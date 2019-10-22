@@ -1,8 +1,9 @@
 // Borrowed some of the implementation from here: https://github.com/blackxparade/Rust-Boy/blob/master/Emulator/src/cpu/opcode.rs
+use crate::alu::*;
 use crate::cpu::*;
 
 pub struct Opcode {
-    pub op: [fn(&mut Opcode, &mut Cpu) -> u8; 256]
+    pub op: [fn(&mut Cpu) -> u8; 256]
 }
 
 impl Opcode {
@@ -10,6 +11,16 @@ impl Opcode {
         Opcode {
             op: [Opcode::default; 256]
         }
+    }
+
+    pub fn execute(self, cpu: &mut Cpu, opcode: u8) -> u8 {
+        self.op[opcode as usize](&mut cpu)
+    }
+
+    pub fn fetch(cpu: &mut Cpu) -> u8 {
+        let val = cpu.ram[cpu.pc as usize];
+        cpu.pc += 1;
+        val
     }
 
     // Set up opcode lookup table
@@ -273,35 +284,74 @@ impl Opcode {
         self.op[0xFF] = Opcode::rst_ff;
     }
 
-    pub fn default(&mut self, cpu: &mut Cpu) -> u8 {
+    fn default(cpu: &mut Cpu) -> u8 {
         0
     }
 
-    pub fn nop(&mut self, cpu: &mut Cpu) -> u8 {
+    // NOP
+    fn nop(cpu: &mut Cpu) -> u8 {
+        cpu.pc += 1;
+        4
+    }
+
+    // LD BC, d16
+    fn ld_01(cpu: &mut Cpu) -> u8 {
+        let byte1 = Opcode::fetch(&mut cpu);
+        let byte2 = Opcode::fetch(&mut cpu);
+        ld_nn_d16(&mut cpu.b, &mut cpu.c, byte1, byte2);
+        12
+    }
+
+    fn ld_02(cpu: &mut Cpu) -> u8 {
 
     }
 
-    pub fn ld_01(&mut self, cpu: &mut Cpu) -> u8 {
+    fn inc_03(cpu: &mut Cpu) -> u8 {
+        inc_16(&mut cpu.b, &mut cpu.c);
+        8
+    }
+
+    fn inc_04(cpu: &mut Cpu) -> u8 {
+        inc_8(&mut cpu, &mut cpu.b);
+        4
+    }
+
+    fn dec_05(cpu: &mut Cpu) -> u8 {
+        dec_8(&mut cpu, &mut cpu.b);
+        4
+    }
+
+    fn ld_06(cpu: &mut Cpu) -> u8 {
 
     }
 
-    pub fn ld_02(&mut self, cpu: &mut Cpu) -> u8 {
-
+    // LD DE, u16
+    fn ld_11(cpu: &mut Cpu) -> u8 {
+        let byte1 = Opcode::fetch(&mut cpu);
+        let byte2 = Opcode::fetch(&mut cpu);
+        ld_nn_d16(&mut cpu.d, &mut cpu.e, byte1, byte2);
+        12
     }
 
-    pub fn inc_03(&mut self, cpu: &mut Cpu) -> u8 {
-
+    // INC DE
+    fn inc_13(cpu: &mut Cpu) -> u8 {
+        inc_16(&mut cpu.d, &mut cpu.e);
+        8
     }
 
-    pub fn inc_04(&mut self, cpu: &mut Cpu) -> u8 {
-
+    // LD HL, d16
+    fn ld_21(cpu: &mut Cpu) -> u8 {
+        let byte1 = Opcode::fetch(&mut cpu);
+        let byte2 = Opcode::fetch(&mut cpu);
+        ld_nn_d16(&mut cpu.h, &mut cpu.l, byte1, byte2);
+        12
     }
 
-    pub fn dec_05(&mut self, cpu: &mut Cpu) -> u8 {
-
-    }
-
-    pub fn ld_06(&mut self, cpu: &mut Cpu) -> u8 {
-
+    // LD SP, d16
+    fn ld_31(cpu: &mut Cpu) -> u8 {
+        let byte1 = Opcode::fetch(&mut cpu);
+        let byte2 = Opcode::fetch(&mut cpu);
+        cpu.sp = merge_bytes(byte1, byte2);
+        12
     }
 }

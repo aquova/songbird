@@ -1,6 +1,7 @@
-const BYTE: u8 = 8;
+pub const BYTE: u8 = 8;
+const RAM_SIZE: usize = 65535;
 
-pub enum flags {
+pub enum Flags {
     Z,
     N,
     H,
@@ -17,7 +18,8 @@ pub struct Cpu {
     pub e: u8,
     pub f: u8,
     pub h: u8,
-    pub l: u8
+    pub l: u8,
+    pub ram: [u8; RAM_SIZE]
 }
 
 impl Cpu {
@@ -32,34 +34,35 @@ impl Cpu {
             e: 0,
             f: 0,
             h: 0,
-            l: 0
+            l: 0,
+            ram: [0; RAM_SIZE]
         }
     }
 
-    pub fn set_flag(&mut self, f: flags) {
+    pub fn set_flag(&mut self, f: Flags) {
         match f {
-            flags::Z => {self.f |= 0b1000_0000},
-            flags::N => {self.f |= 0b0100_0000},
-            flags::H => {self.f |= 0b0010_0000},
-            flags::C => {self.f |= 0b0001_0000},
+            Flags::Z => {self.f |= 0b1000_0000},
+            Flags::N => {self.f |= 0b0100_0000},
+            Flags::H => {self.f |= 0b0010_0000},
+            Flags::C => {self.f |= 0b0001_0000},
         }
     }
 
-    pub fn clear_flag(&mut self, f: flags) {
+    pub fn clear_flag(&mut self, f: Flags) {
         match f {
-            flags::Z => {self.f |= 0b0111_1111},
-            flags::N => {self.f |= 0b1011_1111},
-            flags::H => {self.f |= 0b1101_1111},
-            flags::C => {self.f |= 0b1110_1111},
+            Flags::Z => {self.f |= 0b0111_1111},
+            Flags::N => {self.f |= 0b1011_1111},
+            Flags::H => {self.f |= 0b1101_1111},
+            Flags::C => {self.f |= 0b1110_1111},
         }
     }
 
-    pub fn get_flag(self, f: flags) -> bool {
+    pub fn get_flag(self, f: Flags) -> bool {
         match f {
-            flags::Z => { return (self.f & 0b1000_0000) == 1},
-            flags::N => { return (self.f & 0b0100_0000) == 1},
-            flags::H => { return (self.f & 0b0010_0000) == 1},
-            flags::C => { return (self.f & 0b0001_0000) == 1},
+            Flags::Z => { return (self.f & 0b1000_0000) == 1},
+            Flags::N => { return (self.f & 0b0100_0000) == 1},
+            Flags::H => { return (self.f & 0b0010_0000) == 1},
+            Flags::C => { return (self.f & 0b0001_0000) == 1},
         }
     }
 }
