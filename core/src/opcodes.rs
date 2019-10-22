@@ -1,0 +1,307 @@
+// Borrowed some of the implementation from here: https://github.com/blackxparade/Rust-Boy/blob/master/Emulator/src/cpu/opcode.rs
+use crate::cpu::*;
+
+pub struct Opcode {
+    pub op: [fn(&mut Opcode, &mut Cpu) -> u8; 256]
+}
+
+impl Opcode {
+    pub fn new() -> Opcode {
+        Opcode {
+            op: [Opcode::default; 256]
+        }
+    }
+
+    // Set up opcode lookup table
+    // May god have mercy on our souls
+    pub fn init(&mut self) {
+        self.op[0x00] = Opcode::nop;
+        self.op[0x01] = Opcode::ld_01;
+        self.op[0x02] = Opcode::ld_02;
+        self.op[0x03] = Opcode::inc_03;
+        self.op[0x04] = Opcode::inc_04;
+        self.op[0x05] = Opcode::dec_05;
+        self.op[0x06] = Opcode::ld_06;
+        self.op[0x07] = Opcode::rlca;
+        self.op[0x08] = Opcode::ld_08;
+        self.op[0x09] = Opcode::add_09;
+        self.op[0x0A] = Opcode::ld_0a;
+        self.op[0x0B] = Opcode::dec_0b;
+        self.op[0x0C] = Opcode::inc_0c;
+        self.op[0x0D] = Opcode::dec_0d;
+        self.op[0x0E] = Opcode::ld_0e;
+        self.op[0x0F] = Opcode::rrca;
+        self.op[0x10] = Opcode::stop;
+        self.op[0x11] = Opcode::ld_11;
+        self.op[0x12] = Opcode::ld_12;
+        self.op[0x13] = Opcode::inc_13;
+        self.op[0x14] = Opcode::inc_14;
+        self.op[0x15] = Opcode::dec_15;
+        self.op[0x16] = Opcode::ld_16;
+        self.op[0x17] = Opcode::rla;
+        self.op[0x18] = Opcode::jr_18;
+        self.op[0x19] = Opcode::add_19;
+        self.op[0x1A] = Opcode::ld_1a;
+        self.op[0x1B] = Opcode::dec_1b;
+        self.op[0x1C] = Opcode::inc_1c;
+        self.op[0x1D] = Opcode::dec_1d;
+        self.op[0x1E] = Opcode::ld_1e;
+        self.op[0x1F] = Opcode::rra;
+        self.op[0x20] = Opcode::jr_20;
+        self.op[0x21] = Opcode::ld_21;
+        self.op[0x22] = Opcode::ld_22;
+        self.op[0x23] = Opcode::inc_23;
+        self.op[0x24] = Opcode::inc_24;
+        self.op[0x25] = Opcode::dec_25;
+        self.op[0x26] = Opcode::ld_26;
+        self.op[0x27] = Opcode::daa;
+        self.op[0x28] = Opcode::jr_28;
+        self.op[0x29] = Opcode::add_29;
+        self.op[0x2A] = Opcode::ld_2a;
+        self.op[0x2B] = Opcode::dec_2b;
+        self.op[0x2C] = Opcode::inc_2c;
+        self.op[0x2D] = Opcode::dec_2d;
+        self.op[0x2E] = Opcode::ld_2e;
+        self.op[0x2F] = Opcode::cpl;
+        self.op[0x30] = Opcode::jr_30;
+        self.op[0x31] = Opcode::ld_31;
+        self.op[0x32] = Opcode::ld_32;
+        self.op[0x33] = Opcode::inc_33;
+        self.op[0x34] = Opcode::inc_34;
+        self.op[0x35] = Opcode::dec_35;
+        self.op[0x36] = Opcode::ld_36;
+        self.op[0x37] = Opcode::scf;
+        self.op[0x38] = Opcode::jr_38;
+        self.op[0x39] = Opcode::add_39;
+        self.op[0x3A] = Opcode::ld_3a;
+        self.op[0x3B] = Opcode::dec_3b;
+        self.op[0x3C] = Opcode::inc_3c;
+        self.op[0x3D] = Opcode::dec_3d;
+        self.op[0x3E] = Opcode::ld_3e;
+        self.op[0x3F] = Opcode::ccf;
+        self.op[0x40] = Opcode::ld_40;
+        self.op[0x41] = Opcode::ld_41;
+        self.op[0x42] = Opcode::ld_42;
+        self.op[0x43] = Opcode::ld_43;
+        self.op[0x44] = Opcode::ld_44;
+        self.op[0x45] = Opcode::ld_45;
+        self.op[0x46] = Opcode::ld_46;
+        self.op[0x47] = Opcode::ld_47;
+        self.op[0x48] = Opcode::ld_48;
+        self.op[0x49] = Opcode::ld_49;
+        self.op[0x4A] = Opcode::ld_4a;
+        self.op[0x4B] = Opcode::ld_4b;
+        self.op[0x4C] = Opcode::ld_4c;
+        self.op[0x4D] = Opcode::ld_4d;
+        self.op[0x4E] = Opcode::ld_4e;
+        self.op[0x4F] = Opcode::ld_4f;
+        self.op[0x50] = Opcode::ld_50;
+        self.op[0x51] = Opcode::ld_51;
+        self.op[0x52] = Opcode::ld_52;
+        self.op[0x53] = Opcode::ld_53;
+        self.op[0x54] = Opcode::ld_54;
+        self.op[0x55] = Opcode::ld_55;
+        self.op[0x56] = Opcode::ld_56;
+        self.op[0x57] = Opcode::ld_57;
+        self.op[0x58] = Opcode::ld_58;
+        self.op[0x59] = Opcode::ld_59;
+        self.op[0x5A] = Opcode::ld_5a;
+        self.op[0x5B] = Opcode::ld_5b;
+        self.op[0x5C] = Opcode::ld_5c;
+        self.op[0x5D] = Opcode::ld_5d;
+        self.op[0x5E] = Opcode::ld_5e;
+        self.op[0x5F] = Opcode::ld_5f;
+        self.op[0x60] = Opcode::ld_60;
+        self.op[0x61] = Opcode::ld_61;
+        self.op[0x62] = Opcode::ld_62;
+        self.op[0x63] = Opcode::ld_63;
+        self.op[0x64] = Opcode::ld_64;
+        self.op[0x65] = Opcode::ld_65;
+        self.op[0x66] = Opcode::ld_66;
+        self.op[0x67] = Opcode::ld_67;
+        self.op[0x68] = Opcode::ld_68;
+        self.op[0x69] = Opcode::ld_69;
+        self.op[0x6A] = Opcode::ld_6a;
+        self.op[0x6B] = Opcode::ld_6b;
+        self.op[0x6C] = Opcode::ld_6c;
+        self.op[0x6D] = Opcode::ld_6d;
+        self.op[0x6E] = Opcode::ld_6e;
+        self.op[0x6F] = Opcode::ld_6f;
+        self.op[0x70] = Opcode::ld_70;
+        self.op[0x71] = Opcode::ld_71;
+        self.op[0x72] = Opcode::ld_72;
+        self.op[0x73] = Opcode::ld_73;
+        self.op[0x74] = Opcode::ld_74;
+        self.op[0x75] = Opcode::ld_75;
+        self.op[0x76] = Opcode::halt;
+        self.op[0x77] = Opcode::ld_77;
+        self.op[0x78] = Opcode::ld_78;
+        self.op[0x79] = Opcode::ld_79;
+        self.op[0x7A] = Opcode::ld_7a;
+        self.op[0x7B] = Opcode::ld_7b;
+        self.op[0x7C] = Opcode::ld_7c;
+        self.op[0x7D] = Opcode::ld_7d;
+        self.op[0x7E] = Opcode::ld_7e;
+        self.op[0x7F] = Opcode::ld_7f;
+        self.op[0x80] = Opcode::add_80;
+        self.op[0x81] = Opcode::add_81;
+        self.op[0x82] = Opcode::add_82;
+        self.op[0x83] = Opcode::add_83;
+        self.op[0x84] = Opcode::add_84;
+        self.op[0x85] = Opcode::add_85;
+        self.op[0x86] = Opcode::add_86;
+        self.op[0x87] = Opcode::add_87;
+        self.op[0x88] = Opcode::adc_88;
+        self.op[0x89] = Opcode::adc_89;
+        self.op[0x8A] = Opcode::adc_8a;
+        self.op[0x8B] = Opcode::adc_8b;
+        self.op[0x8C] = Opcode::adc_8c;
+        self.op[0x8D] = Opcode::adc_8d;
+        self.op[0x8E] = Opcode::adc_8e;
+        self.op[0x8F] = Opcode::adc_8f;
+        self.op[0x90] = Opcode::sub_90;
+        self.op[0x91] = Opcode::sub_91;
+        self.op[0x92] = Opcode::sub_92;
+        self.op[0x93] = Opcode::sub_93;
+        self.op[0x94] = Opcode::sub_94;
+        self.op[0x95] = Opcode::sub_95;
+        self.op[0x96] = Opcode::sub_96;
+        self.op[0x97] = Opcode::sub_97;
+        self.op[0x98] = Opcode::sbc_98;
+        self.op[0x99] = Opcode::sbc_99;
+        self.op[0x9A] = Opcode::sbc_9a;
+        self.op[0x9B] = Opcode::sbc_9b;
+        self.op[0x9C] = Opcode::sbc_9c;
+        self.op[0x9D] = Opcode::sbc_9d;
+        self.op[0x9E] = Opcode::sbc_9e;
+        self.op[0x9F] = Opcode::sbc_9f;
+        self.op[0xA0] = Opcode::and_a0;
+        self.op[0xA1] = Opcode::and_a1;
+        self.op[0xA2] = Opcode::and_a2;
+        self.op[0xA3] = Opcode::and_a3;
+        self.op[0xA4] = Opcode::and_a4;
+        self.op[0xA5] = Opcode::and_a5;
+        self.op[0xA6] = Opcode::and_a6;
+        self.op[0xA7] = Opcode::and_a7;
+        self.op[0xA8] = Opcode::xor_a8;
+        self.op[0xA9] = Opcode::xor_a9;
+        self.op[0xAA] = Opcode::xor_aa;
+        self.op[0xAB] = Opcode::xor_ab;
+        self.op[0xAC] = Opcode::xor_ac;
+        self.op[0xAD] = Opcode::xor_ad;
+        self.op[0xAE] = Opcode::xor_ae;
+        self.op[0xAF] = Opcode::xor_af;
+        self.op[0xB0] = Opcode::or_b0;
+        self.op[0xB1] = Opcode::or_b1;
+        self.op[0xB2] = Opcode::or_b2;
+        self.op[0xB3] = Opcode::or_b3;
+        self.op[0xB4] = Opcode::or_b4;
+        self.op[0xB5] = Opcode::or_b5;
+        self.op[0xB6] = Opcode::or_b6;
+        self.op[0xB7] = Opcode::or_b7;
+        self.op[0xB8] = Opcode::or_b8;
+        self.op[0xB9] = Opcode::or_b9;
+        self.op[0xBA] = Opcode::or_ba;
+        self.op[0xBB] = Opcode::or_bb;
+        self.op[0xBC] = Opcode::or_bc;
+        self.op[0xBD] = Opcode::or_bd;
+        self.op[0xBE] = Opcode::or_be;
+        self.op[0xBF] = Opcode::or_bf;
+        self.op[0xC0] = Opcode::ret_c0;
+        self.op[0xC1] = Opcode::pop_c1;
+        self.op[0xC2] = Opcode::jp_c2;
+        self.op[0xC3] = Opcode::jp_c3;
+        self.op[0xC4] = Opcode::call_c4;
+        self.op[0xC5] = Opcode::push_c5;
+        self.op[0xC6] = Opcode::add_c6;
+        self.op[0xC7] = Opcode::rst_c7;
+        self.op[0xC8] = Opcode::ret_c8;
+        self.op[0xC9] = Opcode::ret_c9;
+        self.op[0xCA] = Opcode::jp_ca;
+        self.op[0xCB] = Opcode::prefix;
+        self.op[0xCC] = Opcode::call_cc;
+        self.op[0xCD] = Opcode::call_cd;
+        self.op[0xCE] = Opcode::adc_ce;
+        self.op[0xCF] = Opcode::rst_cf;
+        self.op[0xD0] = Opcode::ret_d0;
+        self.op[0xD1] = Opcode::pop_d1;
+        self.op[0xD2] = Opcode::jp_d2;
+        self.op[0xD3] = Opcode::invalid;
+        self.op[0xD4] = Opcode::call_d4;
+        self.op[0xD5] = Opcode::push_d5;
+        self.op[0xD6] = Opcode::sub_d6;
+        self.op[0xD7] = Opcode::rst_d7;
+        self.op[0xD8] = Opcode::ret_d8;
+        self.op[0xD9] = Opcode::reti_d9;
+        self.op[0xDA] = Opcode::jp_da;
+        self.op[0xDB] = Opcode::invalid;
+        self.op[0xDC] = Opcode::call_dc;
+        self.op[0xDD] = Opcode::invalid;
+        self.op[0xDE] = Opcode::sbc_de;
+        self.op[0xDF] = Opcode::rst_df;
+        self.op[0xE0] = Opcode::ldh_e0;
+        self.op[0xE1] = Opcode::pop_e1;
+        self.op[0xE2] = Opcode::ld_e2;
+        self.op[0xE3] = Opcode::invalid;
+        self.op[0xE4] = Opcode::invalid;
+        self.op[0xE5] = Opcode::push_e5;
+        self.op[0xE6] = Opcode::and_e6;
+        self.op[0xE7] = Opcode::rst_e7;
+        self.op[0xE8] = Opcode::add_e8;
+        self.op[0xE9] = Opcode::jp_e9;
+        self.op[0xEA] = Opcode::ld_ea;
+        self.op[0xEB] = Opcode::invalid;
+        self.op[0xEC] = Opcode::invalid;
+        self.op[0xED] = Opcode::invalid;
+        self.op[0xEE] = Opcode::xor_ee;
+        self.op[0xEF] = Opcode::rst_ef;
+        self.op[0xF0] = Opcode::ldh_f0;
+        self.op[0xF1] = Opcode::pop_f1;
+        self.op[0xF2] = Opcode::ld_f2;
+        self.op[0xF3] = Opcode::di;
+        self.op[0xF4] = Opcode::invalid;
+        self.op[0xF5] = Opcode::push_f5;
+        self.op[0xF6] = Opcode::or_f6;
+        self.op[0xF7] = Opcode::rst_f7;
+        self.op[0xF8] = Opcode::ld_f8;
+        self.op[0xF9] = Opcode::ld_f9;
+        self.op[0xFA] = Opcode::ld_fa;
+        self.op[0xFB] = Opcode::ei;
+        self.op[0xFC] = Opcode::invalid;
+        self.op[0xFD] = Opcode::invalid;
+        self.op[0xFE] = Opcode::cp_fe;
+        self.op[0xFF] = Opcode::rst_ff;
+    }
+
+    pub fn default(&mut self, cpu: &mut Cpu) -> u8 {
+        0
+    }
+
+    pub fn nop(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn ld_01(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn ld_02(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn inc_03(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn inc_04(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn dec_05(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+
+    pub fn ld_06(&mut self, cpu: &mut Cpu) -> u8 {
+
+    }
+}
