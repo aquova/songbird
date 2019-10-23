@@ -350,6 +350,24 @@ impl Opcode {
         8
     }
 
+    // DEC BC
+    fn dec_0b(cpu: &mut Cpu) -> u8 {
+        dec_16(&mut cpu.b, &mut cpu.c);
+        8
+    }
+
+    // INC C
+    fn inc_0c(cpu: &mut Cpu) -> u8 {
+        inc_8(&mut cpu, &mut cpu.c);
+        4
+    }
+
+    // DEC C
+    fn dec_0d(cpu: &mut Cpu) -> u8 {
+        dec_8(&mut cpu, &mut cpu.c);
+        4
+    }
+
     // LD DE, d16
     fn ld_11(cpu: &mut Cpu) -> u8 {
         let byte1 = Opcode::fetch(&mut cpu);
@@ -370,6 +388,24 @@ impl Opcode {
         8
     }
 
+    // DEC DE
+    fn dec_1b(cpu: &mut Cpu) -> u8 {
+        dec_16(&mut cpu.d, &mut cpu.e);
+        8
+    }
+
+    // INC E
+    fn inc_1c(cpu: &mut Cpu) -> u8 {
+        inc_8(&mut cpu, &mut cpu.e);
+        4
+    }
+
+    // DEC E
+    fn dec_1d(cpu: &mut Cpu) -> u8 {
+        dec_8(&mut cpu, &mut cpu.e);
+        4
+    }
+
     // LD HL, d16
     fn ld_21(cpu: &mut Cpu) -> u8 {
         let byte1 = Opcode::fetch(&mut cpu);
@@ -382,6 +418,24 @@ impl Opcode {
     fn add_29(cpu: &mut Cpu) -> u8 {
         add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.h, cpu.l);
         8
+    }
+
+    // DEC HL
+    fn dec_2b(cpu: &mut Cpu) -> u8 {
+        dec_16(&mut cpu.h, &mut cpu.l);
+        8
+    }
+
+    // INC L
+    fn inc_2c(cpu: &mut Cpu) -> u8 {
+        inc_8(&mut cpu, &mut cpu.l);
+        4
+    }
+
+    // DEC L
+    fn dec_2d(cpu: &mut Cpu) -> u8 {
+        dec_8(&mut cpu, &mut cpu.l);
+        4
     }
 
     // LD SP, d16
@@ -398,9 +452,315 @@ impl Opcode {
         8
     }
 
+    // DEC SP
+    fn dec_3b(cpu: &mut Cpu) -> u8 {
+        cpu.sp -= 1;
+        8
+    }
+
+    // INC A
+    fn inc_3c(cpu: &mut Cpu) -> u8 {
+        inc_8(&mut cpu, &mut cpu.a);
+        4
+    }
+
+    // DEC A
+    fn dec_3d(cpu: &mut Cpu) -> u8 {
+        dec_8(&mut cpu, &mut cpu.a);
+        4
+    }
+
     // LD B, B
     fn ld_40(cpu: &mut Cpu) -> u8 {
         ld_n_d8(&mut cpu.b, cpu.b);
+        4
+    }
+
+    // LD B, C
+    fn ld_41(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.c);
+        4
+    }
+
+    // LD B, D
+    fn ld_42(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.d);
+        4
+    }
+
+    // LD B, E
+    fn ld_43(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.e);
+        4
+    }
+
+    // LD B, H
+    fn ld_44(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.h);
+        4
+    }
+
+    // LD B, L
+    fn ld_45(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.l);
+        4
+    }
+
+    // LD B, A
+    fn ld_47(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.a);
+        4
+    }
+
+    // LD C, B
+    fn ld_48(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.b);
+        4
+    }
+
+    // LD C, C
+    fn ld_49(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.c);
+        4
+    }
+
+    // LD C, D
+    fn ld_4a(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.d);
+        4
+    }
+
+    // LD C, E
+    fn ld_4b(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.e);
+        4
+    }
+
+    // LD C, H
+    fn ld_4c(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.h);
+        4
+    }
+
+    // LD C, L
+    fn ld_4d(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.l);
+        4
+    }
+
+    // LD C, A
+    fn ld_4f(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.c, cpu.a);
+        4
+    }
+
+    // LD D, B
+    fn ld_50(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.b);
+        4
+    }
+
+    // LD D, C
+    fn ld_51(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.c);
+        4
+    }
+
+    // LD D, D
+    fn ld_52(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.d);
+        4
+    }
+
+    // LD D, E
+    fn ld_53(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.e);
+        4
+    }
+
+    // LD D, H
+    fn ld_54(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.h);
+        4
+    }
+
+    // LD D, L
+    fn ld_55(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.l);
+        4
+    }
+
+    // LD D, A
+    fn ld_57(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.d, cpu.a);
+        4
+    }
+
+    // LD E, B
+    fn ld_58(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.b);
+        4
+    }
+
+    // LD E, C
+    fn ld_59(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.c);
+        4
+    }
+
+    // LD E, D
+    fn ld_5a(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.d);
+        4
+    }
+
+    // LD E, E
+    fn ld_5b(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.e);
+        4
+    }
+
+    // LD E, H
+    fn ld_5c(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.h);
+        4
+    }
+
+    // LD E, L
+    fn ld_5d(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.l);
+        4
+    }
+
+    // LD E, A
+    fn ld_5f(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.e, cpu.a);
+        4
+    }
+
+    // LD H, B
+    fn ld_60(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.b);
+        4
+    }
+
+    // LD H, C
+    fn ld_61(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.c);
+        4
+    }
+
+    // LD H, D
+    fn ld_62(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.d);
+        4
+    }
+
+    // LD H, E
+    fn ld_63(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.e);
+        4
+    }
+
+    // LD H, H
+    fn ld_64(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.h);
+        4
+    }
+
+    // LD H, L
+    fn ld_65(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.l);
+        4
+    }
+
+    // LD H, A
+    fn ld_67(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.h, cpu.a);
+        4
+    }
+
+    // LD L, B
+    fn ld_68(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.b);
+        4
+    }
+
+    // LD L, C
+    fn ld_69(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.c);
+        4
+    }
+
+    // LD L, D
+    fn ld_6a(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.d);
+        4
+    }
+
+    // LD L, E
+    fn ld_6b(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.e);
+        4
+    }
+
+    // LD L, H
+    fn ld_6c(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.h);
+        4
+    }
+
+    // LD L, L
+    fn ld_6d(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.l);
+        4
+    }
+
+    // LD L, A
+    fn ld_6f(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.l, cpu.a);
+        4
+    }
+
+    // LD A, B
+    fn ld_78(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.b);
+        4
+    }
+
+    // LD A, C
+    fn ld_79(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.c);
+        4
+    }
+
+    // LD A, D
+    fn ld_7a(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.d);
+        4
+    }
+
+    // LD A, E
+    fn ld_7b(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.e);
+        4
+    }
+
+    // LD A, H
+    fn ld_7c(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.h);
+        4
+    }
+
+    // LD A, L
+    fn ld_7d(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.l);
+        4
+    }
+
+    // LD A, A
+    fn ld_7f(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.a, cpu.a);
         4
     }
 }

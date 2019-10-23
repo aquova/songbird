@@ -3,3 +3,4 @@
 *.lock
 
 **/games
+*.code-workspace

@@ -33,9 +33,9 @@ pub fn ld_n_d8(reg: &mut u8, byte: u8) {
     *reg = byte;
 }
 
-pub fn ld_nn_d16(reg1: &mut u8, reg2: &mut u8, byte1: u8, byte2: u8) {
-    *reg1 = byte1;
-    *reg2 = byte2;
+pub fn ld_nn_d16(high_reg: &mut u8, low_reg: &mut u8, high_byte: u8, low_byte: u8) {
+    *high_reg = high_byte;
+    *low_reg = low_byte;
 }
 
 pub fn inc_8(cpu: &mut Cpu, reg: &mut u8) {
@@ -50,11 +50,11 @@ pub fn inc_8(cpu: &mut Cpu, reg: &mut u8) {
     }
 }
 
-pub fn inc_16(reg1: &mut u8, reg2: &mut u8) {
-    *reg2 += 1;
+pub fn inc_16(high_reg: &mut u8, low_reg: &mut u8) {
+    *low_reg += 1;
     // If overflow, increase higher byte
-    if *reg2 == 0 {
-        *reg1 += 1;
+    if *low_reg == 0 {
+        *high_reg += 1;
     }
 }
 
@@ -74,11 +74,18 @@ pub fn dec_8(cpu: &mut Cpu, reg: &mut u8) {
     }
 }
 
-pub fn add_16(cpu: &mut Cpu, target1: &mut u8, target2: &mut u8, source1: u8, source2: u8) {
+pub fn dec_16(high_reg: &mut u8, low_reg: &mut u8) {
+    let mut data = merge_bytes(*high_reg, *low_reg);
+    data -= 1;
+    *high_reg = data.get_high_byte();
+    *low_reg = data.get_low_byte();
+}
+
+pub fn add_16(cpu: &mut Cpu, high_target: &mut u8, low_target: &mut u8, high_source: u8, low_source: u8) {
     cpu.clear_flag(Flags::N);
 
-    let lower = (*target2 as u16) + (source2 as u16);
-    let upper = (*target1 as u16) + (source1 as u16);
+    let lower = (*low_target as u16) + (low_source as u16);
+    let upper = (*high_target as u16) + (high_source as u16);
     let carry = if lower > 0xFF { 1 } else { 0 };
 
     if carry == 1 {
@@ -93,8 +100,8 @@ pub fn add_16(cpu: &mut Cpu, target1: &mut u8, target2: &mut u8, source1: u8, so
         cpu.clear_flag(Flags::C);
     }
 
-    *target2 = lower.get_low_byte();
-    *target1 = ((upper << BYTE) + lower).get_high_byte();
+    *low_target = lower.get_low_byte();
+    *high_target = ((upper << BYTE) + lower).get_high_byte();
 }
 
 pub fn rlca(cpu: &mut Cpu) {
