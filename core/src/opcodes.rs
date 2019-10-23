@@ -14,6 +14,7 @@ impl Opcode {
     }
 
     pub fn execute(self, cpu: &mut Cpu, opcode: u8) -> u8 {
+        cpu.pc += 1;
         self.op[opcode as usize](&mut cpu)
     }
 
@@ -33,7 +34,7 @@ impl Opcode {
         self.op[0x04] = Opcode::inc_04;
         self.op[0x05] = Opcode::dec_05;
         self.op[0x06] = Opcode::ld_06;
-        self.op[0x07] = Opcode::rlca;
+        self.op[0x07] = Opcode::rlca_07;
         self.op[0x08] = Opcode::ld_08;
         self.op[0x09] = Opcode::add_09;
         self.op[0x0A] = Opcode::ld_0a;
@@ -290,7 +291,6 @@ impl Opcode {
 
     // NOP
     fn nop(cpu: &mut Cpu) -> u8 {
-        cpu.pc += 1;
         4
     }
 
@@ -302,30 +302,55 @@ impl Opcode {
         12
     }
 
+    // LD (BC), A
     fn ld_02(cpu: &mut Cpu) -> u8 {
 
     }
 
+    // INC BC
     fn inc_03(cpu: &mut Cpu) -> u8 {
         inc_16(&mut cpu.b, &mut cpu.c);
         8
     }
 
+    // INC B
     fn inc_04(cpu: &mut Cpu) -> u8 {
         inc_8(&mut cpu, &mut cpu.b);
         4
     }
 
+    // DEC B
     fn dec_05(cpu: &mut Cpu) -> u8 {
         dec_8(&mut cpu, &mut cpu.b);
         4
     }
 
+    // LD B, d8
     fn ld_06(cpu: &mut Cpu) -> u8 {
-
+        let byte = Opcode::fetch(&mut cpu);
+        ld_n_d8(&mut cpu.b, byte);
+        8
     }
 
-    // LD DE, u16
+    // RLCA
+    fn rlca_07(cpu: &mut Cpu) -> u8 {
+        rlca(&mut cpu);
+        4
+    }
+
+    // LD (a16), SP
+    fn ld_08(cpu: &mut Cpu) -> u8 {
+
+        20
+    }
+
+    // ADD HL, BC
+    fn add_09(cpu: &mut Cpu) -> u8 {
+        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.b, cpu.c);
+        8
+    }
+
+    // LD DE, d16
     fn ld_11(cpu: &mut Cpu) -> u8 {
         let byte1 = Opcode::fetch(&mut cpu);
         let byte2 = Opcode::fetch(&mut cpu);
@@ -339,6 +364,12 @@ impl Opcode {
         8
     }
 
+    // ADD HL, DE
+    fn add_19(cpu: &mut Cpu) -> u8 {
+        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.d, cpu.e);
+        8
+    }
+
     // LD HL, d16
     fn ld_21(cpu: &mut Cpu) -> u8 {
         let byte1 = Opcode::fetch(&mut cpu);
@@ -347,11 +378,29 @@ impl Opcode {
         12
     }
 
+    // ADD HL, HL
+    fn add_29(cpu: &mut Cpu) -> u8 {
+        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.h, cpu.l);
+        8
+    }
+
     // LD SP, d16
     fn ld_31(cpu: &mut Cpu) -> u8 {
         let byte1 = Opcode::fetch(&mut cpu);
         let byte2 = Opcode::fetch(&mut cpu);
         cpu.sp = merge_bytes(byte1, byte2);
         12
+    }
+
+    // ADD HL, SP
+    fn add_39(cpu: &mut Cpu) -> u8 {
+        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.sp.get_high_byte(), cpu.sp.get_low_byte());
+        8
+    }
+
+    // LD B, B
+    fn ld_40(cpu: &mut Cpu) -> u8 {
+        ld_n_d8(&mut cpu.b, cpu.b);
+        4
     }
 }
