@@ -763,4 +763,88 @@ impl Opcode {
         ld_n_d8(&mut cpu.a, cpu.a);
         4
     }
+
+    // ADD A, B
+    fn add_80(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.b, false);
+        4
+    }
+
+    // ADD A, C
+    fn add_81(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.c, false);
+        4
+    }
+
+    // ADD A, D
+    fn add_82(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.d, false);
+        4
+    }
+
+    // ADD A, E
+    fn add_83(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.e, false);
+        4
+    }
+
+    // ADD A, H
+    fn add_84(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.h, false);
+        4
+    }
+
+    // ADD A, L
+    fn add_85(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.l, false);
+        4
+    }
+
+    // ADD A, A
+    fn add_87(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.a, false);
+        4
+    }
+
+    // ADC A, B
+    fn add_88(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.b, true);
+        4
+    }
+
+    // ADC A, C
+    fn add_89(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.c, true);
+        4
+    }
+
+    // ADC A, D
+    fn add_8a(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.d, true);
+        4
+    }
+
+    // ADC A, E
+    fn add_8b(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.e, true);
+        4
+    }
+
+    // ADC A, H
+    fn add_8c(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.h, true);
+        4
+    }
+
+    // ADC A, L
+    fn add_8d(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.l, true);
+        4
+    }
+
+    // ADC A, A
+    fn add_8f(cpu: &mut Cpu) -> u8 {
+        add_8(&mut cpu, &mut cpu.a, cpu.a, true);
+        4
+    }
 }

@@ -81,6 +81,31 @@ pub fn dec_16(high_reg: &mut u8, low_reg: &mut u8) {
     *low_reg = data.get_low_byte();
 }
 
+pub fn add_8(cpu: &mut Cpu, target: &mut u8, source: u8, adc: bool) {
+    let carry = 0;
+    if adc && cpu.get_flag(Flags::C) {
+        let carry = 1;
+    }
+
+    let sum = (*target as u16) + (source as u16) + carry;
+    cpu.clear_flag(Flags::N);
+    if sum > 0xFF {
+        cpu.set_flag(Flags::C);
+        cpu.set_flag(Flags::H);
+    } else {
+        cpu.clear_flag(Flags::C);
+        cpu.clear_flag(Flags::H);
+    }
+
+    if sum == 0 {
+        cpu.set_flag(Flags::Z);
+    } else {
+        cpu.clear_flag(Flags::Z);
+    }
+
+    *target = (sum as u8);
+}
+
 pub fn add_16(cpu: &mut Cpu, high_target: &mut u8, low_target: &mut u8, high_source: u8, low_source: u8) {
     cpu.clear_flag(Flags::N);
 
@@ -102,6 +127,33 @@ pub fn add_16(cpu: &mut Cpu, high_target: &mut u8, low_target: &mut u8, high_sou
 
     *low_target = lower.get_low_byte();
     *high_target = ((upper << BYTE) + lower).get_high_byte();
+}
+
+pub fn sub(cpu: &mut Cpu, reg: u8, sbc: bool) {
+    let carry = 0;
+    if sbc && cpu.get_flag(Flags::C) {
+        let carry = 1;
+    }
+
+    let diff: i16 = cpu.a - reg - carry;
+    cpu.set_flag(Flags::N);
+
+    if diff == 0 {
+        cpu.set_flag(Flags::Z);
+    } else {
+        cpu.clear_flag(Flags::Z);
+    }
+}
+
+pub fn and(cpu: &mut Cpu, target: &mut u8, source: u8) {
+    *target &= source;
+    cpu.clear_flag(Flags::N);
+    if *target == 0 {
+        cpu.set_flag(Flags::Z);
+    } else {
+        cpu.clear_flag(Flags::Z);
+    }
+    // Need to check for H and C flags
 }
 
 pub fn rlca(cpu: &mut Cpu) {
