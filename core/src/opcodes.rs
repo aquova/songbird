@@ -847,4 +847,88 @@ impl Opcode {
         add_8(&mut cpu, &mut cpu.a, cpu.a, true);
         4
     }
+
+    // SUB B
+    fn sub_90(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.b, false);
+        4
+    }
+
+    // SUB C
+    fn sub_91(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.c, false);
+        4
+    }
+
+    // SUB D
+    fn sub_92(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.d, false);
+        4
+    }
+
+    // SUB E
+    fn sub_93(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.e, false);
+        4
+    }
+
+    // SUB H
+    fn sub_94(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.h, false);
+        4
+    }
+
+    // SUB L
+    fn sub_95(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.l, false);
+        4
+    }
+
+    // SUB A
+    fn sub_97(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.a, false);
+        4
+    }
+
+    // SBC A, B
+    fn sub_98(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.b, true);
+        4
+    }
+
+    // SBC A, C
+    fn sub_99(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.c, true);
+        4
+    }
+
+    // SBC A, D
+    fn sub_9a(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.d, true);
+        4
+    }
+
+    // SBC A, E
+    fn sub_9b(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.e, true);
+        4
+    }
+
+    // SBC A, H
+    fn sub_9c(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.h, true);
+        4
+    }
+
+    // SBC A, L
+    fn sub_9d(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.d, true);
+        4
+    }
+
+    // SBC A, A
+    fn sub_9f(cpu: &mut Cpu) -> u8 {
+        sub(&mut cpu, cpu.a, true);
+        4
+    }
 }

@@ -103,7 +103,7 @@ pub fn add_8(cpu: &mut Cpu, target: &mut u8, source: u8, adc: bool) {
         cpu.clear_flag(Flags::Z);
     }
 
-    *target = (sum as u8);
+    *target = sum as u8;
 }
 
 pub fn add_16(cpu: &mut Cpu, high_target: &mut u8, low_target: &mut u8, high_source: u8, low_source: u8) {
@@ -135,7 +135,7 @@ pub fn sub(cpu: &mut Cpu, reg: u8, sbc: bool) {
         let carry = 1;
     }
 
-    let diff: i16 = cpu.a - reg - carry;
+    let diff: i16 = (cpu.a as i16) - (reg as i16) - carry;
     cpu.set_flag(Flags::N);
 
     if diff == 0 {
@@ -143,6 +143,16 @@ pub fn sub(cpu: &mut Cpu, reg: u8, sbc: bool) {
     } else {
         cpu.clear_flag(Flags::Z);
     }
+
+    if diff < 0 {
+        cpu.set_flag(Flags::H);
+        cpu.set_flag(Flags::C);
+    } else {
+        cpu.clear_flag(Flags::H);
+        cpu.clear_flag(Flags::C);
+    }
+
+    cpu.a = diff as u8;
 }
 
 pub fn and(cpu: &mut Cpu, target: &mut u8, source: u8) {
