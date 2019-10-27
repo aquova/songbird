@@ -31,6 +31,9 @@ pub fn main() {
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
+    let mut gb = Cpu::new();
+    gb.load_game(&args[1]);
+
     // Main loop
     'gameloop: loop {
         // Check for key presses
@@ -49,5 +52,15 @@ pub fn main() {
                 _ => {}
             }
         }
+
+        // Game loop
+        if !paused {
+            gb.tick();
+            draw();
+        }
     }
+}
+
+fn draw() {
+
 }

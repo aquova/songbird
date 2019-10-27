@@ -9,19 +9,13 @@ pub struct Opcode {
 impl Opcode {
     pub fn new() -> Opcode {
         Opcode {
-            op: [Opcode::default; 256]
+            op: [Opcode::invalid; 256]
         }
     }
 
     pub fn execute(self, cpu: &mut Cpu, opcode: u8) -> u8 {
         cpu.pc += 1;
         self.op[opcode as usize](&mut cpu)
-    }
-
-    pub fn fetch(cpu: &mut Cpu) -> u8 {
-        let val = cpu.ram[cpu.pc as usize];
-        cpu.pc += 1;
-        val
     }
 
     // Set up opcode lookup table
@@ -211,14 +205,14 @@ impl Opcode {
         self.op[0xB5] = Opcode::or_b5;
         self.op[0xB6] = Opcode::or_b6;
         self.op[0xB7] = Opcode::or_b7;
-        self.op[0xB8] = Opcode::or_b8;
-        self.op[0xB9] = Opcode::or_b9;
-        self.op[0xBA] = Opcode::or_ba;
-        self.op[0xBB] = Opcode::or_bb;
-        self.op[0xBC] = Opcode::or_bc;
-        self.op[0xBD] = Opcode::or_bd;
-        self.op[0xBE] = Opcode::or_be;
-        self.op[0xBF] = Opcode::or_bf;
+        self.op[0xB8] = Opcode::cp_b8;
+        self.op[0xB9] = Opcode::cp_b9;
+        self.op[0xBA] = Opcode::cp_ba;
+        self.op[0xBB] = Opcode::cp_bb;
+        self.op[0xBC] = Opcode::cp_bc;
+        self.op[0xBD] = Opcode::cp_bd;
+        self.op[0xBE] = Opcode::cp_be;
+        self.op[0xBF] = Opcode::cp_bf;
         self.op[0xC0] = Opcode::ret_c0;
         self.op[0xC1] = Opcode::pop_c1;
         self.op[0xC2] = Opcode::jp_c2;
@@ -285,8 +279,8 @@ impl Opcode {
         self.op[0xFF] = Opcode::rst_ff;
     }
 
-    fn default(cpu: &mut Cpu) -> u8 {
-        0
+    fn invalid(cpu: &mut Cpu) -> u8 {
+        panic!("Invalid opcode");
     }
 
     // NOP
@@ -296,160 +290,365 @@ impl Opcode {
 
     // LD BC, d16
     fn ld_01(cpu: &mut Cpu) -> u8 {
-        let byte1 = Opcode::fetch(&mut cpu);
-        let byte2 = Opcode::fetch(&mut cpu);
-        ld_nn_d16(&mut cpu.b, &mut cpu.c, byte1, byte2);
+        let byte1 = cpu.fetch();
+        let byte2 = cpu.fetch();
+        cpu.ld_nn_d16(Regs::B, Regs::C, byte1, byte2);
         12
     }
 
     // LD (BC), A
     fn ld_02(cpu: &mut Cpu) -> u8 {
-
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // INC BC
     fn inc_03(cpu: &mut Cpu) -> u8 {
-        inc_16(&mut cpu.b, &mut cpu.c);
+        cpu.inc_16(Regs::B, Regs::C);
         8
     }
 
     // INC B
     fn inc_04(cpu: &mut Cpu) -> u8 {
-        inc_8(&mut cpu, &mut cpu.b);
+        cpu.inc_8(Regs::B);
         4
     }
 
     // DEC B
     fn dec_05(cpu: &mut Cpu) -> u8 {
-        dec_8(&mut cpu, &mut cpu.b);
+        cpu.dec_8(Regs::B);
         4
     }
 
     // LD B, d8
     fn ld_06(cpu: &mut Cpu) -> u8 {
-        let byte = Opcode::fetch(&mut cpu);
-        ld_n_d8(&mut cpu.b, byte);
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::B, byte);
         8
     }
 
     // RLCA
     fn rlca_07(cpu: &mut Cpu) -> u8 {
-        rlca(&mut cpu);
+        cpu.rlca();
         4
     }
 
     // LD (a16), SP
     fn ld_08(cpu: &mut Cpu) -> u8 {
-
-        20
+        panic!("Unimplemented opcode");
+        // 20
     }
 
     // ADD HL, BC
     fn add_09(cpu: &mut Cpu) -> u8 {
-        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.b, cpu.c);
+        cpu.add_nn_nn(Regs::H, Regs::L, Regs::B, Regs::C);
         8
+    }
+
+    // ADD HL, BC
+    fn ld_0a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // DEC BC
     fn dec_0b(cpu: &mut Cpu) -> u8 {
-        dec_16(&mut cpu.b, &mut cpu.c);
+        cpu.dec_16(Regs::B, Regs::C);
         8
     }
 
     // INC C
     fn inc_0c(cpu: &mut Cpu) -> u8 {
-        inc_8(&mut cpu, &mut cpu.c);
+        cpu.inc_8(Regs::C);
         4
     }
 
     // DEC C
     fn dec_0d(cpu: &mut Cpu) -> u8 {
-        dec_8(&mut cpu, &mut cpu.c);
+        cpu.dec_8(Regs::C);
         4
+    }
+
+    // LD C, d8
+    fn ld_0e(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::C, byte);
+        8
+    }
+
+    // RRCA
+    fn rrca(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // STOP 0
+    fn stop(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
     }
 
     // LD DE, d16
     fn ld_11(cpu: &mut Cpu) -> u8 {
-        let byte1 = Opcode::fetch(&mut cpu);
-        let byte2 = Opcode::fetch(&mut cpu);
-        ld_nn_d16(&mut cpu.d, &mut cpu.e, byte1, byte2);
+        let byte1 = cpu.fetch();
+        let byte2 = cpu.fetch();
+        cpu.ld_nn_d16(Regs::D, Regs::E, byte1, byte2);
         12
+    }
+
+    // LD (DE), A
+    fn ld_12(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // INC DE
     fn inc_13(cpu: &mut Cpu) -> u8 {
-        inc_16(&mut cpu.d, &mut cpu.e);
+        cpu.inc_16(Regs::D, Regs::E);
         8
+    }
+
+    // INC D
+    fn inc_14(cpu: &mut Cpu) -> u8 {
+        cpu.inc_8(Regs::D);
+        4
+    }
+
+    // DEC D
+    fn dec_15(cpu: &mut Cpu) -> u8 {
+        cpu.dec_8(Regs::D);
+        4
+    }
+
+    // LD D, d8
+    fn ld_16(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::D, byte);
+        8
+    }
+
+    // RLA
+    fn rla(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // JR r8
+    fn jr_18(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
     }
 
     // ADD HL, DE
     fn add_19(cpu: &mut Cpu) -> u8 {
-        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.d, cpu.e);
+        cpu.add_nn_nn(Regs::H, Regs::L, Regs::D, Regs::E);
         8
+    }
+
+    // LD A, (DE)
+    fn ld_1a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // DEC DE
     fn dec_1b(cpu: &mut Cpu) -> u8 {
-        dec_16(&mut cpu.d, &mut cpu.e);
+        cpu.dec_16(Regs::D, Regs::E);
         8
     }
 
     // INC E
     fn inc_1c(cpu: &mut Cpu) -> u8 {
-        inc_8(&mut cpu, &mut cpu.e);
+        cpu.inc_8(Regs::E);
         4
     }
 
     // DEC E
     fn dec_1d(cpu: &mut Cpu) -> u8 {
-        dec_8(&mut cpu, &mut cpu.e);
+        cpu.dec_8(Regs::E);
         4
+    }
+
+    // LD E, d8
+    fn ld_1e(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::E, byte);
+        8
+    }
+
+    // RRA
+    fn rra(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // JR NZ, r8
+    fn jr_20(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12 // Or 8?
     }
 
     // LD HL, d16
     fn ld_21(cpu: &mut Cpu) -> u8 {
-        let byte1 = Opcode::fetch(&mut cpu);
-        let byte2 = Opcode::fetch(&mut cpu);
-        ld_nn_d16(&mut cpu.h, &mut cpu.l, byte1, byte2);
+        let byte1 = cpu.fetch();
+        let byte2 = cpu.fetch();
+        cpu.ld_nn_d16(Regs::H, Regs::L, byte1, byte2);
         12
+    }
+
+    // LD (HL+), A
+    fn ld_22(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // INC HL
+    fn inc_23(cpu: &mut Cpu) -> u8 {
+        cpu.inc_16(Regs::H, Regs::L);
+        8
+    }
+
+    // INC H
+    fn inc_24(cpu: &mut Cpu) -> u8 {
+        cpu.inc_8(Regs::H);
+        4
+    }
+
+    // DEC H
+    fn dec_25(cpu: &mut Cpu) -> u8 {
+        cpu.dec_8(Regs::H);
+        4
+    }
+
+    // LD H, d8
+    fn ld_26(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::H, byte);
+        8
+    }
+
+    // DAA
+    fn daa(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // JR Z, r8
+    fn jr_28(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12 // Or 8?
     }
 
     // ADD HL, HL
     fn add_29(cpu: &mut Cpu) -> u8 {
-        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.h, cpu.l);
+        cpu.add_nn_nn(Regs::H, Regs::L, Regs::H, Regs::L);
         8
+    }
+
+    // LD A, (HL+)
+    fn ld_2a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // DEC HL
     fn dec_2b(cpu: &mut Cpu) -> u8 {
-        dec_16(&mut cpu.h, &mut cpu.l);
+        cpu.dec_16(Regs::H, Regs::L);
         8
     }
 
     // INC L
     fn inc_2c(cpu: &mut Cpu) -> u8 {
-        inc_8(&mut cpu, &mut cpu.l);
+        cpu.inc_8(Regs::L);
         4
     }
 
     // DEC L
     fn dec_2d(cpu: &mut Cpu) -> u8 {
-        dec_8(&mut cpu, &mut cpu.l);
+        cpu.dec_8(Regs::L);
         4
+    }
+
+    // LD L, d8
+    fn ld_2e(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::L, byte);
+        8
+    }
+
+    // CPL
+    fn cpl(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // JR NC, r8
+    fn jr_30(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12 // Or 8?
     }
 
     // LD SP, d16
     fn ld_31(cpu: &mut Cpu) -> u8 {
-        let byte1 = Opcode::fetch(&mut cpu);
-        let byte2 = Opcode::fetch(&mut cpu);
+        let byte1 = cpu.fetch();
+        let byte2 = cpu.fetch();
         cpu.sp = merge_bytes(byte1, byte2);
         12
     }
 
+    // LD (HL-), A
+    fn ld_32(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // INC SP
+    fn inc_33(cpu: &mut Cpu) -> u8 {
+        // May need to check for flags
+        cpu.sp += 1;
+        8
+    }
+
+    // INC (HL)
+    fn inc_34(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // DEC (HL)
+    fn dec_35(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // LD (HL), d8
+    fn ld_36(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // SCF
+    fn scf(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // JR C, r8
+    fn jr_38(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12 // Or 8?
+    }
+
     // ADD HL, SP
     fn add_39(cpu: &mut Cpu) -> u8 {
-        add_16(&mut cpu, &mut cpu.h, &mut cpu.l, cpu.sp.get_high_byte(), cpu.sp.get_low_byte());
+        cpu.add_nn_16(Regs::H, Regs::L, cpu.sp.get_high_byte(), cpu.sp.get_low_byte());
         8
+    }
+
+    // LD A, (HL-)
+    fn ld_3a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // DEC SP
@@ -460,475 +659,1120 @@ impl Opcode {
 
     // INC A
     fn inc_3c(cpu: &mut Cpu) -> u8 {
-        inc_8(&mut cpu, &mut cpu.a);
+        cpu.inc_8(Regs::A);
         4
     }
 
     // DEC A
     fn dec_3d(cpu: &mut Cpu) -> u8 {
-        dec_8(&mut cpu, &mut cpu.a);
+        cpu.dec_8(Regs::A);
         4
+    }
+
+    // LD A, d8
+    fn ld_3e(cpu: &mut Cpu) -> u8 {
+        let byte = cpu.fetch();
+        cpu.ld_n_d8(Regs::A, byte);
+        8
+    }
+
+    // CCF
+    fn ccf(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
     }
 
     // LD B, B
     fn ld_40(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.b);
+        cpu.ld_n_n(Regs::B, Regs::B);
         4
     }
 
     // LD B, C
     fn ld_41(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.c);
+        cpu.ld_n_n(Regs::B, Regs::C);
         4
     }
 
     // LD B, D
     fn ld_42(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.d);
+        cpu.ld_n_n(Regs::B, Regs::D);
         4
     }
 
     // LD B, E
     fn ld_43(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.e);
+        cpu.ld_n_n(Regs::B, Regs::E);
         4
     }
 
     // LD B, H
     fn ld_44(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.h);
+        cpu.ld_n_n(Regs::B, Regs::H);
         4
     }
 
     // LD B, L
     fn ld_45(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.l);
+        cpu.ld_n_n(Regs::B, Regs::L);
         4
+    }
+
+    // LD B, (HL)
+    fn ld_46(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD B, A
     fn ld_47(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.b, cpu.a);
+        cpu.ld_n_n(Regs::B, Regs::A);
         4
     }
 
     // LD C, B
     fn ld_48(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.b);
+        cpu.ld_n_n(Regs::C, Regs::B);
         4
     }
 
     // LD C, C
     fn ld_49(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.c);
+        cpu.ld_n_n(Regs::C, Regs::C);
         4
     }
 
     // LD C, D
     fn ld_4a(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.d);
+        cpu.ld_n_n(Regs::C, Regs::D);
         4
     }
 
     // LD C, E
     fn ld_4b(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.e);
+        cpu.ld_n_n(Regs::C, Regs::E);
         4
     }
 
     // LD C, H
     fn ld_4c(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.h);
+        cpu.ld_n_n(Regs::C, Regs::H);
         4
     }
 
     // LD C, L
     fn ld_4d(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.l);
+        cpu.ld_n_n(Regs::C, Regs::L);
         4
+    }
+
+    // LD C, (HL)
+    fn ld_4e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD C, A
     fn ld_4f(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.c, cpu.a);
+        cpu.ld_n_n(Regs::C, Regs::A);
         4
     }
 
     // LD D, B
     fn ld_50(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.b);
+        cpu.ld_n_n(Regs::D, Regs::B);
         4
     }
 
     // LD D, C
     fn ld_51(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.c);
+        cpu.ld_n_n(Regs::D, Regs::C);
         4
     }
 
     // LD D, D
     fn ld_52(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.d);
+        cpu.ld_n_n(Regs::D, Regs::D);
         4
     }
 
     // LD D, E
     fn ld_53(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.e);
+        cpu.ld_n_n(Regs::D, Regs::E);
         4
     }
 
     // LD D, H
     fn ld_54(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.h);
+        cpu.ld_n_n(Regs::D, Regs::H);
         4
     }
 
     // LD D, L
     fn ld_55(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.l);
+        cpu.ld_n_n(Regs::D, Regs::L);
         4
+    }
+
+    // LD D, (HL)
+    fn ld_56(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD D, A
     fn ld_57(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.d, cpu.a);
+        cpu.ld_n_n(Regs::D, Regs::A);
         4
     }
 
     // LD E, B
     fn ld_58(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.b);
+        cpu.ld_n_n(Regs::E, Regs::B);
         4
     }
 
     // LD E, C
     fn ld_59(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.c);
+        cpu.ld_n_n(Regs::E, Regs::C);
         4
     }
 
     // LD E, D
     fn ld_5a(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.d);
+        cpu.ld_n_n(Regs::E, Regs::D);
         4
     }
 
     // LD E, E
     fn ld_5b(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.e);
+        cpu.ld_n_n(Regs::E, Regs::E);
         4
     }
 
     // LD E, H
     fn ld_5c(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.h);
+        cpu.ld_n_n(Regs::E, Regs::H);
         4
     }
 
     // LD E, L
     fn ld_5d(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.l);
+        cpu.ld_n_n(Regs::E, Regs::L);
         4
+    }
+
+    // LD E, (HL)
+    fn ld_5e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD E, A
     fn ld_5f(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.e, cpu.a);
+        cpu.ld_n_n(Regs::E, Regs::A);
         4
     }
 
     // LD H, B
     fn ld_60(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.b);
+        cpu.ld_n_n(Regs::H, Regs::B);
         4
     }
 
     // LD H, C
     fn ld_61(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.c);
+        cpu.ld_n_n(Regs::H, Regs::C);
         4
     }
 
     // LD H, D
     fn ld_62(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.d);
+        cpu.ld_n_n(Regs::H, Regs::D);
         4
     }
 
     // LD H, E
     fn ld_63(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.e);
+        cpu.ld_n_n(Regs::H, Regs::E);
         4
     }
 
     // LD H, H
     fn ld_64(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.h);
+        cpu.ld_n_n(Regs::H, Regs::H);
         4
     }
 
     // LD H, L
     fn ld_65(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.l);
+        cpu.ld_n_n(Regs::H, Regs::L);
         4
+    }
+
+    // LD H, (HL)
+    fn ld_66(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD H, A
     fn ld_67(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.h, cpu.a);
+        cpu.ld_n_n(Regs::H, Regs::A);
         4
     }
 
     // LD L, B
     fn ld_68(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.b);
+        cpu.ld_n_n(Regs::L, Regs::B);
         4
     }
 
     // LD L, C
     fn ld_69(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.c);
+        cpu.ld_n_n(Regs::L, Regs::C);
         4
     }
 
     // LD L, D
     fn ld_6a(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.d);
+        cpu.ld_n_n(Regs::L, Regs::D);
         4
     }
 
     // LD L, E
     fn ld_6b(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.e);
+        cpu.ld_n_n(Regs::L, Regs::E);
         4
     }
 
     // LD L, H
     fn ld_6c(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.h);
+        cpu.ld_n_n(Regs::L, Regs::H);
         4
     }
 
     // LD L, L
     fn ld_6d(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.l);
+        cpu.ld_n_n(Regs::L, Regs::L);
         4
+    }
+
+    // LD L, (HL)
+    fn ld_6e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD L, A
     fn ld_6f(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.l, cpu.a);
+        cpu.ld_n_n(Regs::L, Regs::A);
         4
+    }
+
+    // LD (HL), B
+    fn ld_70(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), C
+    fn ld_71(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), D
+    fn ld_72(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), E
+    fn ld_73(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), H
+    fn ld_74(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), L
+    fn ld_75(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // HALT
+    fn halt(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD (HL), A
+    fn ld_77(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD A, B
     fn ld_78(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.b);
+        cpu.ld_n_n(Regs::A, Regs::B);
         4
     }
 
     // LD A, C
     fn ld_79(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.c);
+        cpu.ld_n_n(Regs::A, Regs::C);
         4
     }
 
     // LD A, D
     fn ld_7a(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.d);
+        cpu.ld_n_n(Regs::A, Regs::D);
         4
     }
 
     // LD A, E
     fn ld_7b(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.e);
+        cpu.ld_n_n(Regs::A, Regs::E);
         4
     }
 
     // LD A, H
     fn ld_7c(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.h);
+        cpu.ld_n_n(Regs::A, Regs::H);
         4
     }
 
     // LD A, L
     fn ld_7d(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.l);
+        cpu.ld_n_n(Regs::A, Regs::L);
         4
+    }
+
+    // LD A, (HL)
+    fn ld_7e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // LD A, A
     fn ld_7f(cpu: &mut Cpu) -> u8 {
-        ld_n_d8(&mut cpu.a, cpu.a);
+        cpu.ld_n_n(Regs::A, Regs::A);
         4
     }
 
     // ADD A, B
     fn add_80(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.b, false);
+        cpu.add_a_n(Regs::B, false);
         4
     }
 
     // ADD A, C
     fn add_81(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.c, false);
+        cpu.add_a_n(Regs::C, false);
         4
     }
 
     // ADD A, D
     fn add_82(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.d, false);
+        cpu.add_a_n(Regs::D, false);
         4
     }
 
     // ADD A, E
     fn add_83(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.e, false);
+        cpu.add_a_n(Regs::E, false);
         4
     }
 
     // ADD A, H
     fn add_84(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.h, false);
+        cpu.add_a_n(Regs::H, false);
         4
     }
 
     // ADD A, L
     fn add_85(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.l, false);
+        cpu.add_a_n(Regs::L, false);
         4
+    }
+
+    // ADD A, (HL)
+    fn add_86(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // ADD A, A
     fn add_87(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.a, false);
+        cpu.add_a_n(Regs::A, false);
         4
     }
 
     // ADC A, B
-    fn add_88(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.b, true);
+    fn adc_88(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::B, true);
         4
     }
 
     // ADC A, C
-    fn add_89(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.c, true);
+    fn adc_89(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::C, true);
         4
     }
 
     // ADC A, D
-    fn add_8a(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.d, true);
+    fn adc_8a(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::D, true);
         4
     }
 
     // ADC A, E
-    fn add_8b(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.e, true);
+    fn adc_8b(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::E, true);
         4
     }
 
     // ADC A, H
-    fn add_8c(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.h, true);
+    fn adc_8c(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::H, true);
         4
     }
 
     // ADC A, L
-    fn add_8d(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.l, true);
+    fn adc_8d(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::L, true);
         4
     }
 
+    // ADC A, (HL)
+    fn adc_8e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
     // ADC A, A
-    fn add_8f(cpu: &mut Cpu) -> u8 {
-        add_8(&mut cpu, &mut cpu.a, cpu.a, true);
+    fn adc_8f(cpu: &mut Cpu) -> u8 {
+        cpu.add_a_n(Regs::A, true);
         4
     }
 
     // SUB B
     fn sub_90(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.b, false);
+        cpu.sub_a_n(Regs::B, false);
         4
     }
 
     // SUB C
     fn sub_91(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.c, false);
+        cpu.sub_a_n(Regs::C, false);
         4
     }
 
     // SUB D
     fn sub_92(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.d, false);
+        cpu.sub_a_n(Regs::D, false);
         4
     }
 
     // SUB E
     fn sub_93(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.e, false);
+        cpu.sub_a_n(Regs::E, false);
         4
     }
 
     // SUB H
     fn sub_94(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.h, false);
+        cpu.sub_a_n(Regs::H, false);
         4
     }
 
     // SUB L
     fn sub_95(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.l, false);
+        cpu.sub_a_n(Regs::L, false);
         4
+    }
+
+    // SUB (HL)
+    fn sub_96(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
     }
 
     // SUB A
     fn sub_97(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.a, false);
+        cpu.sub_a_n(Regs::A, false);
         4
     }
 
     // SBC A, B
-    fn sub_98(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.b, true);
+    fn sbc_98(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::B, true);
         4
     }
 
     // SBC A, C
-    fn sub_99(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.c, true);
+    fn sbc_99(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::C, true);
         4
     }
 
     // SBC A, D
-    fn sub_9a(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.d, true);
+    fn sbc_9a(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::D, true);
         4
     }
 
     // SBC A, E
-    fn sub_9b(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.e, true);
+    fn sbc_9b(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::E, true);
         4
     }
 
     // SBC A, H
-    fn sub_9c(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.h, true);
+    fn sbc_9c(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::H, true);
         4
     }
 
     // SBC A, L
-    fn sub_9d(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.d, true);
+    fn sbc_9d(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::L, true);
         4
     }
 
+    // SBC A, (HL)
+    fn sbc_9e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
     // SBC A, A
-    fn sub_9f(cpu: &mut Cpu) -> u8 {
-        sub(&mut cpu, cpu.a, true);
+    fn sbc_9f(cpu: &mut Cpu) -> u8 {
+        cpu.sub_a_n(Regs::A, true);
         4
+    }
+
+    // AND B
+    fn and_a0(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::B);
+        4
+    }
+
+    // AND C
+    fn and_a1(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::C);
+        4
+    }
+
+    // AND D
+    fn and_a2(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::D);
+        4
+    }
+
+    // AND E
+    fn and_a3(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::E);
+        4
+    }
+
+    // AND H
+    fn and_a4(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::H);
+        4
+    }
+
+    // AND L
+    fn and_a5(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::L);
+        4
+    }
+
+    // AND (HL)
+    fn and_a6(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // AND A
+    fn and_a7(cpu: &mut Cpu) -> u8 {
+        cpu.and_a_n(Regs::A);
+        4
+    }
+
+    // XOR B
+    fn xor_a8(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::B);
+        4
+    }
+
+    // XOR C
+    fn xor_a9(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::C);
+        4
+    }
+
+    // XOR D
+    fn xor_aa(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::D);
+        4
+    }
+
+    // XOR E
+    fn xor_ab(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::E);
+        4
+    }
+
+    // XOR H
+    fn xor_ac(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::H);
+        4
+    }
+
+    // XOR L
+    fn xor_ad(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::L);
+        4
+    }
+
+    // XOR (HL)
+    fn xor_ae(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // XOR A
+    fn xor_af(cpu: &mut Cpu) -> u8 {
+        cpu.xor_a_n(Regs::A);
+        4
+    }
+
+    // OR B
+    fn or_b0(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::B);
+        4
+    }
+
+    // OR C
+    fn or_b1(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::C);
+        4
+    }
+
+    // OR D
+    fn or_b2(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::D);
+        4
+    }
+
+    // OR E
+    fn or_b3(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::E);
+        4
+    }
+
+    // OR H
+    fn or_b4(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::H);
+        4
+    }
+
+    // OR L
+    fn or_b5(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::L);
+        4
+    }
+
+    // OR (HL)
+    fn or_b6(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // OR A
+    fn or_b7(cpu: &mut Cpu) -> u8 {
+        cpu.or_a_n(Regs::A);
+        4
+    }
+
+    // CP B
+    fn cp_b8(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::B);
+        4
+    }
+
+    // CP C
+    fn cp_b9(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::C);
+        4
+    }
+
+    // CP D
+    fn cp_ba(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::D);
+        4
+    }
+
+    // CP E
+    fn cp_bb(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::E);
+        4
+    }
+
+    // CP H
+    fn cp_bc(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::H);
+        4
+    }
+
+    // CP L
+    fn cp_bd(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::L);
+        4
+    }
+
+    // CP (HL)
+    fn cp_be(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // CP A
+    fn cp_bf(cpu: &mut Cpu) -> u8 {
+        cpu.cp_a_n(Regs::A);
+        4
+    }
+
+    // RET NZ
+    fn ret_c0(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 20 // Or 8?
+    }
+
+    // POP BC
+    fn pop_c1(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // JP NZ, a16
+    fn jp_c2(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16 // Or 12?
+    }
+
+    // JP a16
+    fn jp_c3(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // CALL NZ, a16
+    fn call_c4(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 24 // Or 12?
+    }
+
+    // PUSH BC
+    fn push_c5(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // ADD A, d8
+    fn add_c6(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.add_a_d8(val, false);
+        8
+    }
+
+    // RST 00H
+    fn rst_c7(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // RET Z
+    fn ret_c8(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 20 // Or 8?
+    }
+
+    // RET
+    fn ret_c9(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // JP Z, a16
+    fn jp_ca(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16 // Or 12?
+    }
+
+    // PREFIX CB
+    fn prefix(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // CALL Z, a16
+    fn call_cc(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 24 // Or 12?
+    }
+
+    // CALL a16
+    fn call_cd(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 24
+    }
+
+    // ADC A, d8
+    fn adc_ce(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.add_a_d8(val, true);
+        8
+    }
+
+    // RST 08H
+    fn rst_cf(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // RET NC
+    fn ret_d0(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 20 // Or 8?
+    }
+
+    // POP DE
+    fn pop_d1(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // JP NC, a16
+    fn jp_d2(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16 // Or 12?
+    }
+
+    // CALL NC, a16
+    fn call_d4(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 24 // Or 12?
+    }
+
+    // PUSH DE
+    fn push_d5(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // SUB d8
+    fn sub_d6(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.sub_a_d8(val, false);
+        8
+    }
+
+    // RST 10H
+    fn rst_d7(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // RET C
+    fn ret_d8(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 20 // Or 8?
+    }
+
+    // RETI
+    fn reti_d9(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // JP C, a16
+    fn jp_da(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16 // Or 12?
+    }
+
+    // CALL C, a16
+    fn call_dc(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 24 // Or 12?
+    }
+
+    // SBC A, d8
+    fn sbc_de(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.sub_a_d8(val, true);
+        8
+    }
+
+    // RST 18H
+    fn rst_df(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // LDH (a8), A
+    fn ldh_e0(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // POP HL
+    fn pop_e1(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // LD (C), A
+    fn ld_e2(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // PUSH HL
+    fn push_e5(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // AND d8
+    fn and_e6(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.and_a_d8(val);
+        8
+    }
+
+    // RST 20H
+    fn rst_e7(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // ADD SP, r8
+    fn add_e8(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // JP (HL)
+    fn jp_e9(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // LD (a16), A
+    fn ld_ea(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // XOR d8
+    fn xor_ee(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.xor_a_d8(val);
+        8
+    }
+
+    // RST 28H
+    fn rst_ef(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // LDH A, (a8)
+    fn ldh_f0(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // POP AF
+    fn pop_f1(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // LD A, (C)
+    fn ld_f2(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // DI
+    fn di(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // PUSH AF
+    fn push_f5(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // OR d8
+    fn or_f6(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.or_a_d8(val);
+        8
+    }
+
+    // RST 30H
+    fn rst_f7(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // LD HL, SP+r8
+    fn ld_f8(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 12
+    }
+
+    // LD SP, HL
+    fn ld_f9(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 8
+    }
+
+    // LD A, (a16)
+    fn ld_fa(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
+    }
+
+    // EI
+    fn ei(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 4
+    }
+
+    // CP d8
+    fn cp_fe(cpu: &mut Cpu) -> u8 {
+        let val = cpu.fetch();
+        cpu.cp_a_d8(val);
+        8
+    }
+
+    // RST 38H
+    fn rst_ff(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode");
+        // 16
     }
 }
