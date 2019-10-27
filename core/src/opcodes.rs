@@ -1,5 +1,4 @@
 // Borrowed some of the implementation from here: https://github.com/blackxparade/Rust-Boy/blob/master/Emulator/src/cpu/opcode.rs
-use crate::alu::*;
 use crate::cpu::*;
 
 pub struct Opcode {
@@ -15,7 +14,7 @@ impl Opcode {
 
     pub fn execute(self, cpu: &mut Cpu, opcode: u8) -> u8 {
         cpu.pc += 1;
-        self.op[opcode as usize](&mut cpu)
+        self.op[opcode as usize](cpu)
     }
 
     // Set up opcode lookup table
@@ -279,12 +278,12 @@ impl Opcode {
         self.op[0xFF] = Opcode::rst_ff;
     }
 
-    fn invalid(cpu: &mut Cpu) -> u8 {
+    fn invalid(_cpu: &mut Cpu) -> u8 {
         panic!("Invalid opcode");
     }
 
     // NOP
-    fn nop(cpu: &mut Cpu) -> u8 {
+    fn nop(_cpu: &mut Cpu) -> u8 {
         4
     }
 
@@ -341,7 +340,9 @@ impl Opcode {
 
     // ADD HL, BC
     fn add_09(cpu: &mut Cpu) -> u8 {
-        cpu.add_nn_nn(Regs::H, Regs::L, Regs::B, Regs::C);
+        let high_byte = cpu.get_reg(Regs::B);
+        let low_byte = cpu.get_reg(Regs::C);
+        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
         8
     }
 
@@ -441,7 +442,9 @@ impl Opcode {
 
     // ADD HL, DE
     fn add_19(cpu: &mut Cpu) -> u8 {
-        cpu.add_nn_nn(Regs::H, Regs::L, Regs::D, Regs::E);
+        let high_byte = cpu.get_reg(Regs::D);
+        let low_byte = cpu.get_reg(Regs::E);
+        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
         8
     }
 
@@ -541,7 +544,9 @@ impl Opcode {
 
     // ADD HL, HL
     fn add_29(cpu: &mut Cpu) -> u8 {
-        cpu.add_nn_nn(Regs::H, Regs::L, Regs::H, Regs::L);
+        let high_byte = cpu.get_reg(Regs::H);
+        let low_byte = cpu.get_reg(Regs::L);
+        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
         8
     }
 
@@ -641,7 +646,9 @@ impl Opcode {
 
     // ADD HL, SP
     fn add_39(cpu: &mut Cpu) -> u8 {
-        cpu.add_nn_16(Regs::H, Regs::L, cpu.sp.get_high_byte(), cpu.sp.get_low_byte());
+        let high_byte = cpu.sp.get_high_byte();
+        let low_byte = cpu.sp.get_low_byte();
+        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
         8
     }
 
@@ -684,37 +691,43 @@ impl Opcode {
 
     // LD B, B
     fn ld_40(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD B, C
     fn ld_41(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD B, D
     fn ld_42(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD B, E
     fn ld_43(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD B, H
     fn ld_44(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD B, L
     fn ld_45(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
@@ -726,43 +739,50 @@ impl Opcode {
 
     // LD B, A
     fn ld_47(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::B, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::B, byte);
         4
     }
 
     // LD C, B
     fn ld_48(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD C, C
     fn ld_49(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD C, D
     fn ld_4a(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD C, E
     fn ld_4b(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD C, H
     fn ld_4c(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD C, L
     fn ld_4d(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
@@ -774,43 +794,50 @@ impl Opcode {
 
     // LD C, A
     fn ld_4f(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::C, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::C, byte);
         4
     }
 
     // LD D, B
     fn ld_50(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD D, C
     fn ld_51(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD D, D
     fn ld_52(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD D, E
     fn ld_53(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD D, H
     fn ld_54(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD D, L
     fn ld_55(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
@@ -822,43 +849,50 @@ impl Opcode {
 
     // LD D, A
     fn ld_57(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::D, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::D, byte);
         4
     }
 
     // LD E, B
     fn ld_58(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD E, C
     fn ld_59(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD E, D
     fn ld_5a(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD E, E
     fn ld_5b(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD E, H
     fn ld_5c(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD E, L
     fn ld_5d(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
@@ -870,43 +904,50 @@ impl Opcode {
 
     // LD E, A
     fn ld_5f(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::E, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::E, byte);
         4
     }
 
     // LD H, B
     fn ld_60(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD H, C
     fn ld_61(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD H, D
     fn ld_62(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD H, E
     fn ld_63(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD H, H
     fn ld_64(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD H, L
     fn ld_65(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
@@ -918,43 +959,50 @@ impl Opcode {
 
     // LD H, A
     fn ld_67(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::H, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::H, byte);
         4
     }
 
     // LD L, B
     fn ld_68(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
     // LD L, C
     fn ld_69(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
     // LD L, D
     fn ld_6a(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
     // LD L, E
     fn ld_6b(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
     // LD L, H
     fn ld_6c(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
     // LD L, L
     fn ld_6d(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
@@ -966,7 +1014,8 @@ impl Opcode {
 
     // LD L, A
     fn ld_6f(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::L, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::L, byte);
         4
     }
 
@@ -1020,37 +1069,43 @@ impl Opcode {
 
     // LD A, B
     fn ld_78(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::B);
+        let byte = cpu.get_reg(Regs::B);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // LD A, C
     fn ld_79(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::C);
+        let byte = cpu.get_reg(Regs::C);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // LD A, D
     fn ld_7a(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::D);
+        let byte = cpu.get_reg(Regs::D);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // LD A, E
     fn ld_7b(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::E);
+        let byte = cpu.get_reg(Regs::E);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // LD A, H
     fn ld_7c(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::H);
+        let byte = cpu.get_reg(Regs::H);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // LD A, L
     fn ld_7d(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::L);
+        let byte = cpu.get_reg(Regs::L);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
@@ -1062,43 +1117,50 @@ impl Opcode {
 
     // LD A, A
     fn ld_7f(cpu: &mut Cpu) -> u8 {
-        cpu.ld_n_n(Regs::A, Regs::A);
+        let byte = cpu.get_reg(Regs::A);
+        cpu.ld_n_d8(Regs::A, byte);
         4
     }
 
     // ADD A, B
     fn add_80(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::B, false);
+        let val = cpu.get_reg(Regs::B);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADD A, C
     fn add_81(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::C, false);
+        let val = cpu.get_reg(Regs::C);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADD A, D
     fn add_82(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::D, false);
+        let val = cpu.get_reg(Regs::D);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADD A, E
     fn add_83(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::E, false);
+        let val = cpu.get_reg(Regs::E);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADD A, H
     fn add_84(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::H, false);
+        let val = cpu.get_reg(Regs::H);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADD A, L
     fn add_85(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::L, false);
+        let val = cpu.get_reg(Regs::L);
+        cpu.add_a_d8(val, false);
         4
     }
 
@@ -1110,43 +1172,50 @@ impl Opcode {
 
     // ADD A, A
     fn add_87(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::A, false);
+        let val = cpu.get_reg(Regs::A);
+        cpu.add_a_d8(val, false);
         4
     }
 
     // ADC A, B
     fn adc_88(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::B, true);
+        let val = cpu.get_reg(Regs::B);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // ADC A, C
     fn adc_89(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::C, true);
+        let val = cpu.get_reg(Regs::C);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // ADC A, D
     fn adc_8a(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::D, true);
+        let val = cpu.get_reg(Regs::D);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // ADC A, E
     fn adc_8b(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::E, true);
+        let val = cpu.get_reg(Regs::E);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // ADC A, H
     fn adc_8c(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::H, true);
+        let val = cpu.get_reg(Regs::H);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // ADC A, L
     fn adc_8d(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::L, true);
+        let val = cpu.get_reg(Regs::L);
+        cpu.add_a_d8(val, true);
         4
     }
 
@@ -1158,43 +1227,50 @@ impl Opcode {
 
     // ADC A, A
     fn adc_8f(cpu: &mut Cpu) -> u8 {
-        cpu.add_a_n(Regs::A, true);
+        let val = cpu.get_reg(Regs::A);
+        cpu.add_a_d8(val, true);
         4
     }
 
     // SUB B
     fn sub_90(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::B, false);
+        let val = cpu.get_reg(Regs::B);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SUB C
     fn sub_91(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::C, false);
+        let val = cpu.get_reg(Regs::C);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SUB D
     fn sub_92(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::D, false);
+        let val = cpu.get_reg(Regs::D);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SUB E
     fn sub_93(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::E, false);
+        let val = cpu.get_reg(Regs::E);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SUB H
     fn sub_94(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::H, false);
+        let val = cpu.get_reg(Regs::H);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SUB L
     fn sub_95(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::L, false);
+        let val = cpu.get_reg(Regs::L);
+        cpu.sub_a_d8(val, false);
         4
     }
 
@@ -1206,43 +1282,50 @@ impl Opcode {
 
     // SUB A
     fn sub_97(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::A, false);
+        let val = cpu.get_reg(Regs::A);
+        cpu.sub_a_d8(val, false);
         4
     }
 
     // SBC A, B
     fn sbc_98(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::B, true);
+        let val = cpu.get_reg(Regs::B);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // SBC A, C
     fn sbc_99(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::C, true);
+        let val = cpu.get_reg(Regs::C);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // SBC A, D
     fn sbc_9a(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::D, true);
+        let val = cpu.get_reg(Regs::D);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // SBC A, E
     fn sbc_9b(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::E, true);
+        let val = cpu.get_reg(Regs::E);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // SBC A, H
     fn sbc_9c(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::H, true);
+        let val = cpu.get_reg(Regs::H);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // SBC A, L
     fn sbc_9d(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::L, true);
+        let val = cpu.get_reg(Regs::L);
+        cpu.sub_a_d8(val, true);
         4
     }
 
@@ -1254,43 +1337,50 @@ impl Opcode {
 
     // SBC A, A
     fn sbc_9f(cpu: &mut Cpu) -> u8 {
-        cpu.sub_a_n(Regs::A, true);
+        let val = cpu.get_reg(Regs::A);
+        cpu.sub_a_d8(val, true);
         4
     }
 
     // AND B
     fn and_a0(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::B);
+        let val = cpu.get_reg(Regs::B);
+        cpu.and_a_d8(val);
         4
     }
 
     // AND C
     fn and_a1(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::C);
+        let val = cpu.get_reg(Regs::C);
+        cpu.and_a_d8(val);
         4
     }
 
     // AND D
     fn and_a2(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::D);
+        let val = cpu.get_reg(Regs::D);
+        cpu.and_a_d8(val);
         4
     }
 
     // AND E
     fn and_a3(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::E);
+        let val = cpu.get_reg(Regs::E);
+        cpu.and_a_d8(val);
         4
     }
 
     // AND H
     fn and_a4(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::H);
+        let val = cpu.get_reg(Regs::H);
+        cpu.and_a_d8(val);
         4
     }
 
     // AND L
     fn and_a5(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::L);
+        let val = cpu.get_reg(Regs::L);
+        cpu.and_a_d8(val);
         4
     }
 
@@ -1302,43 +1392,50 @@ impl Opcode {
 
     // AND A
     fn and_a7(cpu: &mut Cpu) -> u8 {
-        cpu.and_a_n(Regs::A);
+        let val = cpu.get_reg(Regs::A);
+        cpu.and_a_d8(val);
         4
     }
 
     // XOR B
     fn xor_a8(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::B);
+        let val = cpu.get_reg(Regs::B);
+        cpu.xor_a_d8(val);
         4
     }
 
     // XOR C
     fn xor_a9(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::C);
+        let val = cpu.get_reg(Regs::C);
+        cpu.xor_a_d8(val);
         4
     }
 
     // XOR D
     fn xor_aa(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::D);
+        let val = cpu.get_reg(Regs::D);
+        cpu.xor_a_d8(val);
         4
     }
 
     // XOR E
     fn xor_ab(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::E);
+        let val = cpu.get_reg(Regs::E);
+        cpu.xor_a_d8(val);
         4
     }
 
     // XOR H
     fn xor_ac(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::H);
+        let val = cpu.get_reg(Regs::H);
+        cpu.xor_a_d8(val);
         4
     }
 
     // XOR L
     fn xor_ad(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::L);
+        let val = cpu.get_reg(Regs::L);
+        cpu.xor_a_d8(val);
         4
     }
 
@@ -1350,43 +1447,50 @@ impl Opcode {
 
     // XOR A
     fn xor_af(cpu: &mut Cpu) -> u8 {
-        cpu.xor_a_n(Regs::A);
+        let val = cpu.get_reg(Regs::A);
+        cpu.xor_a_d8(val);
         4
     }
 
     // OR B
     fn or_b0(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::B);
+        let val = cpu.get_reg(Regs::B);
+        cpu.or_a_d8(val);
         4
     }
 
     // OR C
     fn or_b1(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::C);
+        let val = cpu.get_reg(Regs::C);
+        cpu.or_a_d8(val);
         4
     }
 
     // OR D
     fn or_b2(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::D);
+        let val = cpu.get_reg(Regs::D);
+        cpu.or_a_d8(val);
         4
     }
 
     // OR E
     fn or_b3(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::E);
+        let val = cpu.get_reg(Regs::E);
+        cpu.or_a_d8(val);
         4
     }
 
     // OR H
     fn or_b4(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::H);
+        let val = cpu.get_reg(Regs::H);
+        cpu.or_a_d8(val);
         4
     }
 
     // OR L
     fn or_b5(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::L);
+        let val = cpu.get_reg(Regs::L);
+        cpu.or_a_d8(val);
         4
     }
 
@@ -1398,43 +1502,50 @@ impl Opcode {
 
     // OR A
     fn or_b7(cpu: &mut Cpu) -> u8 {
-        cpu.or_a_n(Regs::A);
+        let val = cpu.get_reg(Regs::A);
+        cpu.or_a_d8(val);
         4
     }
 
     // CP B
     fn cp_b8(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::B);
+        let val = cpu.get_reg(Regs::B);
+        cpu.cp_a_d8(val);
         4
     }
 
     // CP C
     fn cp_b9(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::C);
+        let val = cpu.get_reg(Regs::C);
+        cpu.cp_a_d8(val);
         4
     }
 
     // CP D
     fn cp_ba(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::D);
+        let val = cpu.get_reg(Regs::D);
+        cpu.cp_a_d8(val);
         4
     }
 
     // CP E
     fn cp_bb(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::E);
+        let val = cpu.get_reg(Regs::E);
+        cpu.cp_a_d8(val);
         4
     }
 
     // CP H
     fn cp_bc(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::H);
+        let val = cpu.get_reg(Regs::H);
+        cpu.cp_a_d8(val);
         4
     }
 
     // CP L
     fn cp_bd(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::L);
+        let val = cpu.get_reg(Regs::L);
+        cpu.cp_a_d8(val);
         4
     }
 
@@ -1446,7 +1557,8 @@ impl Opcode {
 
     // CP A
     fn cp_bf(cpu: &mut Cpu) -> u8 {
-        cpu.cp_a_n(Regs::A);
+        let val = cpu.get_reg(Regs::A);
+        cpu.cp_a_d8(val);
         4
     }
 
