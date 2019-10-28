@@ -2,7 +2,8 @@ use std::fs::File;
 use std::io::Read;
 
 pub const BYTE: u8 = 8;
-const RAM_SIZE: usize = 65535;
+const RAM_SIZE: usize = 0xFFFF;
+const ROM_SIZE: usize = 0xFFFFFFFF;
 
 pub enum Flags {
     Z,
@@ -21,6 +22,26 @@ pub enum Regs {
     F,
     H,
     L
+}
+
+pub trait ModifyBits {
+    fn get_bit(&self, digit: u8) -> bool;
+    fn set_bit(&mut self, digit: u8, val: bool);
+}
+
+impl ModifyBits for u8 {
+    // Bits are organized as 0b7654_3210
+    fn get_bit(&self, digit: u8) -> bool {
+        let mut mask = 0b1;
+        mask <<= digit;
+        self & mask != 0
+    }
+
+    fn set_bit(&mut self, digit: u8, val: bool) {
+        let mut mask = if val { 1 } else { 0 };
+        mask <<= digit;
+        *self |= mask;
+    }
 }
 
 pub trait ModifyBytes {
@@ -64,14 +85,15 @@ pub struct Cpu {
     pub f: u8,
     pub h: u8,
     pub l: u8,
-    pub ram: [u8; RAM_SIZE]
+    pub ram: [u8; RAM_SIZE],
+    pub rom: [u8; ROM_SIZE]
 }
 
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
             pc: 0,
-            sp: 0,
+            sp: 0xFFFE,
             a: 0,
             b: 0,
             c: 0,
@@ -80,19 +102,19 @@ impl Cpu {
             f: 0,
             h: 0,
             l: 0,
-            ram: [0; RAM_SIZE]
+            ram: [0; RAM_SIZE],
+            rom: [0; ROM_SIZE]
         }
     }
 
     pub fn load_game(&mut self, path: &str) {
         let mut buffer: Vec<u8> = Vec::new();
         let mut f = File::open(path).expect("Error opening ROM");
-
         f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
 
-        // for i in 0x100..buffer.len() {
-        //     self.ram[i] = buffer[i];
-        // }
+        for i in 0..buffer.len() {
+            self.rom[i] = buffer[i];
+        }
     }
 
     pub fn tick(&mut self) {
@@ -107,6 +129,14 @@ impl Cpu {
 
     pub fn set_byte(&mut self, data: u8, index: usize) {
         self.ram[index] = data;
+    }
+
+    pub fn read_ram(self, address: u16) -> u8 {
+        self.ram[address as usize]
+    }
+
+    pub fn write_ram(&mut self, address: u16, val: u8) {
+        self.ram[address as usize] = val;
     }
 
     pub fn get_reg(self, r: Regs) -> u8 {
@@ -162,6 +192,14 @@ impl Cpu {
         }
     }
 
+    pub fn write_flag(&mut self, f: Flags, val: bool) {
+        if val {
+            self.set_flag(f);
+        } else {
+            self.clear_flag(f);
+        }
+    }
+
     pub fn ld_n_d8(&mut self, reg: Regs, byte: u8) {
         self.set_reg(reg, byte);
     }
@@ -176,13 +214,8 @@ impl Cpu {
         val += 1;
         self.set_reg(reg, val);
         self.clear_flag(Flags::N);
-        if val == 0 {
-            self.clear_flag(Flags::Z);
-            self.clear_flag(Flags::H);
-        } else {
-            self.set_flag(Flags::Z);
-            self.set_flag(Flags::H);
-        }
+        self.write_flag(Flags::Z, val == 0);
+        self.write_flag(Flags::H, val == 0);
     }
 
     // TODO: Can probably infer high reg from low
@@ -202,17 +235,8 @@ impl Cpu {
         val -= 1;
         self.set_reg(reg, val);
         self.set_flag(Flags::N);
-        if val == 0xFF {
-            self.set_flag(Flags::H);
-        } else {
-            self.clear_flag(Flags::H);
-        }
-
-        if val == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
+        self.write_flag(Flags::H, val == 0xFF);
+        self.write_flag(Flags::Z, val == 0);
     }
 
     pub fn dec_16(&mut self, high_reg: Regs, low_reg: Regs) {
@@ -232,20 +256,9 @@ impl Cpu {
 
         let sum = (self.get_reg(Regs::A) as u16) + (val as u16) + carry;
         self.clear_flag(Flags::N);
-        if sum > 0xFF {
-            self.set_flag(Flags::C);
-            self.set_flag(Flags::H);
-        } else {
-            self.clear_flag(Flags::C);
-            self.clear_flag(Flags::H);
-        }
-
-        if sum == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
-
+        self.write_flag(Flags::C, sum > 0xFF);
+        self.write_flag(Flags::H, sum > 0xFF);
+        self.write_flag(Flags::Z, sum == 0);
         self.set_reg(Regs::A, sum as u8);
     }
 
@@ -258,17 +271,8 @@ impl Cpu {
         let upper_sum = (high as u16) + (high_val as u16);
         let carry = if lower_sum > 0xFF { 1 } else { 0 };
 
-        if carry == 1 {
-            self.set_flag(Flags::H);
-        } else {
-            self.clear_flag(Flags::H);
-        }
-
-        if upper_sum + carry > 0xFF {
-            self.set_flag(Flags::C);
-        } else {
-            self.clear_flag(Flags::C);
-        }
+        self.write_flag(Flags::H, lower_sum > 0xFF);
+        self.write_flag(Flags::C, upper_sum + carry > 0xFF);
 
         self.set_reg(low_target, lower_sum.get_low_byte());
         self.set_reg(high_target, ((upper_sum << BYTE) + lower_sum).get_high_byte());
@@ -282,21 +286,9 @@ impl Cpu {
 
         let diff: i16 = (self.get_reg(Regs::A) as i16) - (val as i16) - carry;
         self.set_flag(Flags::N);
-
-        if diff == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
-
-        if diff < 0 {
-            self.set_flag(Flags::H);
-            self.set_flag(Flags::C);
-        } else {
-            self.clear_flag(Flags::H);
-            self.clear_flag(Flags::C);
-        }
-
+        self.write_flag(Flags::Z, diff == 0);
+        self.write_flag(Flags::H, diff < 0);
+        self.write_flag(Flags::C, diff < 0);
         self.set_reg(Regs::A, diff as u8);
     }
 
@@ -306,12 +298,7 @@ impl Cpu {
         self.clear_flag(Flags::N);
         self.set_flag(Flags::H);
         self.clear_flag(Flags::C);
-        if a == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
-
+        self.write_flag(Flags::Z, a == 0);
         self.set_reg(Regs::A, a);
     }
 
@@ -321,38 +308,24 @@ impl Cpu {
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.clear_flag(Flags::C);
-        if a == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
-
+        self.write_flag(Flags::Z, a == 0);
         self.set_reg(Regs::A, a);
     }
 
     pub fn xor_a_d8(&mut self, val: u8) {
-        let mut A = self.get_reg(Regs::A);
-        A ^= val;
+        let mut a = self.get_reg(Regs::A);
+        a ^= val;
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.clear_flag(Flags::C);
-        if A == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
-
-        self.set_reg(Regs::A, A);
+        self.write_flag(Flags::Z, a == 0);
+        self.set_reg(Regs::A, a);
     }
 
     pub fn cp_a_d8(&mut self, val: u8) {
         let diff = (self.get_reg(Regs::A) as i16) - (val as i16);
         self.set_flag(Flags::N);
-        if diff == 0 {
-            self.set_flag(Flags::Z);
-        } else {
-            self.clear_flag(Flags::Z);
-        }
+        self.write_flag(Flags::Z, diff == 0);
         // TODO: H and C flags
     }
 
@@ -360,5 +333,40 @@ impl Cpu {
         self.clear_flag(Flags::Z);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
+    }
+
+    pub fn rrca(&mut self) {
+        let lsb = self.a.get_bit(0);
+        self.a >>= 1;
+        self.a.set_bit(7, lsb);
+
+        self.clear_flag(Flags::Z);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, lsb);
+    }
+
+    pub fn rra(&mut self) {
+        let lsb = self.a.get_bit(0);
+        let old_c = self.get_flag(Flags::C);
+        self.a >>= 1;
+        self.a.set_bit(7, old_c);
+
+        self.clear_flag(Flags::Z);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, lsb);
+    }
+
+    pub fn rla(&mut self) {
+        let msb = self.a.get_bit(7);
+        let old_c = self.get_flag(Flags::C);
+        self.a <<= 1;
+        self.a.set_bit(0, old_c);
+
+        self.clear_flag(Flags::Z);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, msb);
     }
 }
