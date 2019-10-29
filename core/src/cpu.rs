@@ -24,6 +24,14 @@ pub enum Regs {
     L
 }
 
+#[derive(Copy, Clone)]
+pub enum Regs_16 {
+    AF,
+    BC,
+    DE,
+    HL
+}
+
 pub trait ModifyBits {
     fn get_bit(&self, digit: u8) -> bool;
     fn set_bit(&mut self, digit: u8, val: bool);
@@ -146,9 +154,9 @@ impl Cpu {
             Regs::C => { self.c },
             Regs::D => { self.d },
             Regs::E => { self.e },
+            Regs::F => { self.f },
             Regs::H => { self.h },
             Regs::L => { self.l },
-            _ => { panic!("Invalid reg"); }
         }
     }
 
@@ -159,10 +167,57 @@ impl Cpu {
             Regs::C => { self.c = val },
             Regs::D => { self.d = val },
             Regs::E => { self.e = val },
+            Regs::F => { self.f = val },
             Regs::H => { self.h = val },
             Regs::L => { self.l = val },
-            _ => { panic!("Invalid reg"); }
         }
+    }
+
+    pub fn set_reg_16(&mut self, r: Regs_16, val: u16) {
+        let high = val.get_high_byte();
+        let low = val.get_low_byte();
+        match r {
+            Regs_16::AF {
+                self.set_reg(Regs::A, high);
+                self.set_reg(Regs::F, low);
+            },
+            Regs_16::BC {
+                self.set_reg(Regs::B, high);
+                self.set_reg(Regs::C, low);
+            },
+            Regs_16::DE {
+                self.set_reg(Regs::D, high);
+                self.set_reg(Regs::E, low);
+            },
+            Regs_16::HL {
+                self.set_reg(Regs::H, high);
+                self.set_reg(Regs::L, low);
+            }
+        }
+    }
+
+    pub fn get_reg_16(self, r: Regs_16) -> u16 {
+        let mut high: u8;
+        let mut low: u8;
+        match r {
+            Regs_16::AF {
+                high = self.get_reg(Regs::A);
+                low = self.get_reg(Regs::F);
+            },
+            Regs_16::BC {
+                high = self.get_reg(Regs::B);
+                low = self.get_reg(Regs::C);
+            },
+            Regs_16::DE {
+                high = self.get_reg(Regs::D);
+                low = self.get_reg(Regs::E);
+            },
+            Regs_16::HL {
+                high = self.get_reg(Regs::H);
+                low = self.get_reg(Regs::L);
+            }
+        }
+        merge_bytes(high, low)
     }
 
     pub fn set_flag(&mut self, f: Flags) {
@@ -329,44 +384,50 @@ impl Cpu {
         // TODO: H and C flags
     }
 
-    pub fn rlca(&mut self) {
-        self.clear_flag(Flags::Z);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
+    // Stack starts at 0xFFFE, goes down as stack increases
+    pub fn pop(&mut self) -> u16 {
+        let byte1 = self.read_ram(self.sp);
+        let byte2 = self.read_ram(self.sp + 1);
+        let byte = merge_bytes(byte1, byte2);
+        self.pc += 2;
+        byte
     }
 
-    pub fn rrca(&mut self) {
-        let lsb = self.a.get_bit(0);
-        self.a >>= 1;
-        self.a.set_bit(7, lsb);
+    pub fn push(&mut self, val: u16) {
+        let byte1 = val.get_high_byte();
+        let byte2 = val.get_low_byte();
+        self.write_ram(self.pc - 1, byte1);
+        self.write_ram(self.pc, byte2);
+        self.pc -= 2;
+    }
 
-        self.clear_flag(Flags::Z);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
+    pub fn rot_right(&mut self, reg: Regs, carry: bool) {
+        let mut byte = self.get_reg(reg);
+        let lsb = byte.get_bit(0);
+        byte >>= 1;
+        if carry {
+            let old_c = self.get_flag(Flags::C);
+            byte.set_bit(7, old_c);
+        }
+        self.set_reg(reg, byte);
         self.write_flag(Flags::C, lsb);
-    }
-
-    pub fn rra(&mut self) {
-        let lsb = self.a.get_bit(0);
-        let old_c = self.get_flag(Flags::C);
-        self.a >>= 1;
-        self.a.set_bit(7, old_c);
-
-        self.clear_flag(Flags::Z);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
+        self.write_flag(Flags::Z, byte == 0);
+    }
+
+    pub fn rot_left(&mut self, reg: Regs, carry: bool) {
+        let mut byte = self.get_reg(reg);
+        let msb = byte.get_bit(7);
+        byte <<= 1;
+        if carry {
+            let old_c = self.get_flag(Flags::C);
+            byte.set_bit(0, old_c);
+        }
+        self.set_reg(reg, byte);
         self.write_flag(Flags::C, lsb);
-    }
-
-    pub fn rla(&mut self) {
-        let msb = self.a.get_bit(7);
-        let old_c = self.get_flag(Flags::C);
-        self.a <<= 1;
-        self.a.set_bit(0, old_c);
-
-        self.clear_flag(Flags::Z);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
-        self.write_flag(Flags::C, msb);
+        self.write_flag(Flags::Z, byte == 0);
     }
 }
