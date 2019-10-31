@@ -25,60 +25,11 @@ pub enum Regs {
 }
 
 #[derive(Copy, Clone)]
-pub enum Regs_16 {
+pub enum Regs16 {
     AF,
     BC,
     DE,
     HL
-}
-
-pub trait ModifyBits {
-    fn get_bit(&self, digit: u8) -> bool;
-    fn set_bit(&mut self, digit: u8, val: bool);
-}
-
-impl ModifyBits for u8 {
-    // Bits are organized as 0b7654_3210
-    fn get_bit(&self, digit: u8) -> bool {
-        let mut mask = 0b1;
-        mask <<= digit;
-        self & mask != 0
-    }
-
-    fn set_bit(&mut self, digit: u8, val: bool) {
-        let mut mask = if val { 1 } else { 0 };
-        mask <<= digit;
-        *self |= mask;
-    }
-}
-
-pub trait ModifyBytes {
-    fn get_high_byte(&self) -> u8;
-    fn get_low_byte(&self) -> u8;
-    fn set_high_byte(&mut self, val: u8);
-    fn set_low_byte(&mut self, val: u8);
-}
-
-impl ModifyBytes for u16 {
-    fn get_high_byte(&self) -> u8 {
-        (self >> 8) as u8
-    }
-
-    fn get_low_byte(&self) -> u8 {
-        (self & 0xFF) as u8
-    }
-
-    fn set_high_byte(&mut self, val: u8) {
-        *self |= (val as u16) << 8;
-    }
-
-    fn set_low_byte(&mut self, val: u8) {
-        *self |= val as u16;
-    }
-}
-
-pub fn merge_bytes(first: u8, second: u8) -> u16 {
-    ((first as u16) << BYTE) | (second as u16)
 }
 
 #[derive(Copy, Clone)]
@@ -95,6 +46,90 @@ pub struct Cpu {
     pub l: u8,
     pub ram: [u8; RAM_SIZE],
     pub rom: [u8; ROM_SIZE]
+}
+
+pub trait ModifyBits {
+    fn get_bit(&self, digit: u8) -> bool;
+    fn set_bit(&mut self, digit: u8);
+    fn clear_bit(&mut self, digit: u8);
+    fn write_bit(&mut self, digit: u8, val: bool);
+}
+
+impl ModifyBits for u8 {
+    // Bits are organized as 0b7654_3210
+    fn get_bit(&self, digit: u8) -> bool {
+        let mut mask = 0b1;
+        mask <<= digit;
+        self & mask != 0
+    }
+
+    fn set_bit(&mut self, digit: u8) {
+        let mut mask = 0b1;
+        mask <<= digit;
+        *self |= mask;
+    }
+
+    fn clear_bit(&mut self, digit: u8) {
+        let mut mask = 0b1;
+        mask <<= digit;
+        *self &= !mask;
+    }
+
+    fn write_bit(&mut self, digit: u8, val: bool) {
+        if val {
+            self.set_bit(digit);
+        } else {
+            self.clear_bit(digit);
+        }
+    }
+}
+
+// TODO: See if u8 and u16 can be merged. Maybe with generics?
+impl ModifyBits for u16 {
+    fn get_bit(&self, digit: u8) -> bool {
+        let mut mask = 0b1;
+        mask <<= digit;
+        self & mask != 0
+    }
+
+    fn set_bit(&mut self, digit: u8) {
+        let mut mask = 0b1;
+        mask <<= digit;
+        *self |= mask;
+    }
+
+    fn clear_bit(&mut self, digit: u8) {
+        let mut mask = 0b1;
+        mask <<= digit;
+        *self &= !mask;
+    }
+
+    fn write_bit(&mut self, digit: u8, val: bool) {
+        if val {
+            self.set_bit(digit);
+        } else {
+            self.clear_bit(digit);
+        }
+    }
+}
+
+pub trait ModifyBytes {
+    fn get_high_byte(&self) -> u8;
+    fn get_low_byte(&self) -> u8;
+}
+
+impl ModifyBytes for u16 {
+    fn get_high_byte(&self) -> u8 {
+        (self >> 8) as u8
+    }
+
+    fn get_low_byte(&self) -> u8 {
+        (self & 0xFF) as u8
+    }
+}
+
+pub fn merge_bytes(first: u8, second: u8) -> u16 {
+    ((first as u16) << BYTE) | (second as u16)
 }
 
 impl Cpu {
@@ -135,10 +170,6 @@ impl Cpu {
         val
     }
 
-    pub fn set_byte(&mut self, data: u8, index: usize) {
-        self.ram[index] = data;
-    }
-
     pub fn read_ram(self, address: u16) -> u8 {
         self.ram[address as usize]
     }
@@ -173,68 +204,69 @@ impl Cpu {
         }
     }
 
-    pub fn set_reg_16(&mut self, r: Regs_16, val: u16) {
+    pub fn set_reg_16(&mut self, r: Regs16, val: u16) {
         let high = val.get_high_byte();
         let low = val.get_low_byte();
         match r {
-            Regs_16::AF {
+            Regs16::AF => {
                 self.set_reg(Regs::A, high);
                 self.set_reg(Regs::F, low);
             },
-            Regs_16::BC {
+            Regs16::BC => {
                 self.set_reg(Regs::B, high);
                 self.set_reg(Regs::C, low);
             },
-            Regs_16::DE {
+            Regs16::DE => {
                 self.set_reg(Regs::D, high);
                 self.set_reg(Regs::E, low);
             },
-            Regs_16::HL {
+            Regs16::HL => {
                 self.set_reg(Regs::H, high);
                 self.set_reg(Regs::L, low);
             }
         }
     }
 
-    pub fn get_reg_16(self, r: Regs_16) -> u16 {
-        let mut high: u8;
-        let mut low: u8;
+    pub fn get_reg_16(self, r: Regs16) -> u16 {
         match r {
-            Regs_16::AF {
-                high = self.get_reg(Regs::A);
-                low = self.get_reg(Regs::F);
+            Regs16::AF => {
+                let high = self.get_reg(Regs::A);
+                let low = self.get_reg(Regs::F);
+                merge_bytes(high, low)
             },
-            Regs_16::BC {
-                high = self.get_reg(Regs::B);
-                low = self.get_reg(Regs::C);
+            Regs16::BC => {
+                let high = self.get_reg(Regs::B);
+                let low = self.get_reg(Regs::C);
+                merge_bytes(high, low)
             },
-            Regs_16::DE {
-                high = self.get_reg(Regs::D);
-                low = self.get_reg(Regs::E);
+            Regs16::DE => {
+                let high = self.get_reg(Regs::D);
+                let low = self.get_reg(Regs::E);
+                merge_bytes(high, low)
             },
-            Regs_16::HL {
-                high = self.get_reg(Regs::H);
-                low = self.get_reg(Regs::L);
+            Regs16::HL => {
+                let high = self.get_reg(Regs::H);
+                let low = self.get_reg(Regs::L);
+                merge_bytes(high, low)
             }
         }
-        merge_bytes(high, low)
     }
 
     pub fn set_flag(&mut self, f: Flags) {
         match f {
-            Flags::Z => {self.f |= 0b1000_0000},
-            Flags::N => {self.f |= 0b0100_0000},
-            Flags::H => {self.f |= 0b0010_0000},
-            Flags::C => {self.f |= 0b0001_0000},
+            Flags::Z => { self.f |= 0b1000_0000 },
+            Flags::N => { self.f |= 0b0100_0000 },
+            Flags::H => { self.f |= 0b0010_0000 },
+            Flags::C => { self.f |= 0b0001_0000 },
         }
     }
 
     pub fn clear_flag(&mut self, f: Flags) {
         match f {
-            Flags::Z => {self.f &= 0b0111_1111},
-            Flags::N => {self.f &= 0b1011_1111},
-            Flags::H => {self.f &= 0b1101_1111},
-            Flags::C => {self.f &= 0b1110_1111},
+            Flags::Z => { self.f &= 0b0111_1111 },
+            Flags::N => { self.f &= 0b1011_1111 },
+            Flags::H => { self.f &= 0b1101_1111 },
+            Flags::C => { self.f &= 0b1110_1111 },
         }
     }
 
@@ -259,54 +291,52 @@ impl Cpu {
         self.set_reg(reg, byte);
     }
 
-    pub fn ld_nn_d16(&mut self, high_reg: Regs, low_reg: Regs, high_byte: u8, low_byte: u8) {
-        self.set_reg(high_reg, high_byte);
-        self.set_reg(low_reg, low_byte);
+    pub fn ld_nn_d16(&mut self, reg: Regs16, val: u16) {
+        self.set_reg_16(reg, val);
     }
 
     pub fn inc_8(&mut self, reg: Regs) {
-        let mut val = self.get_reg(reg);
-        val += 1;
-        self.set_reg(reg, val);
+        let val = self.get_reg(reg);
+        let old_h = val.get_bit(3);
+        let result = val.wrapping_add(1);
+        self.set_reg(reg, result);
+
         self.clear_flag(Flags::N);
-        self.write_flag(Flags::Z, val == 0);
-        self.write_flag(Flags::H, val == 0);
+        self.write_flag(Flags::Z, result == 0);
+        // Set H flag if overflow 3rd bit
+        let set_h = old_h && !val.get_bit(3);
+        self.write_flag(Flags::H, set_h);
     }
 
-    // TODO: Can probably infer high reg from low
-    pub fn inc_16(&mut self, high_reg: Regs, low_reg: Regs) {
-        let mut low = self.get_reg(low_reg);
-        low += 1;
-        self.set_reg(low_reg, low);
-        // If overflow, increase higher byte
-        if low == 0 {
-            let high = self.get_reg(high_reg);
-            self.set_reg(high_reg, high + 1);
-        }
+    pub fn inc_16(&mut self, reg: Regs16) {
+        let val = self.get_reg_16(reg);
+        let result = val.wrapping_add(1);
+        self.set_reg_16(reg, result);
     }
 
     pub fn dec_8(&mut self, reg: Regs) {
-        let mut val = self.get_reg(reg);
-        val -= 1;
-        self.set_reg(reg, val);
+        let val = self.get_reg(reg);
+        let old_h = val.get_bit(4);
+        let result = val.wrapping_sub(1);
+        self.set_reg(reg, result);
+
         self.set_flag(Flags::N);
-        self.write_flag(Flags::H, val == 0xFF);
-        self.write_flag(Flags::Z, val == 0);
+        self.write_flag(Flags::Z, result == 0);
+        // Set H flag if borrow from 4th bit
+        let set_h = old_h && !val.get_bit(4);
+        self.write_flag(Flags::H, set_h);
     }
 
-    pub fn dec_16(&mut self, high_reg: Regs, low_reg: Regs) {
-        let low = self.get_reg(low_reg);
-        let high = self.get_reg(high_reg);
-        let mut data = merge_bytes(high, low);
-        data -= 1;
-        self.set_reg(high_reg, data.get_high_byte());
-        self.set_reg(low_reg, data.get_low_byte());
+    pub fn dec_16(&mut self, reg: Regs16) {
+        let val = self.get_reg_16(reg);
+        let result = val.wrapping_sub(1);
+        self.set_reg_16(reg, result);
     }
 
     pub fn add_a_d8(&mut self, val: u8, adc: bool) {
-        let carry = 0;
+        let mut carry = 0;
         if adc && self.get_flag(Flags::C) {
-            let carry = 1;
+            carry = 1;
         }
 
         let sum = (self.get_reg(Regs::A) as u16) + (val as u16) + carry;
@@ -317,20 +347,16 @@ impl Cpu {
         self.set_reg(Regs::A, sum as u8);
     }
 
-    pub fn add_nn_d16(&mut self, high_target: Regs, low_target: Regs, high_val: u8, low_val: u8) {
+    pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
+        let target = self.get_reg_16(reg);
+        let old_h = target.get_bit(11);
+        let result = target.overflowing_add(source);
+        let set_h = old_h && !result.0.get_bit(11);
+
+        self.set_reg_16(reg, result.0);
         self.clear_flag(Flags::N);
-        let high = self.get_reg(high_target);
-        let low = self.get_reg(low_target);
-
-        let lower_sum = (low as u16) + (low_val as u16);
-        let upper_sum = (high as u16) + (high_val as u16);
-        let carry = if lower_sum > 0xFF { 1 } else { 0 };
-
-        self.write_flag(Flags::H, lower_sum > 0xFF);
-        self.write_flag(Flags::C, upper_sum + carry > 0xFF);
-
-        self.set_reg(low_target, lower_sum.get_low_byte());
-        self.set_reg(high_target, ((upper_sum << BYTE) + lower_sum).get_high_byte());
+        self.write_flag(Flags::C, result.1);
+        self.write_flag(Flags::H, set_h);
     }
 
     pub fn sub_a_d8(&mut self, val: u8, sbc: bool) {
@@ -407,7 +433,7 @@ impl Cpu {
         byte >>= 1;
         if carry {
             let old_c = self.get_flag(Flags::C);
-            byte.set_bit(7, old_c);
+            byte.write_bit(7, old_c);
         }
         self.set_reg(reg, byte);
         self.write_flag(Flags::C, lsb);
@@ -422,10 +448,10 @@ impl Cpu {
         byte <<= 1;
         if carry {
             let old_c = self.get_flag(Flags::C);
-            byte.set_bit(0, old_c);
+            byte.write_bit(0, old_c);
         }
         self.set_reg(reg, byte);
-        self.write_flag(Flags::C, lsb);
+        self.write_flag(Flags::C, msb);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.write_flag(Flags::Z, byte == 0);

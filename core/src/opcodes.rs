@@ -289,15 +289,16 @@ impl Opcode {
 
     // LD BC, d16
     fn ld_01(cpu: &mut Cpu) -> u8 {
-        let byte1 = cpu.fetch();
-        let byte2 = cpu.fetch();
-        cpu.ld_nn_d16(Regs::B, Regs::C, byte1, byte2);
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let val = merge_bytes(high, low);
+        cpu.ld_nn_d16(Regs16::BC, val);
         12
     }
 
     // LD (BC), A
     fn ld_02(cpu: &mut Cpu) -> u8 {
-        let bc = cpu.get_reg_16(Regs_16::BC);
+        let bc = cpu.get_reg_16(Regs16::BC);
         let val = cpu.get_reg(Regs::A);
         cpu.write_ram(bc, val);
         8
@@ -305,7 +306,7 @@ impl Opcode {
 
     // INC BC
     fn inc_03(cpu: &mut Cpu) -> u8 {
-        cpu.inc_16(Regs::B, Regs::C);
+        cpu.inc_16(Regs16::BC);
         8
     }
 
@@ -346,15 +347,14 @@ impl Opcode {
 
     // ADD HL, BC
     fn add_09(cpu: &mut Cpu) -> u8 {
-        let high_byte = cpu.get_reg(Regs::B);
-        let low_byte = cpu.get_reg(Regs::C);
-        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
+        let bc = cpu.get_reg_16(Regs16::BC);
+        cpu.add_nn_d16(Regs16::HL, bc);
         8
     }
 
     // LD A, (BC)
     fn ld_0a(cpu: &mut Cpu) -> u8 {
-        let bc = cpu.get_reg_16(Regs::BC);
+        let bc = cpu.get_reg_16(Regs16::BC);
         let val = cpu.read_ram(bc);
         cpu.ld_n_d8(Regs::A, val);
         8
@@ -362,7 +362,7 @@ impl Opcode {
 
     // DEC BC
     fn dec_0b(cpu: &mut Cpu) -> u8 {
-        cpu.dec_16(Regs::B, Regs::C);
+        cpu.dec_16(Regs16::BC);
         8
     }
 
@@ -399,15 +399,16 @@ impl Opcode {
 
     // LD DE, d16
     fn ld_11(cpu: &mut Cpu) -> u8 {
-        let byte1 = cpu.fetch();
-        let byte2 = cpu.fetch();
-        cpu.ld_nn_d16(Regs::D, Regs::E, byte1, byte2);
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let val = merge_bytes(high, low);
+        cpu.ld_nn_d16(Regs16::DE, val);
         12
     }
 
     // LD (DE), A
     fn ld_12(cpu: &mut Cpu) -> u8 {
-        let de = cpu.get_reg_16(Regs::DE);
+        let de = cpu.get_reg_16(Regs16::DE);
         let val = cpu.get_reg(Regs::A);
         cpu.write_ram(de, val);
         8
@@ -415,7 +416,7 @@ impl Opcode {
 
     // INC DE
     fn inc_13(cpu: &mut Cpu) -> u8 {
-        cpu.inc_16(Regs::D, Regs::E);
+        cpu.inc_16(Regs16::DE);
         8
     }
 
@@ -453,15 +454,14 @@ impl Opcode {
 
     // ADD HL, DE
     fn add_19(cpu: &mut Cpu) -> u8 {
-        let high_byte = cpu.get_reg(Regs::D);
-        let low_byte = cpu.get_reg(Regs::E);
-        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
+        let de = cpu.get_reg_16(Regs16::DE);
+        cpu.add_nn_d16(Regs::HL, de);
         8
     }
 
     // LD A, (DE)
     fn ld_1a(cpu: &mut Cpu) -> u8 {
-        let de = cpu.get_reg_16(Regs::DE);
+        let de = cpu.get_reg_16(Regs16::DE);
         let val = cpu.read_ram(de);
         cpu.set_reg(Regs::A, val);
         8
@@ -469,7 +469,7 @@ impl Opcode {
 
     // DEC DE
     fn dec_1b(cpu: &mut Cpu) -> u8 {
-        cpu.dec_16(Regs::D, Regs::E);
+        cpu.dec_16(Regs16::DE);
         8
     }
 
@@ -509,25 +509,26 @@ impl Opcode {
 
     // LD HL, d16
     fn ld_21(cpu: &mut Cpu) -> u8 {
-        let byte1 = cpu.fetch();
-        let byte2 = cpu.fetch();
-        cpu.ld_nn_d16(Regs::H, Regs::L, byte1, byte2);
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let val = merge_bytes(high, low);
+        cpu.ld_nn_d16(Regs16::HL, val);
         12
     }
 
     // LD (HL+), A
     fn ld_22(cpu: &mut Cpu) -> u8 {
-        let mut hl = cpu.get_reg_16(Regs::HL);
+        let mut hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.get_reg(Regs::A);
         cpu.write_ram(hl, val);
         hl += 1; // TODO: Add trait for u16
-        cpu.set_reg_16(Regs::HL, hl);
+        cpu.set_reg_16(Regs16::HL, hl);
         8
     }
 
     // INC HL
     fn inc_23(cpu: &mut Cpu) -> u8 {
-        cpu.inc_16(Regs::H, Regs::L);
+        cpu.inc_16(Regs16::HL);
         8
     }
 
@@ -569,25 +570,24 @@ impl Opcode {
 
     // ADD HL, HL
     fn add_29(cpu: &mut Cpu) -> u8 {
-        let high_byte = cpu.get_reg(Regs::H);
-        let low_byte = cpu.get_reg(Regs::L);
-        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
+        let hl = cpu.get_reg_16(Regs16::HL);
+        cpu.add_nn_d16(Regs::HL, hl);
         8
     }
 
     // LD A, (HL+)
     fn ld_2a(cpu: &mut Cpu) -> u8 {
-        let mut hl = cpu.get_reg_16(Regs::HL);
+        let mut hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::A, val);
         hl += 1;
-        cpu.set_reg_16(Regs::HL, hl);
+        cpu.set_reg_16(Regs16::HL, hl);
         8
     }
 
     // DEC HL
     fn dec_2b(cpu: &mut Cpu) -> u8 {
-        cpu.dec_16(Regs::H, Regs::L);
+        cpu.dec_16(Regs16::HL);
         8
     }
 
@@ -639,11 +639,11 @@ impl Opcode {
 
     // LD (HL-), A
     fn ld_32(cpu: &mut Cpu) -> u8 {
-        let mut hl = cpu.get_reg_16(Regs::HL);
+        let mut hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.get_reg(Regs::A);
         cpu.write_ram(hl, val);
         hl -= 1;
-        cpu.set_reg_16(Regs::HL, hl);
+        cpu.set_reg_16(Regs16::HL, hl);
         8
     }
 
@@ -656,7 +656,7 @@ impl Opcode {
 
     // INC (HL)
     fn inc_34(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let mut val = cpu.read_ram(hl);
         val += 1;
         cpu.write_ram(hl, val);
@@ -665,7 +665,7 @@ impl Opcode {
 
     // DEC (HL)
     fn dec_35(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let mut val = cpu.read_ram(hl);
         val -= 1;
         cpu.write_ram(hl, val);
@@ -674,7 +674,7 @@ impl Opcode {
 
     // LD (HL), d8
     fn ld_36(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.fetch();
         cpu.write_ram(hl, val);
         12
@@ -701,19 +701,17 @@ impl Opcode {
 
     // ADD HL, SP
     fn add_39(cpu: &mut Cpu) -> u8 {
-        let high_byte = cpu.sp.get_high_byte();
-        let low_byte = cpu.sp.get_low_byte();
-        cpu.add_nn_d16(Regs::H, Regs::L, high_byte, low_byte);
+        cpu.add_nn_d16(Regs::HL, cpu.sp);
         8
     }
 
     // LD A, (HL-)
     fn ld_3a(cpu: &mut Cpu) -> u8 {
-        let mut hl = cpu.get_reg_16(Regs::HL);
+        let mut hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::A, val);
         hl -= 1;
-        cpu.set_reg_16(Regs::HL, hl);
+        cpu.set_reg_16(Regs16::HL, hl);
         8
     }
 
@@ -795,7 +793,7 @@ impl Opcode {
 
     // LD B, (HL)
     fn ld_46(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::B, val);
         8
@@ -852,7 +850,7 @@ impl Opcode {
 
     // LD C, (HL)
     fn ld_4e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::C, val);
         8
@@ -909,7 +907,7 @@ impl Opcode {
 
     // LD D, (HL)
     fn ld_56(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::D, val);
         8
@@ -966,7 +964,7 @@ impl Opcode {
 
     // LD E, (HL)
     fn ld_5e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::E, val);
         8
@@ -1023,7 +1021,7 @@ impl Opcode {
 
     // LD H, (HL)
     fn ld_66(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::H, val);
         8
@@ -1080,7 +1078,7 @@ impl Opcode {
 
     // LD L, (HL)
     fn ld_6e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::L, val);
         8
@@ -1096,7 +1094,7 @@ impl Opcode {
     // LD (HL), B
     fn ld_70(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::B);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1104,7 +1102,7 @@ impl Opcode {
     // LD (HL), C
     fn ld_71(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::C);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1112,7 +1110,7 @@ impl Opcode {
     // LD (HL), D
     fn ld_72(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::D);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1120,7 +1118,7 @@ impl Opcode {
     // LD (HL), E
     fn ld_73(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::E);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1128,7 +1126,7 @@ impl Opcode {
     // LD (HL), H
     fn ld_74(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::H);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1136,7 +1134,7 @@ impl Opcode {
     // LD (HL), L
     fn ld_75(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::L);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1150,7 +1148,7 @@ impl Opcode {
     // LD (HL), A
     fn ld_77(cpu: &mut Cpu) -> u8 {
         let val = cpu.get_reg(Regs::A);
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.write_ram(hl, val);
         8
     }
@@ -1199,7 +1197,7 @@ impl Opcode {
 
     // LD A, (HL)
     fn ld_7e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.set_reg(Regs::A, val);
         8
@@ -1256,7 +1254,7 @@ impl Opcode {
 
     // ADD A, (HL)
     fn add_86(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.add_a_d8(val, false);
         8
@@ -1313,7 +1311,7 @@ impl Opcode {
 
     // ADC A, (HL)
     fn adc_8e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.add_a_d8(val, true);
         8
@@ -1370,7 +1368,7 @@ impl Opcode {
 
     // SUB (HL)
     fn sub_96(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.sub_a_d8(val, false);
         8
@@ -1427,7 +1425,7 @@ impl Opcode {
 
     // SBC A, (HL)
     fn sbc_9e(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.sub_a_d8(val, true);
         8
@@ -1484,7 +1482,7 @@ impl Opcode {
 
     // AND (HL)
     fn and_a6(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.and_a_d8(val);
         8
@@ -1541,7 +1539,7 @@ impl Opcode {
 
     // XOR (HL)
     fn xor_ae(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.xor_a_d8(val);
         8
@@ -1598,7 +1596,7 @@ impl Opcode {
 
     // OR (HL)
     fn or_b6(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.or_a_d8(val);
         8
@@ -1655,7 +1653,7 @@ impl Opcode {
 
     // CP (HL)
     fn cp_be(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.cp_a_d8(val);
         8
@@ -1682,7 +1680,7 @@ impl Opcode {
     // POP BC
     fn pop_c1(cpu: &mut Cpu) -> u8 {
         let val = cpu.pop();
-        cpu.set_reg_16(Regs::BC, val);
+        cpu.set_reg_16(Regs16::BC, val);
         12
     }
 
@@ -1711,14 +1709,23 @@ impl Opcode {
 
     // CALL NZ, a16
     fn call_c4(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 24 // Or 12?
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        if !cpu.get_flag(Flags::Z) {
+            let addr = merge_bytes(high, low);
+            cpu.push(cpu.pc);
+            cpu.pc = addr;
+            24
+        } else {
+            12
+        }
     }
 
     // PUSH BC
     fn push_c5(cpu: &mut Cpu) -> u8 {
-        let b
-        // 16
+        let bc = cpu.get_reg_16(Regs16::BC);
+        cpu.push(bc);
+        16
     }
 
     // ADD A, d8
@@ -1750,7 +1757,7 @@ impl Opcode {
 
     // RET
     fn ret_c9(cpu: &mut Cpu) -> u8 {
-        self.pc = cpu.pop();
+        cpu.pc = cpu.pop();
         16
     }
 
@@ -1775,14 +1782,26 @@ impl Opcode {
 
     // CALL Z, a16
     fn call_cc(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 24 // Or 12?
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        if cpu.get_flag(Flags::Z) {
+            let addr = merge_bytes(high, low);
+            cpu.push(cpu.pc);
+            cpu.pc = addr;
+            24
+        } else {
+            12
+        }
     }
 
     // CALL a16
     fn call_cd(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 24
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let addr = merge_bytes(high, low);
+        cpu.push(cpu.pc);
+        cpu.pc = addr;
+        24
     }
 
     // ADC A, d8
@@ -1812,7 +1831,7 @@ impl Opcode {
     // POP DE
     fn pop_d1(cpu: &mut Cpu) -> u8 {
         let val = cpu.pop();
-        cpu.set_reg_16(Regs::DE, val);
+        cpu.set_reg_16(Regs16::DE, val);
         12
     }
 
@@ -1831,14 +1850,23 @@ impl Opcode {
 
     // CALL NC, a16
     fn call_d4(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 24 // Or 12?
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        if !cpu.get_flag(Flags::C) {
+            let addr = merge_bytes(high, low);
+            cpu.push(cpu.pc);
+            cpu.pc = addr;
+            24
+        } else {
+            12
+        }
     }
 
     // PUSH DE
     fn push_d5(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let de = cpu.get_reg_16(Regs16::DE);
+        cpu.push(de);
+        16
     }
 
     // SUB d8
@@ -1867,7 +1895,7 @@ impl Opcode {
 
     // RETI
     fn reti_d9(cpu: &mut Cpu) -> u8 {
-        self.pc = cpu.pop();
+        cpu.pc = cpu.pop();
         // TODO: Enable interrupts
         16
     }
@@ -1887,8 +1915,16 @@ impl Opcode {
 
     // CALL C, a16
     fn call_dc(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 24 // Or 12?
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        if cpu.get_flag(Flags::C) {
+            let addr = merge_bytes(high, low);
+            cpu.push(cpu.pc);
+            cpu.pc = addr;
+            24
+        } else {
+            12
+        }
     }
 
     // SBC A, d8
@@ -1906,15 +1942,18 @@ impl Opcode {
     }
 
     // LDH (a8), A
+    // Same as LD $FF00+n A
     fn ldh_e0(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 12
+        let offset = cpu.fetch() as u16;
+        let val = cpu.get_reg(Regs::A);
+        cpu.write_ram(0xFF00 + offset, val);
+        12
     }
 
     // POP HL
     fn pop_e1(cpu: &mut Cpu) -> u8 {
         let val = cpu.pop();
-        cpu.set_reg_16(Regs::HL, val);
+        cpu.set_reg_16(Regs16::HL, val);
         12
     }
 
@@ -1928,8 +1967,9 @@ impl Opcode {
 
     // PUSH HL
     fn push_e5(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let hl = cpu.get_reg_16(Regs16::HL);
+        cpu.push(hl);
+        16
     }
 
     // AND d8
@@ -1954,7 +1994,7 @@ impl Opcode {
 
     // JP (HL)
     fn jp_e9(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.read_ram(hl);
         cpu.pc = val as u16;
         4
@@ -1962,8 +2002,12 @@ impl Opcode {
 
     // LD (a16), A
     fn ld_ea(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let addr = merge_bytes(high, low);
+        let a = cpu.get_reg(Regs::A);
+        cpu.write_ram(addr, a);
+        16
     }
 
     // XOR d8
@@ -1989,7 +2033,7 @@ impl Opcode {
     // POP AF
     fn pop_f1(cpu: &mut Cpu) -> u8 {
         let val = cpu.pop();
-        cpu.set_reg_16(Regs::AF, val);
+        cpu.set_reg_16(Regs16::AF, val);
         12
     }
 
@@ -2007,8 +2051,9 @@ impl Opcode {
 
     // PUSH AF
     fn push_f5(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let af = cpu.get_reg_16(Regs16::AF);
+        cpu.push(af);
+        16
     }
 
     // OR d8
@@ -2033,15 +2078,19 @@ impl Opcode {
 
     // LD SP, HL
     fn ld_f9(cpu: &mut Cpu) -> u8 {
-        let hl = cpu.get_reg_16(Regs::HL);
+        let hl = cpu.get_reg_16(Regs16::HL);
         cpu.sp = hl;
         8
     }
 
     // LD A, (a16)
     fn ld_fa(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let high = cpu.fetch();
+        let low = cpu.fetch();
+        let addr = merge_bytes(high, low);
+        let val = cpu.read_ram(addr);
+        cpu.set_reg(Regs::A, val);
+        16
     }
 
     // EI
