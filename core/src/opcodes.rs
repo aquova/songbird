@@ -2,19 +2,27 @@
 use crate::cpu::*;
 
 pub struct Opcode {
-    pub op: [fn(&mut Cpu) -> u8; 256]
+    op: [fn(&mut Cpu) -> u8; 256],
+    cbop: [fn(&mut Cpu) -> u8; 256]
 }
 
 impl Opcode {
     pub fn new() -> Opcode {
         Opcode {
-            op: [Opcode::invalid; 256]
+            op: [Opcode::invalid; 256],
+            cbop: [Opcode::invalid; 256]
         }
     }
 
-    pub fn execute(self, cpu: &mut Cpu, opcode: u8) -> u8 {
-        cpu.pc += 1;
-        self.op[opcode as usize](cpu)
+    pub fn execute(self, cpu: &mut Cpu) -> u8 {
+        let opcode = cpu.fetch();
+        // If opcode is $CB, then use other opcode table
+        if opcode == 0xcb {
+            // Need to also return 4 additional cycles for $CB opcode
+            self.cbop[opcode as usize](cpu) + 4
+        } else {
+            self.op[opcode as usize](cpu)
+        }
     }
 
     // Set up opcode lookup table
@@ -276,6 +284,263 @@ impl Opcode {
         self.op[0xFD] = Opcode::invalid;
         self.op[0xFE] = Opcode::cp_fe;
         self.op[0xFF] = Opcode::rst_ff;
+
+        self.cbop[0x00] = Opcode::rlc_00;
+        self.cbop[0x01] = Opcode::rlc_01;
+        self.cbop[0x02] = Opcode::rlc_02;
+        self.cbop[0x03] = Opcode::rlc_03;
+        self.cbop[0x04] = Opcode::rlc_04;
+        self.cbop[0x05] = Opcode::rlc_05;
+        self.cbop[0x06] = Opcode::rlc_06;
+        self.cbop[0x07] = Opcode::rlc_07;
+        self.cbop[0x08] = Opcode::rrc_08;
+        self.cbop[0x09] = Opcode::rrc_09;
+        self.cbop[0x0a] = Opcode::rrc_0a;
+        self.cbop[0x0b] = Opcode::rrc_0b;
+        self.cbop[0x0c] = Opcode::rrc_0c;
+        self.cbop[0x0d] = Opcode::rrc_0d;
+        self.cbop[0x0e] = Opcode::rrc_0e;
+        self.cbop[0x0f] = Opcode::rrc_0f;
+        self.cbop[0x10] = Opcode::rl_10;
+        self.cbop[0x11] = Opcode::rl_11;
+        self.cbop[0x12] = Opcode::rl_12;
+        self.cbop[0x13] = Opcode::rl_13;
+        self.cbop[0x14] = Opcode::rl_14;
+        self.cbop[0x15] = Opcode::rl_15;
+        self.cbop[0x16] = Opcode::rl_16;
+        self.cbop[0x17] = Opcode::rl_17;
+        self.cbop[0x18] = Opcode::rr_18;
+        self.cbop[0x19] = Opcode::rr_19;
+        self.cbop[0x1a] = Opcode::rr_1a;
+        self.cbop[0x1b] = Opcode::rr_1b;
+        self.cbop[0x1c] = Opcode::rr_1c;
+        self.cbop[0x1d] = Opcode::rr_1d;
+        self.cbop[0x1e] = Opcode::rr_1e;
+        self.cbop[0x1f] = Opcode::rr_1f;
+        self.cbop[0x20] = Opcode::sla_20;
+        self.cbop[0x21] = Opcode::sla_21;
+        self.cbop[0x22] = Opcode::sla_22;
+        self.cbop[0x23] = Opcode::sla_23;
+        self.cbop[0x24] = Opcode::sla_24;
+        self.cbop[0x25] = Opcode::sla_25;
+        self.cbop[0x26] = Opcode::sla_26;
+        self.cbop[0x27] = Opcode::sla_27;
+        self.cbop[0x28] = Opcode::sra_28;
+        self.cbop[0x29] = Opcode::sra_29;
+        self.cbop[0x2a] = Opcode::sra_2a;
+        self.cbop[0x2b] = Opcode::sra_2b;
+        self.cbop[0x2c] = Opcode::sra_2c;
+        self.cbop[0x2d] = Opcode::sra_2d;
+        self.cbop[0x2e] = Opcode::sra_2e;
+        self.cbop[0x2f] = Opcode::sra_2f;
+        self.cbop[0x30] = Opcode::swap_30;
+        self.cbop[0x31] = Opcode::swap_31;
+        self.cbop[0x32] = Opcode::swap_32;
+        self.cbop[0x33] = Opcode::swap_33;
+        self.cbop[0x34] = Opcode::swap_34;
+        self.cbop[0x35] = Opcode::swap_35;
+        self.cbop[0x36] = Opcode::swap_36;
+        self.cbop[0x37] = Opcode::swap_37;
+        self.cbop[0x38] = Opcode::srl_38;
+        self.cbop[0x39] = Opcode::srl_39;
+        self.cbop[0x3a] = Opcode::srl_3a;
+        self.cbop[0x3b] = Opcode::srl_3b;
+        self.cbop[0x3c] = Opcode::srl_3c;
+        self.cbop[0x3d] = Opcode::srl_3d;
+        self.cbop[0x3e] = Opcode::srl_3e;
+        self.cbop[0x3f] = Opcode::srl_3f;
+        self.cbop[0x40] = Opcode::bit_40;
+        self.cbop[0x41] = Opcode::bit_41;
+        self.cbop[0x42] = Opcode::bit_42;
+        self.cbop[0x43] = Opcode::bit_43;
+        self.cbop[0x44] = Opcode::bit_44;
+        self.cbop[0x45] = Opcode::bit_45;
+        self.cbop[0x46] = Opcode::bit_46;
+        self.cbop[0x47] = Opcode::bit_47;
+        self.cbop[0x48] = Opcode::bit_48;
+        self.cbop[0x49] = Opcode::bit_49;
+        self.cbop[0x4a] = Opcode::bit_4a;
+        self.cbop[0x4b] = Opcode::bit_4b;
+        self.cbop[0x4c] = Opcode::bit_4c;
+        self.cbop[0x4d] = Opcode::bit_4d;
+        self.cbop[0x4e] = Opcode::bit_4e;
+        self.cbop[0x4f] = Opcode::bit_4f;
+        self.cbop[0x50] = Opcode::bit_50;
+        self.cbop[0x51] = Opcode::bit_51;
+        self.cbop[0x52] = Opcode::bit_52;
+        self.cbop[0x53] = Opcode::bit_53;
+        self.cbop[0x54] = Opcode::bit_54;
+        self.cbop[0x55] = Opcode::bit_55;
+        self.cbop[0x56] = Opcode::bit_56;
+        self.cbop[0x57] = Opcode::bit_57;
+        self.cbop[0x58] = Opcode::bit_58;
+        self.cbop[0x59] = Opcode::bit_59;
+        self.cbop[0x5a] = Opcode::bit_5a;
+        self.cbop[0x5b] = Opcode::bit_5b;
+        self.cbop[0x5c] = Opcode::bit_5c;
+        self.cbop[0x5d] = Opcode::bit_5d;
+        self.cbop[0x5e] = Opcode::bit_5e;
+        self.cbop[0x5f] = Opcode::bit_5f;
+        self.cbop[0x60] = Opcode::bit_60;
+        self.cbop[0x61] = Opcode::bit_61;
+        self.cbop[0x62] = Opcode::bit_62;
+        self.cbop[0x63] = Opcode::bit_63;
+        self.cbop[0x64] = Opcode::bit_64;
+        self.cbop[0x65] = Opcode::bit_65;
+        self.cbop[0x66] = Opcode::bit_66;
+        self.cbop[0x67] = Opcode::bit_67;
+        self.cbop[0x68] = Opcode::bit_68;
+        self.cbop[0x69] = Opcode::bit_69;
+        self.cbop[0x6a] = Opcode::bit_6a;
+        self.cbop[0x6b] = Opcode::bit_6b;
+        self.cbop[0x6c] = Opcode::bit_6c;
+        self.cbop[0x6d] = Opcode::bit_6d;
+        self.cbop[0x6e] = Opcode::bit_6e;
+        self.cbop[0x6f] = Opcode::bit_6f;
+        self.cbop[0x70] = Opcode::bit_70;
+        self.cbop[0x71] = Opcode::bit_71;
+        self.cbop[0x72] = Opcode::bit_72;
+        self.cbop[0x73] = Opcode::bit_73;
+        self.cbop[0x74] = Opcode::bit_74;
+        self.cbop[0x75] = Opcode::bit_75;
+        self.cbop[0x76] = Opcode::bit_76;
+        self.cbop[0x77] = Opcode::bit_77;
+        self.cbop[0x78] = Opcode::bit_78;
+        self.cbop[0x79] = Opcode::bit_79;
+        self.cbop[0x7a] = Opcode::bit_7a;
+        self.cbop[0x7b] = Opcode::bit_7b;
+        self.cbop[0x7c] = Opcode::bit_7c;
+        self.cbop[0x7d] = Opcode::bit_7d;
+        self.cbop[0x7e] = Opcode::bit_7e;
+        self.cbop[0x7f] = Opcode::bit_7f;
+        self.cbop[0x80] = Opcode::res_80;
+        self.cbop[0x81] = Opcode::res_81;
+        self.cbop[0x82] = Opcode::res_82;
+        self.cbop[0x83] = Opcode::res_83;
+        self.cbop[0x84] = Opcode::res_84;
+        self.cbop[0x85] = Opcode::res_85;
+        self.cbop[0x86] = Opcode::res_86;
+        self.cbop[0x87] = Opcode::res_87;
+        self.cbop[0x88] = Opcode::res_88;
+        self.cbop[0x89] = Opcode::res_89;
+        self.cbop[0x8a] = Opcode::res_8a;
+        self.cbop[0x8b] = Opcode::res_8b;
+        self.cbop[0x8c] = Opcode::res_8c;
+        self.cbop[0x8d] = Opcode::res_8d;
+        self.cbop[0x8e] = Opcode::res_8e;
+        self.cbop[0x8f] = Opcode::res_8f;
+        self.cbop[0x90] = Opcode::res_90;
+        self.cbop[0x91] = Opcode::res_91;
+        self.cbop[0x92] = Opcode::res_92;
+        self.cbop[0x93] = Opcode::res_93;
+        self.cbop[0x94] = Opcode::res_94;
+        self.cbop[0x95] = Opcode::res_95;
+        self.cbop[0x96] = Opcode::res_96;
+        self.cbop[0x97] = Opcode::res_97;
+        self.cbop[0x98] = Opcode::res_98;
+        self.cbop[0x99] = Opcode::res_99;
+        self.cbop[0x9a] = Opcode::res_9a;
+        self.cbop[0x9b] = Opcode::res_9b;
+        self.cbop[0x9c] = Opcode::res_9c;
+        self.cbop[0x9d] = Opcode::res_9d;
+        self.cbop[0x9e] = Opcode::res_9e;
+        self.cbop[0x9f] = Opcode::res_9f;
+        self.cbop[0xa0] = Opcode::res_a0;
+        self.cbop[0xa1] = Opcode::res_a1;
+        self.cbop[0xa2] = Opcode::res_a2;
+        self.cbop[0xa3] = Opcode::res_a3;
+        self.cbop[0xa4] = Opcode::res_a4;
+        self.cbop[0xa5] = Opcode::res_a5;
+        self.cbop[0xa6] = Opcode::res_a6;
+        self.cbop[0xa7] = Opcode::res_a7;
+        self.cbop[0xa8] = Opcode::res_a8;
+        self.cbop[0xa9] = Opcode::res_a9;
+        self.cbop[0xaa] = Opcode::res_aa;
+        self.cbop[0xab] = Opcode::res_ab;
+        self.cbop[0xac] = Opcode::res_ac;
+        self.cbop[0xad] = Opcode::res_ad;
+        self.cbop[0xae] = Opcode::res_ae;
+        self.cbop[0xaf] = Opcode::res_af;
+        self.cbop[0xb0] = Opcode::res_b0;
+        self.cbop[0xb1] = Opcode::res_b1;
+        self.cbop[0xb2] = Opcode::res_b2;
+        self.cbop[0xb3] = Opcode::res_b3;
+        self.cbop[0xb4] = Opcode::res_b4;
+        self.cbop[0xb5] = Opcode::res_b5;
+        self.cbop[0xb6] = Opcode::res_b6;
+        self.cbop[0xb7] = Opcode::res_b7;
+        self.cbop[0xb8] = Opcode::res_b8;
+        self.cbop[0xb9] = Opcode::res_b9;
+        self.cbop[0xba] = Opcode::res_ba;
+        self.cbop[0xbb] = Opcode::res_bb;
+        self.cbop[0xbc] = Opcode::res_bc;
+        self.cbop[0xbd] = Opcode::res_bd;
+        self.cbop[0xbe] = Opcode::res_be;
+        self.cbop[0xbf] = Opcode::res_bf;
+        self.cbop[0xc0] = Opcode::set_c0;
+        self.cbop[0xc1] = Opcode::set_c1;
+        self.cbop[0xc2] = Opcode::set_c2;
+        self.cbop[0xc3] = Opcode::set_c3;
+        self.cbop[0xc4] = Opcode::set_c4;
+        self.cbop[0xc5] = Opcode::set_c5;
+        self.cbop[0xc6] = Opcode::set_c6;
+        self.cbop[0xc7] = Opcode::set_c7;
+        self.cbop[0xc8] = Opcode::set_c8;
+        self.cbop[0xc9] = Opcode::set_c9;
+        self.cbop[0xca] = Opcode::set_ca;
+        self.cbop[0xcb] = Opcode::set_cb;
+        self.cbop[0xcc] = Opcode::set_cc;
+        self.cbop[0xcd] = Opcode::set_cd;
+        self.cbop[0xce] = Opcode::set_ce;
+        self.cbop[0xcf] = Opcode::set_cf;
+        self.cbop[0xd0] = Opcode::set_d0;
+        self.cbop[0xd1] = Opcode::set_d1;
+        self.cbop[0xd2] = Opcode::set_d2;
+        self.cbop[0xd3] = Opcode::set_d3;
+        self.cbop[0xd4] = Opcode::set_d4;
+        self.cbop[0xd5] = Opcode::set_d5;
+        self.cbop[0xd6] = Opcode::set_d6;
+        self.cbop[0xd7] = Opcode::set_d7;
+        self.cbop[0xd8] = Opcode::set_d8;
+        self.cbop[0xd9] = Opcode::set_d9;
+        self.cbop[0xda] = Opcode::set_da;
+        self.cbop[0xdb] = Opcode::set_db;
+        self.cbop[0xdc] = Opcode::set_dc;
+        self.cbop[0xdd] = Opcode::set_dd;
+        self.cbop[0xde] = Opcode::set_de;
+        self.cbop[0xdf] = Opcode::set_df;
+        self.cbop[0xe0] = Opcode::set_e0;
+        self.cbop[0xe1] = Opcode::set_e1;
+        self.cbop[0xe2] = Opcode::set_e2;
+        self.cbop[0xe3] = Opcode::set_e3;
+        self.cbop[0xe4] = Opcode::set_e4;
+        self.cbop[0xe5] = Opcode::set_e5;
+        self.cbop[0xe6] = Opcode::set_e6;
+        self.cbop[0xe7] = Opcode::set_e7;
+        self.cbop[0xe8] = Opcode::set_e8;
+        self.cbop[0xe9] = Opcode::set_e9;
+        self.cbop[0xea] = Opcode::set_ea;
+        self.cbop[0xeb] = Opcode::set_eb;
+        self.cbop[0xec] = Opcode::set_ec;
+        self.cbop[0xed] = Opcode::set_ed;
+        self.cbop[0xee] = Opcode::set_ee;
+        self.cbop[0xff] = Opcode::set_ef;
+        self.cbop[0xf0] = Opcode::set_f0;
+        self.cbop[0xf1] = Opcode::set_f1;
+        self.cbop[0xf2] = Opcode::set_f2;
+        self.cbop[0xf3] = Opcode::set_f3;
+        self.cbop[0xf4] = Opcode::set_f4;
+        self.cbop[0xf5] = Opcode::set_f5;
+        self.cbop[0xf6] = Opcode::set_f6;
+        self.cbop[0xf7] = Opcode::set_f7;
+        self.cbop[0xf8] = Opcode::set_f8;
+        self.cbop[0xf9] = Opcode::set_f9;
+        self.cbop[0xfa] = Opcode::set_fa;
+        self.cbop[0xfb] = Opcode::set_fb;
+        self.cbop[0xfc] = Opcode::set_fc;
+        self.cbop[0xfd] = Opcode::set_fd;
+        self.cbop[0xfe] = Opcode::set_fe;
+        self.cbop[0xff] = Opcode::set_ff;
     }
 
     fn invalid(_cpu: &mut Cpu) -> u8 {
@@ -1776,8 +2041,7 @@ impl Opcode {
 
     // PREFIX CB
     fn prefix_cb(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 4
+        panic!("Should be using other table!");
     }
 
     // CALL Z, a16
@@ -2111,5 +2375,585 @@ impl Opcode {
         cpu.push(cpu.pc);
         cpu.pc = 0x0038;
         16
+    }
+
+    /* ------------------
+     * $CB Opcode block
+     * ---------------- */
+
+    // RLC B
+    fn rlc_00(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC C
+    fn rlc_01(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC D
+    fn rlc_02(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC E
+    fn rlc_03(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC H
+    fn rlc_04(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC L
+    fn rlc_05(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC (HL)
+    fn rlc_06(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RLC A
+    fn rlc_07(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC B
+    fn rrc_08(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC C
+    fn rrc_09(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC D
+    fn rrc_0a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC E
+    fn rrc_0b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC H
+    fn rrc_0c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC L
+    fn rrc_0d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC (HL)
+    fn rrc_0e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RRC A
+    fn rrc_0f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL B
+    fn rl_10(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL C
+    fn rl_11(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL D
+    fn rl_12(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL E
+    fn rl_13(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL H
+    fn rl_14(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL L
+    fn rl_15(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL (HL)
+    fn rl_16(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RL A
+    fn rl_17(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR B
+    fn rr_18(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR C
+    fn rr_19(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR D
+    fn rr_1a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR E
+    fn rr_1b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR H
+    fn rr_1c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR L
+    fn rr_1d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR (HL)
+    fn rr_1e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // RR A
+    fn rr_1f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA B
+    fn sla_20(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA C
+    fn sla_21(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA D
+    fn sla_22(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA E
+    fn sla_23(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA H
+    fn sla_24(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA L
+    fn sla_25(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA (HL)
+    fn sla_26(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SLA A
+    fn sla_27(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA B
+    fn sra_28(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA C
+    fn sra_29(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA D
+    fn sra_2a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA E
+    fn sra_2b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA H
+    fn sra_2c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA L
+    fn sra_2d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA (HL)
+    fn sra_2e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRA A
+    fn sra_2f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP B
+    fn swap_30(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP C
+    fn swap_31(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP D
+    fn swap_32(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP E
+    fn swap_33(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP H
+    fn swap_34(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP L
+    fn swap_35(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP (HL)
+    fn swap_36(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SWAP A
+    fn swap_37(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL B
+    fn srl_38(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL C
+    fn srl_39(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL D
+    fn srl_3a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL E
+    fn srl_3b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL H
+    fn srl_3c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL L
+    fn srl_3d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL (HL)
+    fn srl_3e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // SRL A
+    fn srl_3f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,B
+    fn bit_40(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,C
+    fn bit_41(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,D
+    fn bit_42(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,E
+    fn bit_43(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,H
+    fn bit_44(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,L
+    fn bit_45(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,(HL)
+    fn bit_46(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 0,A
+    fn bit_47(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,B
+    fn bit_48(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,C
+    fn bit_49(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,D
+    fn bit_4a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,E
+    fn bit_4b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,H
+    fn bit_4c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,L
+    fn bit_4d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,(HL)
+    fn bit_4e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 1,A
+    fn bit_4f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,B
+    fn bit_50(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,C
+    fn bit_51(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,D
+    fn bit_52(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,E
+    fn bit_53(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,H
+    fn bit_54(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,L
+    fn bit_55(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,(HL)
+    fn bit_56(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 2,A
+    fn bit_57(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,B
+    fn bit_58(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,C
+    fn bit_59(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,D
+    fn bit_5a(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,E
+    fn bit_5b(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,H
+    fn bit_5c(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,L
+    fn bit_5d(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,(HL)
+    fn bit_5e(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
+    }
+
+    // BIT 3,A
+    fn bit_5f(cpu: &mut Cpu) -> u8 {
+        panic!("Unimplemented opcode!");
+        // 8
     }
 }
