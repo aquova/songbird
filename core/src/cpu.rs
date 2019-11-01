@@ -338,13 +338,17 @@ impl Cpu {
         if adc && self.get_flag(Flags::C) {
             carry = 1;
         }
+        let a = self.get_reg(Regs::A);
+        let old_h = a.get_bit(3);
+        let result1 = a.overflowing_add(val);
+        let result2 = result1.0.overflowing_add(carry);
+        let set_h = old_h && !result2.0.get_bit(3);
 
-        let sum = (self.get_reg(Regs::A) as u16) + (val as u16) + carry;
         self.clear_flag(Flags::N);
-        self.write_flag(Flags::C, sum > 0xFF);
-        self.write_flag(Flags::H, sum > 0xFF);
-        self.write_flag(Flags::Z, sum == 0);
-        self.set_reg(Regs::A, sum as u8);
+        self.write_flag(Flags::C, result1.1 || result2.1);
+        self.write_flag(Flags::H, set_h);
+        self.write_flag(Flags::Z, result2.0 == 0);
+        self.set_reg(Regs::A, result2.0);
     }
 
     pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
@@ -365,12 +369,17 @@ impl Cpu {
             let carry = 1;
         }
 
-        let diff: i16 = (self.get_reg(Regs::A) as i16) - (val as i16) - carry;
+        let a = self.get_reg(Regs::A);
+        let old_h = a.get_bit(3);
+        let result1 = a.overflowing_sub(val);
+        let result2 = result1.0.overflowing_sub(carry);
+
+        // TODO: Need to do H flags properly
         self.set_flag(Flags::N);
-        self.write_flag(Flags::Z, diff == 0);
+        self.write_flag(Flags::Z, result2.0 == 0);
         self.write_flag(Flags::H, diff < 0);
-        self.write_flag(Flags::C, diff < 0);
-        self.set_reg(Regs::A, diff as u8);
+        self.write_flag(Flags::C, result2.1);
+        self.set_reg(Regs::A, result2.0);
     }
 
     pub fn and_a_d8(&mut self, val: u8) {
@@ -427,6 +436,7 @@ impl Cpu {
         self.pc -= 2;
     }
 
+    // TODO: This might not be right. Not sure if C flag gets swapped in, or just logical/arithmetic
     pub fn rot_right(&mut self, reg: Regs, carry: bool) {
         let mut byte = self.get_reg(reg);
         let lsb = byte.get_bit(0);

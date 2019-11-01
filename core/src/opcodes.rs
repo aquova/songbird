@@ -455,7 +455,7 @@ impl Opcode {
     // ADD HL, DE
     fn add_19(cpu: &mut Cpu) -> u8 {
         let de = cpu.get_reg_16(Regs16::DE);
-        cpu.add_nn_d16(Regs::HL, de);
+        cpu.add_nn_d16(Regs16::HL, de);
         8
     }
 
@@ -571,7 +571,7 @@ impl Opcode {
     // ADD HL, HL
     fn add_29(cpu: &mut Cpu) -> u8 {
         let hl = cpu.get_reg_16(Regs16::HL);
-        cpu.add_nn_d16(Regs::HL, hl);
+        cpu.add_nn_d16(Regs16::HL, hl);
         8
     }
 
@@ -701,7 +701,7 @@ impl Opcode {
 
     // ADD HL, SP
     fn add_39(cpu: &mut Cpu) -> u8 {
-        cpu.add_nn_d16(Regs::HL, cpu.sp);
+        cpu.add_nn_d16(Regs16::HL, cpu.sp);
         8
     }
 
