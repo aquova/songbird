@@ -3,7 +3,6 @@ use std::io::Read;
 
 pub const BYTE: u8 = 8;
 const RAM_SIZE: usize = 0xFFFF;
-const ROM_SIZE: usize = 0xFFFFFFFF;
 
 pub enum Flags {
     Z,
@@ -44,8 +43,8 @@ pub struct Cpu {
     pub f: u8,
     pub h: u8,
     pub l: u8,
-    pub ram: [u8; RAM_SIZE],
-    pub rom: [u8; ROM_SIZE]
+    pub interupt: bool,
+    pub ram: [u8; RAM_SIZE]
 }
 
 pub trait ModifyBits {
@@ -145,8 +144,8 @@ impl Cpu {
             f: 0,
             h: 0,
             l: 0,
-            ram: [0; RAM_SIZE],
-            rom: [0; ROM_SIZE]
+            interupt: false,
+            ram: [0; RAM_SIZE]
         }
     }
 
@@ -155,9 +154,9 @@ impl Cpu {
         let mut f = File::open(path).expect("Error opening ROM");
         f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
 
-        for i in 0..buffer.len() {
-            self.rom[i] = buffer[i];
-        }
+        // for i in 0..buffer.len() {
+        //     self.rom[i] = buffer[i];
+        // }
     }
 
     pub fn tick(&mut self) {
@@ -377,7 +376,7 @@ impl Cpu {
         // TODO: Need to do H flags properly
         self.set_flag(Flags::N);
         self.write_flag(Flags::Z, result2.0 == 0);
-        self.write_flag(Flags::H, diff < 0);
+        self.write_flag(Flags::H, old_h);
         self.write_flag(Flags::C, result2.1);
         self.set_reg(Regs::A, result2.0);
     }
@@ -465,5 +464,26 @@ impl Cpu {
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.write_flag(Flags::Z, byte == 0);
+    }
+
+    pub fn test_bit(&mut self, reg: Regs, digit: u8) {
+        let val = self.get_reg(reg);
+        let bit = val.get_bit(digit);
+
+        self.write_flag(Flags::Z, !bit);
+        self.clear_flag(Flags::N);
+        self.set_flag(Flags::H);
+    }
+
+    pub fn write_bit_n(&mut self, reg: Regs, digit: u8, set: bool) {
+        let mut r = self.get_reg(reg);
+        r.write_bit(digit, set);
+        self.set_reg(reg, r);
+    }
+
+    pub fn write_bit_ram(&mut self, addr: u16, digit: u8, set: bool) {
+        let mut val = self.read_ram(addr);
+        val.write_bit(digit, set);
+        self.write_ram(addr, val);
     }
 }
