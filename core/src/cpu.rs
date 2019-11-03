@@ -131,6 +131,14 @@ pub fn merge_bytes(first: u8, second: u8) -> u16 {
     ((first as u16) << BYTE) | (second as u16)
 }
 
+pub fn check_h_flag_u8(first: u8, second: u8) -> bool {
+    ((first & 0xF) + (second & 0xF)) & 0x10 == 0x10
+}
+
+pub fn check_h_flag_u16(first: u16, second: u16) -> bool {
+    ((first & 0xFFF) + (second & 0xFFF)) & 0x1000 == 0x1000
+}
+
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
@@ -296,14 +304,12 @@ impl Cpu {
 
     pub fn inc_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
-        let old_h = val.get_bit(3);
         let result = val.wrapping_add(1);
+        let set_h = check_h_flag_u8(val, result);
         self.set_reg(reg, result);
 
         self.clear_flag(Flags::N);
         self.write_flag(Flags::Z, result == 0);
-        // Set H flag if overflow 3rd bit
-        let set_h = old_h && !val.get_bit(3);
         self.write_flag(Flags::H, set_h);
     }
 
@@ -315,14 +321,13 @@ impl Cpu {
 
     pub fn dec_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
-        let old_h = val.get_bit(4);
         let result = val.wrapping_sub(1);
+        // TODO: Probably need to check borrow
+        let set_h = check_h_flag_u8(val, result);
         self.set_reg(reg, result);
 
         self.set_flag(Flags::N);
         self.write_flag(Flags::Z, result == 0);
-        // Set H flag if borrow from 4th bit
-        let set_h = old_h && !val.get_bit(4);
         self.write_flag(Flags::H, set_h);
     }
 
@@ -338,13 +343,15 @@ impl Cpu {
             carry = 1;
         }
         let a = self.get_reg(Regs::A);
-        let old_h = a.get_bit(3);
         let result1 = a.overflowing_add(val);
+        let h_check1 = check_h_flag_u8(a, val);
         let result2 = result1.0.overflowing_add(carry);
-        let set_h = old_h && !result2.0.get_bit(3);
+        let h_check2 = check_h_flag_u8(result1.0, carry);
+        let set_h = h_check1 || h_check2;
+        let set_c = result1.1 || result2.1;
 
         self.clear_flag(Flags::N);
-        self.write_flag(Flags::C, result1.1 || result2.1);
+        self.write_flag(Flags::C, set_c);
         self.write_flag(Flags::H, set_h);
         self.write_flag(Flags::Z, result2.0 == 0);
         self.set_reg(Regs::A, result2.0);
@@ -352,9 +359,8 @@ impl Cpu {
 
     pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
         let target = self.get_reg_16(reg);
-        let old_h = target.get_bit(11);
         let result = target.overflowing_add(source);
-        let set_h = old_h && !result.0.get_bit(11);
+        let set_h = check_h_flag_u16(target, source);
 
         self.set_reg_16(reg, result.0);
         self.clear_flag(Flags::N);
@@ -371,12 +377,14 @@ impl Cpu {
         let a = self.get_reg(Regs::A);
         let old_h = a.get_bit(3);
         let result1 = a.overflowing_sub(val);
+        let check_h1 = check_h_flag_u8(a, val);
         let result2 = result1.0.overflowing_sub(carry);
+        let check_h2 = check_h_flag_u8(result1.0, carry);
+        let set_h = check_h1 || check_h2;
 
-        // TODO: Need to do H flags properly
         self.set_flag(Flags::N);
         self.write_flag(Flags::Z, result2.0 == 0);
-        self.write_flag(Flags::H, old_h);
+        self.write_flag(Flags::H, set_h);
         self.write_flag(Flags::C, result2.1);
         self.set_reg(Regs::A, result2.0);
     }
@@ -412,10 +420,12 @@ impl Cpu {
     }
 
     pub fn cp_a_d8(&mut self, val: u8) {
-        let diff = (self.get_reg(Regs::A) as i16) - (val as i16);
-        self.set_flag(Flags::N);
-        self.write_flag(Flags::Z, diff == 0);
-        // TODO: H and C flags
+        let a = self.get_reg(Regs::A);
+        let result = a.overflowing_sub(val);
+
+        self.write_flag(Flags::Z, a == val);
+        // TODO: Check borrowed bit C flag
+        self.write_flag(Flags::C, a < val);
     }
 
     // Stack starts at 0xFFFE, goes down as stack increases

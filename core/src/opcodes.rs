@@ -1,4 +1,3 @@
-// Borrowed some of the implementation from here: https:///github.com/blackxparade/Rust-Boy/blob/master/Emulator/src/cpu/opcode.rs
 use crate::cpu::*;
 
 pub struct Opcode {
@@ -785,7 +784,7 @@ impl Opcode {
         let mut hl = cpu.get_reg_16(Regs16::HL);
         let val = cpu.get_reg(Regs::A);
         cpu.write_ram(hl, val);
-        hl += 1; // TODO: Add trait for u16
+        hl += 1;
         cpu.set_reg_16(Regs16::HL, hl);
         8
     }
@@ -1950,7 +1949,6 @@ impl Opcode {
 
     /// JP NZ, a16
     fn jp_c2(cpu: &mut Cpu) -> u8 {
-        // Is this the right order?
         let low = cpu.fetch();
         let high = cpu.fetch();
         let offset = merge_bytes(high, low);
@@ -2159,7 +2157,7 @@ impl Opcode {
     /// RETI
     fn reti_d9(cpu: &mut Cpu) -> u8 {
         cpu.pc = cpu.pop();
-        // TODO: Enable interrupts
+        cpu.interupt = true;
         16
     }
 
@@ -2251,8 +2249,17 @@ impl Opcode {
 
     /// ADD SP, r8
     fn add_e8(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 16
+        let val = cpu.fetch();
+        let signed = val as i8 as i16 as u16;
+        let result = cpu.sp.overflowing_add(signed);
+        let set_h = check_h_flag_u16(cpu.sp, signed);
+        cpu.sp = result.0;
+
+        cpu.clear_flag(Flags::Z);
+        cpu.clear_flag(Flags::N);
+        cpu.write_flag(Flags::C, result.1);
+        cpu.write_flag(Flags::H, set_h);
+        16
     }
 
     /// JP (HL)
@@ -2288,9 +2295,11 @@ impl Opcode {
     }
 
     /// LDH A, (a8)
+    /// Store $FF00 + n into A
     fn ldh_f0(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 12
+        let val = cpu.fetch();
+        cpu.set_reg(Regs::A, val + 0xFF00);
+        12
     }
 
     /// POP AF
@@ -2301,9 +2310,11 @@ impl Opcode {
     }
 
     /// LD A, (C)
+    /// Store $FF00 + register C into A
     fn ld_f2(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 8
+        let c = cpu.get_reg(Regs::C);
+        cpu.set_reg(Regs::A, 0xFF00 + c);
+        8
     }
 
     /// DI
@@ -2334,9 +2345,11 @@ impl Opcode {
     }
 
     /// LD HL, SP+r8
+    /// Put SP + n into HL
     fn ld_f8(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode");
-        // 12
+        let n = cpu.fetch();
+        cpu.set_reg_16(Regs16::HL, cpu.sp + n as u16);
+        12
     }
 
     /// LD SP, HL
