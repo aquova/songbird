@@ -1,4 +1,5 @@
 use crate::cpu::*;
+use crate::utils::*;
 
 pub struct Opcode {
     op: [fn(&mut Cpu) -> u8; 256],
@@ -2297,8 +2298,9 @@ impl Opcode {
     /// LDH A, (a8)
     /// Store $FF00 + n into A
     fn ldh_f0(cpu: &mut Cpu) -> u8 {
-        let val = cpu.fetch();
-        cpu.set_reg(Regs::A, val + 0xFF00);
+        let offset = cpu.fetch() as u16;
+        let val = cpu.read_ram(0xFF00 + offset);
+        cpu.set_reg(Regs::A, val);
         12
     }
 
@@ -2312,8 +2314,9 @@ impl Opcode {
     /// LD A, (C)
     /// Store $FF00 + register C into A
     fn ld_f2(cpu: &mut Cpu) -> u8 {
-        let c = cpu.get_reg(Regs::C);
-        cpu.set_reg(Regs::A, 0xFF00 + c);
+        let c = cpu.get_reg(Regs::C) as u16;
+        let val = cpu.read_ram(0xFF00 + c);
+        cpu.set_reg(Regs::A, val);
         8
     }
 
@@ -2431,8 +2434,16 @@ impl Opcode {
 
     /// RLC (HL)
     fn rlc_06(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        let hl = cpu.get_reg_16(Regs16::HL);
+        let mut byte = cpu.read_ram(hl);
+        cpu.write_flag(Flags::C, byte.get_bit(7));
+        byte <<= 1;
+        cpu.write_ram(hl, byte);
+
+        cpu.write_flag(Flags::Z, byte == 0);
+        cpu.clear_flag(Flags::N);
+        cpu.clear_flag(Flags::H);
+        8
     }
 
     /// RLC A
@@ -2479,8 +2490,16 @@ impl Opcode {
 
     /// RRC (HL)
     fn rrc_0e(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        let hl = cpu.get_reg_16(Regs16::HL);
+        let mut byte = cpu.read_ram(hl);
+        cpu.write_flag(Flags::C, byte.get_bit(0));
+        byte >>= 1;
+        cpu.write_ram(hl, byte);
+
+        cpu.write_flag(Flags::Z, byte == 0);
+        cpu.clear_flag(Flags::N);
+        cpu.clear_flag(Flags::H);
+        8
     }
 
     /// RRC A
@@ -2527,8 +2546,18 @@ impl Opcode {
 
     /// RL (HL)
     fn rl_16(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        let hl = cpu.get_reg_16(Regs16::HL);
+        let mut byte = cpu.read_ram(hl);
+        let old_c = byte.get_bit(7);
+        cpu.write_flag(Flags::C, byte.get_bit(7));
+        byte <<= 1;
+        byte.write_bit(7, old_c);
+        cpu.write_ram(hl, byte);
+
+        cpu.write_flag(Flags::Z, byte == 0);
+        cpu.clear_flag(Flags::N);
+        cpu.clear_flag(Flags::H);
+        8
     }
 
     /// RL A
@@ -2575,8 +2604,18 @@ impl Opcode {
 
     /// RR (HL)
     fn rr_1e(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        let hl = cpu.get_reg_16(Regs16::HL);
+        let mut byte = cpu.read_ram(hl);
+        let old_c = byte.get_bit(0);
+        cpu.write_flag(Flags::C, byte.get_bit(0));
+        byte >>= 1;
+        byte.write_bit(0, old_c);
+        cpu.write_ram(hl, byte);
+
+        cpu.write_flag(Flags::Z, byte == 0);
+        cpu.clear_flag(Flags::N);
+        cpu.clear_flag(Flags::H);
+        8
     }
 
     /// RR A
@@ -2683,38 +2722,38 @@ impl Opcode {
 
     /// SWAP B
     fn swap_30(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::B);
+        8
     }
 
     /// SWAP C
     fn swap_31(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::C);
+        8
     }
 
     /// SWAP D
     fn swap_32(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::D);
+        8
     }
 
     /// SWAP E
     fn swap_33(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::E);
+        8
     }
 
     /// SWAP H
     fn swap_34(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::H);
+        8
     }
 
     /// SWAP L
     fn swap_35(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::L);
+        8
     }
 
     /// SWAP (HL)
@@ -2725,8 +2764,8 @@ impl Opcode {
 
     /// SWAP A
     fn swap_37(cpu: &mut Cpu) -> u8 {
-        panic!("Unimplemented opcode!");
-        // 8
+        cpu.swap_bits(Regs::A);
+        8
     }
 
     /// SRL B

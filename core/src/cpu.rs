@@ -1,7 +1,7 @@
+use crate::utils::*;
 use std::fs::File;
 use std::io::Read;
 
-pub const BYTE: u8 = 8;
 const RAM_SIZE: usize = 0xFFFF;
 
 pub enum Flags {
@@ -47,97 +47,6 @@ pub struct Cpu {
     pub ram: [u8; RAM_SIZE]
 }
 
-pub trait ModifyBits {
-    fn get_bit(&self, digit: u8) -> bool;
-    fn set_bit(&mut self, digit: u8);
-    fn clear_bit(&mut self, digit: u8);
-    fn write_bit(&mut self, digit: u8, val: bool);
-}
-
-impl ModifyBits for u8 {
-    // Bits are organized as 0b7654_3210
-    fn get_bit(&self, digit: u8) -> bool {
-        let mut mask = 0b1;
-        mask <<= digit;
-        self & mask != 0
-    }
-
-    fn set_bit(&mut self, digit: u8) {
-        let mut mask = 0b1;
-        mask <<= digit;
-        *self |= mask;
-    }
-
-    fn clear_bit(&mut self, digit: u8) {
-        let mut mask = 0b1;
-        mask <<= digit;
-        *self &= !mask;
-    }
-
-    fn write_bit(&mut self, digit: u8, val: bool) {
-        if val {
-            self.set_bit(digit);
-        } else {
-            self.clear_bit(digit);
-        }
-    }
-}
-
-// TODO: See if u8 and u16 can be merged. Maybe with generics?
-impl ModifyBits for u16 {
-    fn get_bit(&self, digit: u8) -> bool {
-        let mut mask = 0b1;
-        mask <<= digit;
-        self & mask != 0
-    }
-
-    fn set_bit(&mut self, digit: u8) {
-        let mut mask = 0b1;
-        mask <<= digit;
-        *self |= mask;
-    }
-
-    fn clear_bit(&mut self, digit: u8) {
-        let mut mask = 0b1;
-        mask <<= digit;
-        *self &= !mask;
-    }
-
-    fn write_bit(&mut self, digit: u8, val: bool) {
-        if val {
-            self.set_bit(digit);
-        } else {
-            self.clear_bit(digit);
-        }
-    }
-}
-
-pub trait ModifyBytes {
-    fn get_high_byte(&self) -> u8;
-    fn get_low_byte(&self) -> u8;
-}
-
-impl ModifyBytes for u16 {
-    fn get_high_byte(&self) -> u8 {
-        (self >> 8) as u8
-    }
-
-    fn get_low_byte(&self) -> u8 {
-        (self & 0xFF) as u8
-    }
-}
-
-pub fn merge_bytes(first: u8, second: u8) -> u16 {
-    ((first as u16) << BYTE) | (second as u16)
-}
-
-pub fn check_h_flag_u8(first: u8, second: u8) -> bool {
-    ((first & 0xF) + (second & 0xF)) & 0x10 == 0x10
-}
-
-pub fn check_h_flag_u16(first: u16, second: u16) -> bool {
-    ((first & 0xFFF) + (second & 0xFFF)) & 0x1000 == 0x1000
-}
 
 impl Cpu {
     pub fn new() -> Cpu {
@@ -171,20 +80,51 @@ impl Cpu {
 
     }
 
+    /// Fetch
+    ///
+    /// Fetches the byte specified by the PC, increments PC by one
+    ///
+    /// Output:
+    ///     Byte at the current PC (u8)
     pub fn fetch(&mut self) -> u8 {
         let val = self.ram[self.pc as usize];
         self.pc += 1;
         val
     }
 
+    /// Read RAM
+    ///
+    /// Returns the byte at the specified address in RAM
+    ///
+    /// Input:
+    ///     Address in RAM (u16)
+    ///
+    /// Output:
+    ///     Byte at specified address (u8)
     pub fn read_ram(self, address: u16) -> u8 {
         self.ram[address as usize]
     }
 
+    /// Write RAM
+    ///
+    /// Writes the specified byte at the specified address
+    ///
+    /// Inputs:
+    ///     Address in RAM (u16)
+    ///     Byte to write (u8)
     pub fn write_ram(&mut self, address: u16, val: u8) {
         self.ram[address as usize] = val;
     }
 
+    /// Get Register
+    ///
+    /// Returns the value stored in the specified register
+    ///
+    /// Input:
+    ///     Desired register (Regs enum value)
+    ///
+    /// Output:
+    ///     Byte stored in register (u8)
     pub fn get_reg(self, r: Regs) -> u8 {
         match r {
             Regs::A => { self.a },
@@ -198,6 +138,13 @@ impl Cpu {
         }
     }
 
+    /// Set register
+    ///
+    /// Sets the specified value into specified register
+    ///
+    /// Input:
+    ///     Desired register (Regs enum value)
+    ///     Byte to store (u8)
     pub fn set_reg(&mut self, r: Regs, val: u8) {
         match r {
             Regs::A => { self.a = val },
@@ -211,6 +158,13 @@ impl Cpu {
         }
     }
 
+    /// Set 16-bit Register
+    ///
+    /// Sets the specified u16 value into joint register
+    ///
+    /// Input:
+    ///     Desired register (Regs16 enum value)
+    ///     Byte to store (u16)
     pub fn set_reg_16(&mut self, r: Regs16, val: u16) {
         let high = val.get_high_byte();
         let low = val.get_low_byte();
@@ -234,6 +188,15 @@ impl Cpu {
         }
     }
 
+    /// Get 16-bit Register
+    ///
+    /// Gets the value stored in the joint 16-bit register
+    ///
+    /// Input:
+    ///     16-bit register (Regs16 enum value)
+    ///
+    /// Output:
+    ///     Value stored in register (u16)
     pub fn get_reg_16(self, r: Regs16) -> u16 {
         match r {
             Regs16::AF => {
@@ -259,6 +222,12 @@ impl Cpu {
         }
     }
 
+    /// Set Flag
+    ///
+    /// Sets the specified flag to True
+    ///
+    /// Input:
+    ///     Flag to set (Flags enum value)
     pub fn set_flag(&mut self, f: Flags) {
         match f {
             Flags::Z => { self.f |= 0b1000_0000 },
@@ -268,6 +237,12 @@ impl Cpu {
         }
     }
 
+    /// Clear Flag
+    ///
+    /// Sets the specified flag to False
+    ///
+    /// Input:
+    ///     Flag to clear (Flags enum value)
     pub fn clear_flag(&mut self, f: Flags) {
         match f {
             Flags::Z => { self.f &= 0b0111_1111 },
@@ -277,6 +252,15 @@ impl Cpu {
         }
     }
 
+    /// Get Flag
+    ///
+    /// Returns whether the specified flag is set or cleared
+    ///
+    /// Input:
+    ///     Flag to return (Flags enum value)
+    ///
+    /// Output:
+    ///     Whether the flag is set or not (bool)
     pub fn get_flag(self, f: Flags) -> bool {
         match f {
             Flags::Z => { return (self.f & 0b1000_0000) != 0 },
@@ -286,6 +270,13 @@ impl Cpu {
         }
     }
 
+    /// Write Flag
+    ///
+    /// Sets the specified flag to true or false
+    ///
+    /// Inputs:
+    ///     Flag to set (Flags enum value)
+    ///     Whether the flag should be set or not (bool)
     pub fn write_flag(&mut self, f: Flags, val: bool) {
         if val {
             self.set_flag(f);
@@ -294,14 +285,34 @@ impl Cpu {
         }
     }
 
+    /// LD N d8
+    ///
+    /// Load 8-bit value into register
+    ///
+    /// Inputs:
+    ///     Register to load (Regs enum value)
+    ///     Value to store (u8)
     pub fn ld_n_d8(&mut self, reg: Regs, byte: u8) {
         self.set_reg(reg, byte);
     }
 
+    /// LD NN d16
+    ///
+    /// Load 16-bit value into joint register
+    ///
+    /// Inputs:
+    ///     Register to load (Regs16 enum value)
+    ///     Value to store (u16)
     pub fn ld_nn_d16(&mut self, reg: Regs16, val: u16) {
         self.set_reg_16(reg, val);
     }
 
+    /// INC d8
+    ///
+    /// Increments specified register
+    ///
+    /// Input:
+    ///     Register to increment (Regs enum value)
     pub fn inc_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
         let result = val.wrapping_add(1);
@@ -313,12 +324,24 @@ impl Cpu {
         self.write_flag(Flags::H, set_h);
     }
 
+    /// INC d16
+    ///
+    /// Increments specified join register
+    ///
+    /// Input:
+    ///     Register to increment (Regs16 enum value)
     pub fn inc_16(&mut self, reg: Regs16) {
         let val = self.get_reg_16(reg);
         let result = val.wrapping_add(1);
         self.set_reg_16(reg, result);
     }
 
+    /// DEC d8
+    ///
+    /// Decrements specified register
+    ///
+    /// Input:
+    ///     Register to decrement (Regs enum value)
     pub fn dec_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
         let result = val.wrapping_sub(1);
@@ -331,12 +354,25 @@ impl Cpu {
         self.write_flag(Flags::H, set_h);
     }
 
+    /// DEC d16
+    ///
+    /// Decrements specified joint register
+    ///
+    /// Input:
+    ///     Register to decrement (Regs16 enum value)
     pub fn dec_16(&mut self, reg: Regs16) {
         let val = self.get_reg_16(reg);
         let result = val.wrapping_sub(1);
         self.set_reg_16(reg, result);
     }
 
+    /// ADD A d8
+    ///
+    /// Adds specified value to A register
+    ///
+    /// Inputs:
+    ///     Value to add to register (u8)
+    ///     Whether or not to add with carry (bool)
     pub fn add_a_d8(&mut self, val: u8, adc: bool) {
         let mut carry = 0;
         if adc && self.get_flag(Flags::C) {
@@ -357,6 +393,13 @@ impl Cpu {
         self.set_reg(Regs::A, result2.0);
     }
 
+    /// ADD NN d16
+    ///
+    /// Adds value to joint 16-bit register
+    ///
+    /// Inputs:
+    ///     Register to add to (Regs16 enum value)
+    ///     Value to add (u16)
     pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
         let target = self.get_reg_16(reg);
         let result = target.overflowing_add(source);
@@ -368,6 +411,13 @@ impl Cpu {
         self.write_flag(Flags::H, set_h);
     }
 
+    /// SUB A d8
+    ///
+    /// Subtract value from A register
+    ///
+    /// Inputs:
+    ///     Value to subtract to A register (u8)
+    ///     Whether or not to subtract with carry
     pub fn sub_a_d8(&mut self, val: u8, sbc: bool) {
         let carry = 0;
         if sbc && self.get_flag(Flags::C) {
@@ -389,6 +439,12 @@ impl Cpu {
         self.set_reg(Regs::A, result2.0);
     }
 
+    /// AND A d8
+    ///
+    /// Boolean AND value with A register
+    ///
+    /// Input:
+    ///     Value to AND with A register (u8)
     pub fn and_a_d8(&mut self, val: u8) {
         let mut a = self.get_reg(Regs::A);
         a &= val;
@@ -399,6 +455,12 @@ impl Cpu {
         self.set_reg(Regs::A, a);
     }
 
+    /// OR A d8
+    ///
+    /// Boolean OR value with A register
+    ///
+    /// Input:
+    ///     Value to OR with A register (u8)
     pub fn or_a_d8(&mut self, val: u8) {
         let mut a = self.get_reg(Regs::A);
         a |= val;
@@ -409,6 +471,12 @@ impl Cpu {
         self.set_reg(Regs::A, a);
     }
 
+    /// XOR A d8
+    ///
+    /// Boolean XOR value with A register
+    ///
+    /// Input:
+    ///     Value to XOR with A register (u8)
     pub fn xor_a_d8(&mut self, val: u8) {
         let mut a = self.get_reg(Regs::A);
         a ^= val;
@@ -419,6 +487,12 @@ impl Cpu {
         self.set_reg(Regs::A, a);
     }
 
+    /// CP A d8
+    ///
+    /// Compare value with A register
+    ///
+    /// Input:
+    ///     Value to compare (u8)
     pub fn cp_a_d8(&mut self, val: u8) {
         let a = self.get_reg(Regs::A);
         let result = a.overflowing_sub(val);
@@ -428,7 +502,13 @@ impl Cpu {
         self.write_flag(Flags::C, a < val);
     }
 
-    // Stack starts at 0xFFFE, goes down as stack increases
+    /// POP
+    ///
+    /// Pops 16-bit value off of stack.
+    /// Stack starts at 0xFFFE, goes down as stack increases
+    ///
+    /// Output:
+    ///     Value on top of stack (u16)
     pub fn pop(&mut self) -> u16 {
         let byte1 = self.read_ram(self.sp);
         let byte2 = self.read_ram(self.sp + 1);
@@ -437,6 +517,12 @@ impl Cpu {
         byte
     }
 
+    /// PUSH
+    ///
+    /// Pushes value onto stack
+    ///
+    /// Input:
+    ///     Value to push onto stack (u16)
     pub fn push(&mut self, val: u16) {
         let byte1 = val.get_high_byte();
         let byte2 = val.get_low_byte();
@@ -445,8 +531,15 @@ impl Cpu {
         self.pc -= 2;
     }
 
-    // TODO: This might not be right. Not sure if C flag gets swapped in, or just logical/arithmetic
+    /// Rotate right
+    ///
+    /// Rotates value in given register right
+    ///
+    /// Inputs:
+    ///     Register to rotate (Regs enum value)
+    ///     Whether or not to push in carry flag (bool)
     pub fn rot_right(&mut self, reg: Regs, carry: bool) {
+        // TODO: This might not be right. Not sure if C flag gets swapped in, or just logical/arithmetic
         let mut byte = self.get_reg(reg);
         let lsb = byte.get_bit(0);
         byte >>= 1;
@@ -461,6 +554,13 @@ impl Cpu {
         self.write_flag(Flags::Z, byte == 0);
     }
 
+    /// Rotate Left
+    ///
+    /// Rotates value in given register left
+    ///
+    /// Inputs:
+    ///     Register to rotate (Regs enum value)
+    ///     Whether or not to push in carry flag (bool)
     pub fn rot_left(&mut self, reg: Regs, carry: bool) {
         let mut byte = self.get_reg(reg);
         let msb = byte.get_bit(7);
@@ -476,6 +576,13 @@ impl Cpu {
         self.write_flag(Flags::Z, byte == 0);
     }
 
+    /// Test Bit
+    ///
+    /// Tests whether or not specified bit is 1 or 0
+    ///
+    /// Inputs:
+    ///     Register to test (Regs enum value)
+    ///     Which bit to test (u8)
     pub fn test_bit(&mut self, reg: Regs, digit: u8) {
         let val = self.get_reg(reg);
         let bit = val.get_bit(digit);
@@ -485,15 +592,50 @@ impl Cpu {
         self.set_flag(Flags::H);
     }
 
+    /// Write Bit in Register
+    ///
+    /// Writes the given value into a value in a register
+    ///
+    /// Inputs:
+    ///     Which register to modify (Regs enum value)
+    ///     Which digit to modify (u8)
+    ///     Whether to set bit to 1 or 0 (bool)
     pub fn write_bit_n(&mut self, reg: Regs, digit: u8, set: bool) {
         let mut r = self.get_reg(reg);
         r.write_bit(digit, set);
         self.set_reg(reg, r);
     }
 
+    /// Write Bit in RAM
+    ///
+    /// Writes the given value into a value in RAM
+    ///
+    /// Inputs:
+    ///     Address to modify (u16)
+    ///     Which digit to modify (u8)
+    ///     Whether to set bit to 1 or 0 (bool)
     pub fn write_bit_ram(&mut self, addr: u16, digit: u8, set: bool) {
         let mut val = self.read_ram(addr);
         val.write_bit(digit, set);
         self.write_ram(addr, val);
+    }
+
+    /// Swap Bits
+    ///
+    /// Swaps the high and low nibbles of 8-bit value
+    ///
+    /// Input:
+    ///     8-bit value to swap bits (Regs enum value)
+    pub fn swap_bits(&mut self, reg: Regs) {
+        let val = self.get_reg(reg);
+        let new_high = val & 0xF;
+        let new_low = (val & 0xF0) >> 4;
+        let new_val = (new_high << 4) | new_low;
+        self.set_reg_16(reg, new_val);
+
+        self.write_flag(Flags::Z, new_val == 0);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.clear_flag(Flags::C);
     }
 }
