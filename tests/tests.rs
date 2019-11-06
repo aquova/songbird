@@ -1,58 +1,164 @@
 extern crate gb_core;
-extern crate rand;
 
 use gb_core::cpu::*;
-use rand::Rng;
-
-fn rand_reg() -> Regs {
-    let index = rand::thread_rng().gen_range(0, 6);
-    match index {
-        0 => { Regs::A }
-        1 => { Regs::B }
-        2 => { Regs::C }
-        3 => { Regs::D }
-        4 => { Regs::E }
-        5 => { Regs::H }
-        6 => { Regs::L }
-        _ => { panic!("Invalid index") }
-    }
-}
+use gb_core::utils::ModifyBytes;
 
 #[test]
-/// Tests register getter and setter
-fn test_regs() {
+/// Test joint 16-bit register operations
+fn test_reg_16() {
     let mut gb = Cpu::new();
-    for _ in 0..100 {
-        let val: u8 = rand::thread_rng().gen_range(0, 0xFF);
-        let reg = rand_reg();
 
-        gb.set_reg(reg, val);
-        let ret = gb.get_reg(reg);
-        assert_eq!(ret, val);
-    }
+    gb.set_reg_16(Regs16::BC, 0xABCD);
+    assert_eq!(gb.b, 0xAB);
+    assert_eq!(gb.c, 0xCD);
+
+    let bc = gb.get_reg_16(Regs16::BC);
+    assert_eq!(bc.get_high_byte(), 0xAB);
+    assert_eq!(bc.get_low_byte(), 0xCD);
 }
 
 #[test]
-/// Tests flags getter and setter
+/// Test flag functions
 fn test_flags() {
     let mut gb = Cpu::new();
 
+    gb.f = 0;
     gb.set_flag(Flags::Z);
-    gb.set_flag(Flags::N);
-    gb.set_flag(Flags::C);
-    gb.set_flag(Flags::H);
-    assert_eq!(gb.get_flag(Flags::Z), true);
-    assert_eq!(gb.get_flag(Flags::N), true);
-    assert_eq!(gb.get_flag(Flags::C), true);
-    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.f, 0b1000_0000);
+    assert!(gb.get_flag(Flags::Z));
 
-    gb.clear_flag(Flags::Z);
+    gb.f = 0xF0;
     gb.clear_flag(Flags::N);
-    gb.clear_flag(Flags::H);
-    gb.clear_flag(Flags::C);
-    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.f, 0b1011_0000);
     assert_eq!(gb.get_flag(Flags::N), false);
-    assert_eq!(gb.get_flag(Flags::C), false);
-    assert_eq!(gb.get_flag(Flags::H), false);
 }
 
+#[test]
+/// Test 8-bit increment
+fn test_inc_8() {
+    let mut gb = Cpu::new();
+
+    assert_eq!(gb.a, 0);
+    assert_eq!(gb.f, 0);
+
+    // Check that basic increment works
+    gb.inc_8(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 1);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Check that C flag is not modified
+    // Check that N flag is always false
+    gb.set_flag(Flags::C);
+    gb.set_flag(Flags::N);
+
+    gb.inc_8(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 2);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    // Check that H flag is set properly
+    gb.a = 0x0F;
+    gb.inc_8(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 0x10);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    // Check that value overflows properly
+    // Check that Z flag is set properly
+    gb.a = 0xFF;
+    gb.inc_8(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 0);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Test 16-bit increment
+fn test_inc_16() {
+    let mut gb = Cpu::new();
+
+    assert_eq!(gb.b, 0);
+    assert_eq!(gb.c, 0);
+    assert_eq!(gb.f, 0);
+
+    // Check that basic increment works
+    // Don't need to test flags - they are not modified
+    gb.inc_16(Regs16::BC);
+    assert_eq!(gb.get_reg_16(Regs16::BC), 1);
+
+    // Check that value overflows properly
+    gb.b = 0xFF;
+    gb.c = 0xFF;
+    gb.inc_16(Regs16::BC);
+    assert_eq!(gb.get_reg_16(Regs16::BC), 0);
+}
+
+// TODO: Add dec tests
+
+#[test]
+/// Test 8-bit addition
+fn test_add_8() {
+    let mut gb = Cpu::new();
+
+    gb.a = 0;
+    gb.f = 0;
+
+    // Test basic addition functionality
+    gb.add_a_d8(1, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 1);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test add with carry
+    gb.set_flag(Flags::C);
+    gb.add_a_d8(1, true);
+
+    assert_eq!(gb.get_reg(Regs::A), 3);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test N flag is always reset
+    gb.set_flag(Flags::N);
+    gb.add_a_d8(1, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 4);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test H flag
+    gb.a = 0x7F;
+    gb.add_a_d8(0x7F, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 0xFE);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test value overflows
+    // Test C flag
+    gb.a = 0xFF;
+    gb.add_a_d8(0x7F, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 0x7E);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}

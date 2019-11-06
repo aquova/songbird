@@ -316,7 +316,7 @@ impl Cpu {
     pub fn inc_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
         let result = val.wrapping_add(1);
-        let set_h = check_h_flag_u8(val, result);
+        let set_h = check_h_flag_u8(val, 1);
         self.set_reg(reg, result);
 
         self.clear_flag(Flags::N);
@@ -346,7 +346,7 @@ impl Cpu {
         let val = self.get_reg(reg);
         let result = val.wrapping_sub(1);
         // TODO: Probably need to check borrow
-        let set_h = check_h_flag_u8(val, result);
+        let set_h = check_h_flag_u8(val, 0xFF);
         self.set_reg(reg, result);
 
         self.set_flag(Flags::N);
@@ -631,7 +631,7 @@ impl Cpu {
         let new_high = val & 0xF;
         let new_low = (val & 0xF0) >> 4;
         let new_val = (new_high << 4) | new_low;
-        self.set_reg_16(reg, new_val);
+        self.set_reg(reg, new_val);
 
         self.write_flag(Flags::Z, new_val == 0);
         self.clear_flag(Flags::N);

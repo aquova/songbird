@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 gb_core = { path = "core" }
-rand = "^0.7.2"
+# rand = "^0.7.2"
 sdl2 = "^0.32.2"
