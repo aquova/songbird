@@ -2253,7 +2253,7 @@ impl Opcode {
         let val = cpu.fetch();
         let signed = val as i8 as i16 as u16;
         let result = cpu.sp.overflowing_add(signed);
-        let set_h = check_h_flag_u16(cpu.sp, signed);
+        let set_h = check_h_carry_u16(cpu.sp, signed);
         cpu.sp = result.0;
 
         cpu.clear_flag(Flags::Z);

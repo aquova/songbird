@@ -131,16 +131,6 @@ fn test_add_8() {
     assert_eq!(gb.get_flag(Flags::H), false);
     assert_eq!(gb.get_flag(Flags::C), false);
 
-    // Test N flag is always reset
-    gb.set_flag(Flags::N);
-    gb.add_a_d8(1, false);
-
-    assert_eq!(gb.get_reg(Regs::A), 4);
-    assert_eq!(gb.get_flag(Flags::Z), false);
-    assert_eq!(gb.get_flag(Flags::N), false);
-    assert_eq!(gb.get_flag(Flags::H), false);
-    assert_eq!(gb.get_flag(Flags::C), false);
-
     // Test H flag
     gb.a = 0x7F;
     gb.add_a_d8(0x7F, false);
@@ -161,4 +151,98 @@ fn test_add_8() {
     assert_eq!(gb.get_flag(Flags::N), false);
     assert_eq!(gb.get_flag(Flags::H), true);
     assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Test 16-bit addition
+fn test_add_16() {
+    let mut gb = Cpu::new();
+
+    gb.b = 0;
+    gb.c = 0;
+    gb.f = 0;
+
+    // Test basic addition functionality
+    gb.add_nn_d16(Regs16::BC, 1);
+
+    assert_eq!(gb.get_reg_16(Regs16::BC), 1);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test H flag
+    gb.b = 0x0F;
+    gb.c = 0xFF;
+    gb.add_nn_d16(Regs16::BC, 0x000F);
+
+    assert_eq!(gb.get_reg_16(Regs16::BC), 0x100E);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test value overflows
+    // Test C flag
+    gb.b = 0x7F;
+    gb.c = 0xFF;
+    gb.add_nn_d16(Regs16::BC, 0x8001);
+
+    assert_eq!(gb.get_reg_16(Regs16::BC), 0);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Test 8-bit subtraction
+fn test_sub() {
+    let mut gb = Cpu::new();
+
+    gb.a = 10;
+    gb.f = 0;
+
+    // Test basic subtraction functionality
+    gb.sub_a_d8(1, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 9);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), true);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test sub with carry
+    gb.set_flag(Flags::C);
+    gb.sub_a_d8(1, true);
+
+    assert_eq!(gb.get_reg(Regs::A), 7);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), true);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test H flag
+    gb.a = 0x10;
+    gb.sub_a_d8(1, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 0x0F);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), true);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    // Test value underflows
+    // Test C flag
+    gb.a = 0x7F;
+    gb.sub_a_d8(0x90, false);
+
+    assert_eq!(gb.get_reg(Regs::A), 0xEF);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), true);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Tests AND operation
+fn test_and() {
+    let mut gb = Cpu::new();
 }

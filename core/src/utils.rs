@@ -79,6 +79,7 @@ impl ModifyBytes for u16 {
     }
 }
 
+/// ```
 /// Merge Bytes
 ///
 /// Inputs:
@@ -87,28 +88,60 @@ impl ModifyBytes for u16 {
 ///
 /// Output:
 ///     u16 combination of two inputs
+/// ```
 pub fn merge_bytes(first: u8, second: u8) -> u16 {
     ((first as u16) << BYTE) | (second as u16)
 }
 
-/// Check H Flag - u8
+/// ```
+/// Check H Carry - u8
 ///
 /// Inputs:
 ///     Two u8 operands
 ///
 /// Outputs:
 ///     Whether or not there has been a carry from 3rd to 4th bit (bool)
-pub fn check_h_flag_u8(first: u8, second: u8) -> bool {
+/// ```
+pub fn check_h_carry_u8(first: u8, second: u8) -> bool {
     ((first & 0xF) + (second & 0xF)) & 0x10 == 0x10
 }
 
-/// Check H Flag - u16
+/// ```
+/// Check H Carry - u16
 ///
 /// Inputs:
 ///     Two u16 operands
 ///
 /// Outputs:
 ///     Whether or not there has been a carry from the 11th to 12th bit (bool)
-pub fn check_h_flag_u16(first: u16, second: u16) -> bool {
+/// ```
+pub fn check_h_carry_u16(first: u16, second: u16) -> bool {
     ((first & 0xFFF) + (second & 0xFFF)) & 0x1000 == 0x1000
+}
+
+/// ```
+/// Check H Borrow - u8
+///
+/// Inputs:
+///     Two u8 operands
+///
+/// Outputs:
+///     Whether or not there has been a borrow from the 4th to 3rd bit (bool)
+/// ```
+pub fn check_h_borrow_u8(first: u8, second: u8) -> bool {
+    (first & 0xF).checked_sub(second & 0xF).is_none()
+}
+
+/// ```
+/// Check H Borrow - u16
+///
+/// Inputs:
+///     Two u16 operands
+///
+/// Outputs:
+///     Whether or not there has been a borrow from the 12th to 11th bit (bool)
+/// ```
+pub fn check_h_borrow_u16(first: u16, second: u16) -> bool {
+    // TODO: See if the two borrow functions can be generic-ized
+    (first & 0xF).checked_sub(second & 0xF).is_none()
 }
