@@ -1,4 +1,6 @@
+use cartridge::ROM;
 use crate::utils::*;
+
 use std::fs::File;
 use std::io::Read;
 
