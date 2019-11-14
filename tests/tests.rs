@@ -245,4 +245,125 @@ fn test_sub() {
 /// Tests AND operation
 fn test_and() {
     let mut gb = Cpu::new();
+
+    gb.a = 0xFF;
+    gb.f = 0;
+
+    gb.and_a_d8(0xAA);
+    assert_eq!(gb.get_reg(Regs::A), 0xAA);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.and_a_d8(0x55);
+    assert_eq!(gb.get_reg(Regs::A), 0);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), true);
+    assert_eq!(gb.get_flag(Flags::C), false);
+}
+
+#[test]
+/// Tests OR operation
+fn test_or() {
+    let mut gb = Cpu::new();
+
+    gb.a = 0;
+    gb.f = 0;
+
+    gb.or_a_d8(0xAA);
+    assert_eq!(gb.get_reg(Regs::A), 0xAA);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.or_a_d8(0);
+    assert_eq!(gb.get_reg(Regs::A), 0xAA);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.a = 0;
+    gb.or_a_d8(0);
+    assert_eq!(gb.get_reg(Regs::A), 0);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+}
+
+#[test]
+/// Tests XOR operation
+fn test_xor() {
+    let mut gb = Cpu::new();
+
+    gb.a = 0;
+    gb.f = 0;
+
+    gb.xor_a_d8(0xAA);
+    assert_eq!(gb.get_reg(Regs::A), 0xAA);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.xor_a_d8(0);
+    assert_eq!(gb.get_reg(Regs::A), 0xAA);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.xor_a_d8(0xAA);
+    assert_eq!(gb.get_reg(Regs::A), 0);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::N), false);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+}
+
+#[test]
+/// Tests CP operation
+fn test_cp() {
+    let mut gb = Cpu::new();
+
+    gb.a = 0;
+    gb.f = 0;
+
+    gb.cp_a_d8(0);
+    assert_eq!(gb.get_reg(Regs::A), 0);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::H), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+}
+
+#[test]
+/// Test push and pop operations
+fn test_stack() {
+    let mut gb = Cpu::new();
+
+    gb.push(0xABCD);
+    gb.push(0x1234);
+    assert_eq!(gb.sp, 0xFFFA);
+    assert_eq!(gb.read_ram(0xFFFB), 0x12);
+    assert_eq!(gb.read_ram(0xFFFC), 0x34);
+    assert_eq!(gb.read_ram(0xFFFD), 0xAB);
+    assert_eq!(gb.read_ram(0xFFFE), 0xCD);
+
+    assert_eq!(gb.pop(), 0x1234);
+    assert_eq!(gb.sp, 0xFFFC);
+    assert_eq!(gb.pop(), 0xABCD);
+    assert_eq!(gb.sp, 0xFFFE);
+}
+
+#[test]
+#[should_panic]
+/// Test invalid stack operation
+fn test_invalid_stack() {
+    // Not much of a test
+    let mut gb = Cpu::new();
+    gb.pop();
 }

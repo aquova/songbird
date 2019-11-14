@@ -558,10 +558,12 @@ impl Cpu {
     ///     Value on top of stack (u16)
     /// ```
     pub fn pop(&mut self) -> u16 {
-        let byte1 = self.read_ram(self.sp);
-        let byte2 = self.read_ram(self.sp + 1);
+        // If at $FFFE, then stack is empty, assert?
+        assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
+        self.sp += 2;
+        let byte1 = self.read_ram(self.sp - 1);
+        let byte2 = self.read_ram(self.sp);
         let byte = merge_bytes(byte1, byte2);
-        self.pc += 2;
         byte
     }
 
@@ -576,9 +578,9 @@ impl Cpu {
     pub fn push(&mut self, val: u16) {
         let byte1 = val.get_high_byte();
         let byte2 = val.get_low_byte();
-        self.write_ram(self.pc - 1, byte1);
-        self.write_ram(self.pc, byte2);
-        self.pc -= 2;
+        self.write_ram(self.sp - 1, byte1);
+        self.write_ram(self.sp, byte2);
+        self.sp -= 2;
     }
 
     /// ```
