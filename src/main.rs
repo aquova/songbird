@@ -4,7 +4,7 @@
 extern crate sdl2;
 
 // Includes
-use gb_core::cpu::*;
+use gb_core::system::Gameboy;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::{env, process};
@@ -31,8 +31,9 @@ pub fn main() {
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut gb = Cpu::new();
-    gb.load_game(&args[1]);
+    let mut gb = Gameboy::new();
+    // let mut game = ROM::new();
+    // game.load_cart(&args[1]);
 
     // Main loop
     'gameloop: loop {
@@ -55,7 +56,7 @@ pub fn main() {
 
         // Game loop
         if !paused {
-            gb.tick();
+            // gb.tick();
             draw();
         }
     }

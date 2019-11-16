@@ -1,5 +1,5 @@
 use crate::cpu::*;
-use crate::utils::*;
+use super::utils::*;
 
 pub struct Opcode {
     op: [fn(&mut Cpu) -> u8; 256],

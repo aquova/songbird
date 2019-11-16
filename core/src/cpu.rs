@@ -1,8 +1,5 @@
-use cartridge::ROM;
+use crate::mmu::RAM;
 use crate::utils::*;
-
-use std::fs::File;
-use std::io::Read;
 
 const RAM_SIZE: usize = 0xFFFF;
 
@@ -46,12 +43,13 @@ pub struct Cpu {
     pub h: u8,
     pub l: u8,
     pub interupt: bool,
-    pub ram: [u8; RAM_SIZE]
+    // pub ram: [u8; RAM_SIZE]
+    pub ram: RAM
 }
 
 
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(ram: RAM) -> Cpu {
         Cpu {
             pc: 0,
             sp: 0xFFFE,
@@ -64,18 +62,9 @@ impl Cpu {
             h: 0,
             l: 0,
             interupt: false,
-            ram: [0; RAM_SIZE]
+            // ram: [0; RAM_SIZE]
+            ram: ram
         }
-    }
-
-    pub fn load_game(&mut self, path: &str) {
-        let mut buffer: Vec<u8> = Vec::new();
-        let mut f = File::open(path).expect("Error opening ROM");
-        f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
-
-        // for i in 0..buffer.len() {
-        //     self.rom[i] = buffer[i];
-        // }
     }
 
     pub fn tick(&mut self) {
@@ -91,7 +80,7 @@ impl Cpu {
     ///     Byte at the current PC (u8)
     /// ```
     pub fn fetch(&mut self) -> u8 {
-        let val = self.ram[self.pc as usize];
+        let val = self.ram.read_byte(self.pc);
         self.pc += 1;
         val
     }
@@ -107,8 +96,8 @@ impl Cpu {
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_ram(self, address: u16) -> u8 {
-        self.ram[address as usize]
+    pub fn read_ram(self, addr: u16) -> u8 {
+        self.ram.read_byte(addr)
     }
 
     /// ```
@@ -120,8 +109,8 @@ impl Cpu {
     ///     Address in RAM (u16)
     ///     Byte to write (u8)
     /// ```
-    pub fn write_ram(&mut self, address: u16, val: u8) {
-        self.ram[address as usize] = val;
+    pub fn write_ram(&mut self, addr: u16, val: u8) {
+        self.ram.write_byte(addr, val);
     }
 
     /// ```
@@ -563,8 +552,8 @@ impl Cpu {
         // If at $FFFE, then stack is empty, assert?
         assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
         self.sp += 2;
-        let byte1 = self.read_ram(self.sp - 1);
-        let byte2 = self.read_ram(self.sp);
+        let byte1 = self.ram.read_byte(self.sp - 1);
+        let byte2 = self.ram.read_byte(self.sp);
         let byte = merge_bytes(byte1, byte2);
         byte
     }
@@ -580,8 +569,8 @@ impl Cpu {
     pub fn push(&mut self, val: u16) {
         let byte1 = val.get_high_byte();
         let byte2 = val.get_low_byte();
-        self.write_ram(self.sp - 1, byte1);
-        self.write_ram(self.sp, byte2);
+        self.ram.write_byte(self.sp - 1, byte1);
+        self.ram.write_byte(self.sp, byte2);
         self.sp -= 2;
     }
 
@@ -679,9 +668,9 @@ impl Cpu {
     ///     Whether to set bit to 1 or 0 (bool)
     /// ```
     pub fn write_bit_ram(&mut self, addr: u16, digit: u8, set: bool) {
-        let mut val = self.read_ram(addr);
+        let mut val = self.ram.read_byte(addr);
         val.write_bit(digit, set);
-        self.write_ram(addr, val);
+        self.ram.write_byte(addr, val);
     }
 
     /// ```
