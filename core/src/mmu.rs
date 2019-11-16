@@ -2,15 +2,14 @@ use crate::cartridge::ROM;
 
 const RAM_SIZE: usize = 0x10000;
 
-#[derive(Copy, Clone)]
 pub struct RAM {
-    pub ram: [u8; RAM_SIZE]
+    ram: [u8; RAM_SIZE],
 }
 
 impl RAM {
     pub fn new() -> RAM {
         RAM {
-            ram: [0; RAM_SIZE]
+            ram: [0; RAM_SIZE],
         }
     }
 

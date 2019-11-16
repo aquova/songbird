@@ -1,15 +1,16 @@
-use std::convert::TryInto;
 use std::fs::File;
 use std::io::Read;
 
 const BANK_SIZE: usize = 0x4000;
 const HEADER_SIZE: usize = 0x50;
 
+#[derive(Copy, Clone)]
 pub enum MBC {
     NONE,
     MBC1,
     MBC2,
-    MBC3
+    MBC3,
+    INVALID
 }
 
 struct Bank {
@@ -26,14 +27,16 @@ impl Bank {
 
 pub struct ROM {
     banks: Vec<Bank>,
-    bank: MBC
+    mbc_type: MBC,
+    header: [u8; HEADER_SIZE]
 }
 
 impl ROM {
     pub fn new() -> ROM {
         ROM {
             banks: Vec::new(),
-            bank: MBC::NONE
+            mbc_type: MBC::INVALID,
+            header: [0; HEADER_SIZE]
         }
     }
 
@@ -51,15 +54,15 @@ impl ROM {
         let mut f = File::open(path).expect("Error opening ROM");
         f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
 
-        // Copy data one bank at a time
-        let mut bank_num = 0;
-        loop {
+        let num_banks = buffer.len() / BANK_SIZE;
+
+        // Assuming that buffer length is multiple of bank size
+        for i in 0..num_banks {
             let mut new_bank = Bank::new();
 
             // Get next bank sized slice
-            // TODO: Need to check that ROM size is multiple of bank size?
-            let starting_index = bank_num * BANK_SIZE;
-            let ending_index = (bank_num + 1) * BANK_SIZE;
+            let starting_index = i * BANK_SIZE;
+            let ending_index = (i + 1) * BANK_SIZE;
             let data = &buffer[starting_index..ending_index];
 
             // Copy data into new bank
@@ -67,13 +70,10 @@ impl ROM {
 
             // Add new bank to bank array
             self.banks.push(new_bank);
-
-            bank_num += 1;
-
-            if (bank_num * BANK_SIZE) >= buffer.len() {
-                break;
-            }
         }
+
+        // Set game header
+        self.set_header();
     }
 
     /// ```
@@ -128,20 +128,15 @@ impl ROM {
         bank.data
     }
 
-    /*
     /// ```
     /// Get Header
     ///
-    /// Returns the header for the game
-    /// Header is the data from $0100 - $014F
-    ///
-    /// Output
-    ///     Returns array of header data
+    /// Sets the header for the game
+    /// Header is the ROM data from $0100 - $014F
     /// ```
-    // pub fn get_header(self) -> [u8; HEADER_SIZE] {
-    //     let bank0 = self.banks[0].data;
-    //     let header = &bank0[0x100..=0x14F];
-    //     header.try_into().unwrap()
-    // }
-    */
+    pub fn set_header(&mut self) {
+        let bank0 = self.banks[0].data;
+        let header_slice = &bank0[0x100..=0x14F];
+        self.header.copy_from_slice(header_slice);
+    }
 }

@@ -1,8 +1,6 @@
 use crate::mmu::RAM;
 use crate::utils::*;
 
-const RAM_SIZE: usize = 0xFFFF;
-
 pub enum Flags {
     Z,
     N,
@@ -43,7 +41,6 @@ pub struct Cpu {
     pub h: u8,
     pub l: u8,
     pub interupt: bool,
-    // pub ram: [u8; RAM_SIZE]
     pub ram: RAM
 }
 
@@ -62,7 +59,6 @@ impl Cpu {
             h: 0,
             l: 0,
             interupt: false,
-            // ram: [0; RAM_SIZE]
             ram: ram
         }
     }

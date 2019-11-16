@@ -13,6 +13,7 @@ impl Gameboy {
         let new_ram = RAM::new();
 
         Gameboy {
+            // Not sure if this is being passed by copy?
             cpu: Cpu::new(new_ram),
             ram: new_ram,
             rom: ROM::new()
