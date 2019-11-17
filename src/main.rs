@@ -4,7 +4,7 @@
 extern crate sdl2;
 
 // Includes
-use gb_core::system::Gameboy;
+use gb_core::bus::Bus;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::{env, process};
