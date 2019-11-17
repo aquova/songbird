@@ -1,4 +1,4 @@
-use crate::mmu::RAM;
+use crate::bus::Bus;
 use crate::utils::*;
 
 pub enum Flags {
@@ -8,7 +8,6 @@ pub enum Flags {
     C
 }
 
-#[derive(Copy, Clone)]
 pub enum Regs {
     A,
     B,
@@ -20,7 +19,6 @@ pub enum Regs {
     L
 }
 
-#[derive(Copy, Clone)]
 pub enum Regs16 {
     AF,
     BC,
@@ -28,7 +26,6 @@ pub enum Regs16 {
     HL
 }
 
-#[derive(Copy, Clone)]
 pub struct Cpu {
     pub pc: u16,
     pub sp: u16,
@@ -41,12 +38,12 @@ pub struct Cpu {
     pub h: u8,
     pub l: u8,
     pub interupt: bool,
-    pub ram: RAM
+    pub bus: Bus,
 }
 
 
 impl Cpu {
-    pub fn new(ram: RAM) -> Cpu {
+    pub fn new(bus: Bus) -> Cpu {
         Cpu {
             pc: 0,
             sp: 0xFFFE,
@@ -59,7 +56,7 @@ impl Cpu {
             h: 0,
             l: 0,
             interupt: false,
-            ram: ram
+            bus: bus
         }
     }
 
@@ -76,7 +73,7 @@ impl Cpu {
     ///     Byte at the current PC (u8)
     /// ```
     pub fn fetch(&mut self) -> u8 {
-        let val = self.ram.read_byte(self.pc);
+        let val = self.read_ram(self.pc);
         self.pc += 1;
         val
     }
@@ -93,7 +90,7 @@ impl Cpu {
     ///     Byte at specified address (u8)
     /// ```
     pub fn read_ram(self, addr: u16) -> u8 {
-        self.ram.read_byte(addr)
+        self.bus.read_ram(addr)
     }
 
     /// ```
@@ -106,7 +103,7 @@ impl Cpu {
     ///     Byte to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        self.ram.write_byte(addr, val);
+        self.bus.write_ram(addr, val);
     }
 
     /// ```
@@ -548,8 +545,8 @@ impl Cpu {
         // If at $FFFE, then stack is empty, assert?
         assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
         self.sp += 2;
-        let byte1 = self.ram.read_byte(self.sp - 1);
-        let byte2 = self.ram.read_byte(self.sp);
+        let byte1 = self.read_ram(self.sp - 1);
+        let byte2 = self.read_ram(self.sp);
         let byte = merge_bytes(byte1, byte2);
         byte
     }
@@ -565,8 +562,8 @@ impl Cpu {
     pub fn push(&mut self, val: u16) {
         let byte1 = val.get_high_byte();
         let byte2 = val.get_low_byte();
-        self.ram.write_byte(self.sp - 1, byte1);
-        self.ram.write_byte(self.sp, byte2);
+        self.write_ram(self.sp - 1, byte1);
+        self.write_ram(self.sp, byte2);
         self.sp -= 2;
     }
 
@@ -664,9 +661,9 @@ impl Cpu {
     ///     Whether to set bit to 1 or 0 (bool)
     /// ```
     pub fn write_bit_ram(&mut self, addr: u16, digit: u8, set: bool) {
-        let mut val = self.ram.read_byte(addr);
+        let mut val = self.read_ram(addr);
         val.write_bit(digit, set);
-        self.ram.write_byte(addr, val);
+        self.write_ram(addr, val);
     }
 
     /// ```

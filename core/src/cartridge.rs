@@ -4,7 +4,6 @@ use std::io::Read;
 const BANK_SIZE: usize = 0x4000;
 const HEADER_SIZE: usize = 0x50;
 
-#[derive(Copy, Clone)]
 pub enum MBC {
     NONE,
     MBC1,

@@ -1,5 +1,3 @@
-use crate::cartridge::ROM;
-
 const RAM_SIZE: usize = 0x10000;
 
 pub struct RAM {
@@ -40,5 +38,4 @@ impl RAM {
     pub fn write_byte(&mut self, address: u16, val: u8) {
         self.ram[address as usize] = val;
     }
-
 }
