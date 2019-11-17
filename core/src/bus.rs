@@ -3,20 +3,18 @@ use crate::mmu::RAM;
 
 pub struct Bus {
     ram: RAM,
-    rom: Box<ROM>
+    rom: ROM
 }
 
 impl Bus {
     pub fn new() -> Bus {
-        let rom = ROM::new();
-
         Bus {
             ram: RAM::new(),
-            rom: Box::new(rom)
+            rom: ROM::new()
         }
     }
 
-    pub fn read_ram(self, addr: u16) -> u8 {
+    pub fn read_ram(&self, addr: u16) -> u8 {
         self.ram.read_byte(addr)
     }
 

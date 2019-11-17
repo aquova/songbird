@@ -8,6 +8,7 @@ pub enum Flags {
     C
 }
 
+#[derive(Copy, Clone)]
 pub enum Regs {
     A,
     B,
@@ -19,6 +20,7 @@ pub enum Regs {
     L
 }
 
+#[derive(Copy, Clone)]
 pub enum Regs16 {
     AF,
     BC,
@@ -89,7 +91,7 @@ impl Cpu {
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_ram(self, addr: u16) -> u8 {
+    pub fn read_ram(&self, addr: u16) -> u8 {
         self.bus.read_ram(addr)
     }
 
@@ -117,7 +119,7 @@ impl Cpu {
     /// Output:
     ///     Byte stored in register (u8)
     /// ```
-    pub fn get_reg(self, r: Regs) -> u8 {
+    pub fn get_reg(&self, r: Regs) -> u8 {
         match r {
             Regs::A => { self.a },
             Regs::B => { self.b },
@@ -195,26 +197,26 @@ impl Cpu {
     /// Output:
     ///     Value stored in register (u16)
     /// ```
-    pub fn get_reg_16(self, r: Regs16) -> u16 {
+    pub fn get_reg_16(&self, r: Regs16) -> u16 {
         match r {
             Regs16::AF => {
-                let high = self.get_reg(Regs::A);
-                let low = self.get_reg(Regs::F);
+                let high = self.a;
+                let low = self.f;
                 merge_bytes(high, low)
             },
             Regs16::BC => {
-                let high = self.get_reg(Regs::B);
-                let low = self.get_reg(Regs::C);
+                let high = self.b;
+                let low = self.c;
                 merge_bytes(high, low)
             },
             Regs16::DE => {
-                let high = self.get_reg(Regs::D);
-                let low = self.get_reg(Regs::E);
+                let high = self.d;
+                let low = self.e;
                 merge_bytes(high, low)
             },
             Regs16::HL => {
-                let high = self.get_reg(Regs::H);
-                let low = self.get_reg(Regs::L);
+                let high = self.h;
+                let low = self.l;
                 merge_bytes(high, low)
             }
         }
@@ -265,7 +267,7 @@ impl Cpu {
     /// Output:
     ///     Whether the flag is set or not (bool)
     /// ```
-    pub fn get_flag(self, f: Flags) -> bool {
+    pub fn get_flag(&self, f: Flags) -> bool {
         match f {
             Flags::Z => { return (self.f & 0b1000_0000) != 0 },
             Flags::N => { return (self.f & 0b0100_0000) != 0 },
