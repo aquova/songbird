@@ -4,11 +4,12 @@
 extern crate sdl2;
 
 // Includes
-use gb_core::bus::Bus;
+use gb_core::cpu::Cpu;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::{env, process};
 
+// Constants
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 const SCALE: u32 = 1;
@@ -24,16 +25,15 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    let window = video_subsystem.window(&args[1], WIDTH, HEIGHT).position_centered().opengl().build().unwrap();
+    let window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
 
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut gb = Gameboy::new();
-    // let mut game = ROM::new();
-    // game.load_cart(&args[1]);
+    let mut gb = Cpu::new();
+    gb.load_game(&args[1]);
 
     // Main loop
     'gameloop: loop {
@@ -56,12 +56,7 @@ pub fn main() {
 
         // Game loop
         if !paused {
-            // gb.tick();
-            draw();
+            gb.tick();
         }
     }
-}
-
-fn draw() {
-
 }

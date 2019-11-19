@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::opcodes::Opcode;
 use crate::utils::*;
 
 pub enum Flags {
@@ -45,7 +46,7 @@ pub struct Cpu {
 
 
 impl Cpu {
-    pub fn new(bus: Bus) -> Cpu {
+    pub fn new() -> Cpu {
         Cpu {
             pc: 0,
             sp: 0xFFFE,
@@ -58,7 +59,7 @@ impl Cpu {
             h: 0,
             l: 0,
             interupt: false,
-            bus: bus
+            bus: Bus::new()
         }
     }
 
@@ -78,6 +79,18 @@ impl Cpu {
         let val = self.read_ram(self.pc);
         self.pc += 1;
         val
+    }
+
+    /// ```
+    /// Load game
+    ///
+    /// Loads game into ROM
+    ///
+    /// Input:
+    ///     Path to game (&str)
+    /// ```
+    pub fn load_game(&mut self, path: &str) {
+        self.bus.load_game(path);
     }
 
     /// ```

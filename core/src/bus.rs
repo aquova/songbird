@@ -5,25 +5,43 @@ const RAM_SIZE: usize = 0x10000;
 /*
  * RAM Map
  *
- * = Read Only =
- * $0000 - $3FFF
- * - ROM bank $00
- * $4000 - $7FFF
- * - ROM bank N
- * $A000 - $BFFF
- * - RAM bank N (if present)
- * =============
- *
- * = Write Only =
- * $0000 - $1FFF
- * Writing $0A enables RAM, else disables
- * $2000 - $3FFF
- * Which bank N to load
- * $4000 - $5FFF
- *
- * $6000 - $7FFF
- * ROM/RAM mode change ($00/$01)
- *
+ * +----Cartridge-ROM-----+ $0000
+ * |                      |
+ * |                      |
+ * |        Bank 0        |
+ * |                      |
+ * |                      |
+ * +----------------------+ $4000
+ * |                      |
+ * |                      |
+ * |        Bank N        |
+ * |                      |
+ * |                      |
+ * +----Internal-RAM------+ $8000
+ * |                      |
+ * |      Video RAM       |
+ * |                      |
+ * +----Cartridge-RAM-----+ $A000
+ * |                      |
+ * |    Switchable RAM    |
+ * |                      |
+ * +----Internal-RAM------+ $C000
+ * |                      |
+ * +----------------------+ $E000
+ * | Echo of Internal RAM |
+ * +----------------------+ $FE00
+ * | Sprite Attribute RAM |
+ * +-----Special-I/O------+ $FEA0
+ * |        Empty         |
+ * +----------------------+ $FF00
+ * |  Special (I/O Ports) |
+ * +----------------------+ $FF4C
+ * |        Empty         |
+ * +----------------------+ $FF80
+ * |     Internal RAM     |
+ * +----------------------+ $FFFE
+ * | Interrupt Enable Reg |
+ * +----------------------+ $FFFF
  *
  */
 
@@ -34,6 +52,9 @@ pub struct Bus {
     mbc: MBC
 }
 
+// ==================
+// = Public methods =
+// ==================
 impl Bus {
     pub fn new() -> Bus {
         Bus {
@@ -83,31 +104,31 @@ impl Bus {
     ///     Value to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        match addr {
-            0x0000..=0x1FFF => {
-                // Enable RAM if $0A written, else disable
-                if val == 0x0A {
-                    self.ram_enabled = true;
-                } else {
-                    self.ram_enabled = false;
-                }
+        match self.mbc {
+            MBC::NONE => {
+                self.ram[addr as usize] = val;
             },
-            0x2000..=0x3FFF => {
-                let bank_n = val & 0x1F;
-                self.bank_switch(bank_n);
+            MBC::MBC1 => {
+                self.write_mbc1(addr, val);
             },
-            0x8000..=0xFFFF => {
-                // TODO: This should not be all writable
-                if self.ram_enabled {
-                    self.ram[addr as usize] = val;
-                }
-            }
-            _ => {
+            MBC::MBC2 => {
+                self.write_mbc2(addr, val);
+            },
+            MBC::MBC3 => {
+                self.write_mbc3(addr, val);
+            },
+            MBC::UNKNOWN => {
                 // Do nothing
             }
         }
     }
 
+}
+
+// ===================
+// = Private methods =
+// ===================
+impl Bus {
     /// ```
     /// Load Bank 0
     ///
@@ -125,7 +146,44 @@ impl Bus {
     /// ```
     fn bank_switch(&mut self, num: u8) {
         let bank = self.rom.get_bank_n(num);
-        let ending_index = 2 * BANK_SIZE - 1;
-        &self.ram[BANK_SIZE..ending_index].copy_from_slice(&bank);
+        &self.ram[0x4000..=0x7FFF].copy_from_slice(&bank);
+    }
+
+    fn write_mbc1(&mut self, addr: u16, val: u8) {
+        match addr {
+            0x0000..=0x1FFF => {
+                // Enable RAM if $0A written, else disable
+                // TODO: Does this write to $FFFF?
+                if val == 0x0A {
+                    self.ram_enabled = true;
+                } else {
+                    self.ram_enabled = false;
+                }
+            },
+            0x2000..=0x3FFF => {
+                let mut bank_n = val & 0x1F;
+                if bank_n == 0 {
+                    bank_n += 1;
+                }
+                self.bank_switch(bank_n);
+            },
+            0x8000..=0xFFFF => {
+                // TODO: This should not be all writable
+                if self.ram_enabled {
+                    self.ram[addr as usize] = val;
+                }
+            }
+            _ => {
+                // Do nothing
+            }
+        }
+    }
+
+    fn write_mbc2(&mut self, addr: u16, val: u8) {
+
+    }
+
+    fn write_mbc3(&mut self, addr: u16, val: u8) {
+
     }
 }
