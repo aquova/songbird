@@ -1,5 +1,5 @@
 use crate::bus::Bus;
-use crate::opcodes::Opcode;
+use crate::opcodes::execute;
 use crate::utils::*;
 
 pub enum Flags {
