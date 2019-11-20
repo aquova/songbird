@@ -123,6 +123,17 @@ impl Bus {
         }
     }
 
+    /// ```
+    /// Get Title
+    ///
+    /// Gets the title of the game
+    ///
+    /// Output:
+    ///     Game title from ROM (&str)
+    /// ```
+    pub fn get_title(&self) -> &str {
+        self.rom.get_title()
+    }
 }
 
 // ===================

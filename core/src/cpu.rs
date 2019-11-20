@@ -63,8 +63,9 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self) {
-
+    pub fn tick(&mut self) -> u8 {
+        let cycles = execute(self);
+        cycles
     }
 
     /// ```

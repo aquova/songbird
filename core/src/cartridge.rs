@@ -1,8 +1,54 @@
 use std::fs::File;
 use std::io::Read;
+use std::str::from_utf8;
 
 pub const BANK_SIZE: usize = 0x4000;
 const HEADER_SIZE: usize = 0x50;
+
+/*
+ * ROM Header Layout
+ * Header runs from $0100-$014F
+ *
+ * +-------------------------+ $100
+ * |       Start Vector      |
+ * +-------------------------+ $104
+ * |      Nintendo Logo      |
+ * +-------------------------+ $134
+ * |       Game Title        |
+ * +-------------------------+ $13F
+ * | Manufacturer Code (GBC) |
+ * +-------------------------+ $143
+ * |        GBC Flag         |
+ * +-------------------------+ $144
+ * |    New Licensee Code    |
+ * +-------------------------+ $146
+ * |        SGB Flag         |
+ * +-------------------------+ $147
+ * |     Cartridge Type      |
+ * +-------------------------+ $148
+ * |        ROM Size         |
+ * +-------------------------+ $149
+ * |        RAM Size         |
+ * +-------------------------+ $14A
+ * |     Destination Code    |
+ * +-------------------------+ $14B
+ * |    Old Licensee Code    |
+ * +-------------------------+ $14C
+ * |      ROM Version        |
+ * +-------------------------+ $14D
+ * |    Header Checksum      |
+ * +-------------------------+ $14E
+ * |    Global Checksum      |
+ * +-------------------------+ $14F
+ *
+ */
+
+// 48 byte sequence in all ROMs, starting at $0104
+const NINTENDO_LOGO: [u8; 48] = [
+    0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+    0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+    0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+];
 
 #[derive(Copy, Clone)]
 pub enum MBC {
@@ -30,6 +76,9 @@ pub struct ROM {
     header: [u8; HEADER_SIZE]
 }
 
+// ==================
+// = Public Methods =
+// ==================
 impl ROM {
     pub fn new() -> ROM {
         ROM {
@@ -98,8 +147,7 @@ impl ROM {
     /// Gets the Memory Bank Controller type for this game
     /// ```
     pub fn get_mbc(&self) -> MBC {
-        let bank0 = self.banks[0].data;
-        let val = bank0[0x0147];
+        let val = self.header[0x47];
         match val {
             0x00 =>        { MBC::NONE },
             0x01..=0x03 => { MBC::MBC1 },
@@ -138,7 +186,25 @@ impl ROM {
     }
 
     /// ```
-    /// Get Header
+    /// Get Game Title
+    ///
+    /// Returns the title of the game, from $0134 - $0142 in ROM
+    ///
+    /// Output:
+    ///     Title of the game, from ROM (&str)
+    /// ```
+    pub fn get_title(&self) -> &str {
+        let data = &self.header[0x34..0x43];
+        from_utf8(data).unwrap()
+    }
+}
+
+// ===================
+// = Private Methods =
+// ===================
+impl ROM {
+    /// ```
+    /// Set Header
     ///
     /// Sets the header for the game
     /// Header is the ROM data from $0100 - $014F
