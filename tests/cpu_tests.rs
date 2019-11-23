@@ -1,8 +1,6 @@
 extern crate gb_core;
 
 use gb_core::cpu::*;
-use gb_core::bus::*;
-use gb_core::cartridge::*;
 use gb_core::utils::ModifyBytes;
 
 #[test]

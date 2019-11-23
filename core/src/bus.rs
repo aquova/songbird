@@ -61,7 +61,7 @@ impl Bus {
             ram: [0; RAM_SIZE],
             ram_enabled: false,
             rom: ROM::new(),
-            mbc: MBC::UNKNOWN
+            mbc: MBC::NONE
         }
     }
 
@@ -116,9 +116,6 @@ impl Bus {
             },
             MBC::MBC3 => {
                 self.write_mbc3(addr, val);
-            },
-            MBC::UNKNOWN => {
-                // Do nothing
             }
         }
     }
@@ -133,6 +130,18 @@ impl Bus {
     /// ```
     pub fn get_title(&self) -> &str {
         self.rom.get_title()
+    }
+
+    /// ```
+    /// Get MBC
+    ///
+    /// Returns the MBC type for the game
+    ///
+    /// Output:
+    ///     MBC type from ROM (MBC)
+    /// ```
+    pub fn get_mbc(&self) -> MBC {
+        self.mbc
     }
 }
 

@@ -55,8 +55,7 @@ pub enum MBC {
     NONE,
     MBC1,
     MBC2,
-    MBC3,
-    UNKNOWN
+    MBC3
 }
 
 struct Bank {
@@ -153,7 +152,7 @@ impl ROM {
             0x01..=0x03 => { MBC::MBC1 },
             0x05..=0x06 => { MBC::MBC2 },
             0x0F..=0x13 => { MBC::MBC3 },
-            _ =>           { MBC::UNKNOWN }
+            _ =>           { MBC::NONE }
         }
     }
 
