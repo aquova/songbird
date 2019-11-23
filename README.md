@@ -4,6 +4,7 @@ My Game Boy emulator, written in Rust
 
 ## Resources
 
+- [Blargg test roms](https://github.com/retrio/gb-test-roms)
 - [Game Boy Opcode Table](http://pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
 - [Details about Opcode functionality](https://raw.githubusercontent.com/gb-archive/salvage/master/txt-files/gb-instructions.txt)
 - [Reference emulator](https://github.com/blackxparade/Rust-Boy)

@@ -30,42 +30,42 @@ pub fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let mut window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
-    window.set_title(gb.bus.get_title()).unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
 
     canvas.clear();
     canvas.present();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    println!("{}", gb.bus.get_title());
+    // let mut event_pump = sdl_context.event_pump().unwrap();
 
-    // Main loop
-    'gameloop: loop {
-        // Check for key presses
-        for event in event_pump.poll_iter() {
-            match event {
-                // Quit game
-                Event::Quit{..} | Event::KeyDown{keycode: Some(Keycode::Escape), ..} => {
-                    break 'gameloop;
-                },
-                // Pause with Space
-                Event::KeyDown{keycode: Some(Keycode::Space), ..} => {
-                    paused = !paused;
-                    if paused {
-                        println!("Paused");
-                    }
-                },
-                // Step through operation with N
-                Event::KeyDown{keycode: Some(Keycode::N), ..} => {
-                    if paused {
-                        gb.tick();
-                    }
-                },
-                _ => {}
-            }
-        }
+    // // Main loop
+    // 'gameloop: loop {
+    //     // Check for key presses
+    //     for event in event_pump.poll_iter() {
+    //         match event {
+    //             // Quit game
+    //             Event::Quit{..} | Event::KeyDown{keycode: Some(Keycode::Escape), ..} => {
+    //                 break 'gameloop;
+    //             },
+    //             // Pause with Space
+    //             Event::KeyDown{keycode: Some(Keycode::Space), ..} => {
+    //                 paused = !paused;
+    //                 if paused {
+    //                     println!("Paused");
+    //                 }
+    //             },
+    //             // Step through operation with N
+    //             Event::KeyDown{keycode: Some(Keycode::N), ..} => {
+    //                 if paused {
+    //                     gb.tick();
+    //                 }
+    //             },
+    //             _ => {}
+    //         }
+    //     }
 
-        // Game loop
-        if !paused {
-            gb.tick();
-        }
-    }
+    //     // Game loop
+    //     if !paused {
+    //         gb.tick();
+    //     }
+    // }
 }
