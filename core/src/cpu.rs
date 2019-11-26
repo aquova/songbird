@@ -47,20 +47,58 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new() -> Cpu {
-        Cpu {
-            pc: 0,
+        // Magic values from pandocs
+        let mut new_cpu = Cpu {
+            pc: 0x100,
             sp: 0xFFFE,
-            a: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            f: 0,
-            h: 0,
-            l: 0,
+            a: 0x01,
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            f: 0xB0,
+            h: 0x01,
+            l: 0x4D,
             interupt: false,
             bus: Bus::new()
-        }
+        };
+
+        // More magic values for RAM initialization
+        // TODO: May need a 'set_ram' fn
+        // if not MBC none and not allowed to write
+        new_cpu.write_ram(0xFF05, 0x00);
+        new_cpu.write_ram(0xFF06, 0x00);
+        new_cpu.write_ram(0xFF07, 0x00);
+        new_cpu.write_ram(0xFF10, 0x80);
+        new_cpu.write_ram(0xFF11, 0xBF);
+        new_cpu.write_ram(0xFF12, 0xF3);
+        new_cpu.write_ram(0xFF14, 0xBF);
+        new_cpu.write_ram(0xFF16, 0x3F);
+        new_cpu.write_ram(0xFF17, 0x00);
+        new_cpu.write_ram(0xFF19, 0xBF);
+        new_cpu.write_ram(0xFF1A, 0x7F);
+        new_cpu.write_ram(0xFF1B, 0xFF);
+        new_cpu.write_ram(0xFF1C, 0x9F);
+        new_cpu.write_ram(0xFF1E, 0xBF);
+        new_cpu.write_ram(0xFF20, 0xFF);
+        new_cpu.write_ram(0xFF21, 0x00);
+        new_cpu.write_ram(0xFF22, 0x00);
+        new_cpu.write_ram(0xFF23, 0xBF);
+        new_cpu.write_ram(0xFF24, 0x77);
+        new_cpu.write_ram(0xFF25, 0xF3);
+        new_cpu.write_ram(0xFF26, 0xF1); // $F0 for SGB
+        new_cpu.write_ram(0xFF40, 0x91);
+        new_cpu.write_ram(0xFF42, 0x00);
+        new_cpu.write_ram(0xFF43, 0x00);
+        new_cpu.write_ram(0xFF45, 0x00);
+        new_cpu.write_ram(0xFF47, 0xFC);
+        new_cpu.write_ram(0xFF48, 0xFF);
+        new_cpu.write_ram(0xFF49, 0xFF);
+        new_cpu.write_ram(0xFF4A, 0x00);
+        new_cpu.write_ram(0xFF4B, 0x00);
+        new_cpu.write_ram(0xFF4F, 0x00);
+
+        new_cpu
     }
 
     pub fn tick(&mut self) -> u8 {

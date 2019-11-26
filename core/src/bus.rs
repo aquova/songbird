@@ -77,6 +77,10 @@ impl Bus {
         self.rom.load_cart(path);
         self.load_bank_0();
         self.mbc = self.rom.get_mbc();
+        // If no MBC, then load the rest of ROM into RAM
+        if self.mbc == MBC::NONE {
+            self.load_bank_n(1);
+        }
     }
 
     /// ```
@@ -118,6 +122,18 @@ impl Bus {
                 self.write_mbc3(addr, val);
             }
         }
+    }
+
+    /// ```
+    /// Get RAM
+    ///
+    /// Returns the entire RAM array. Used for testing.
+    ///
+    /// Output:
+    ///     RAM array ([u8])
+    /// ```
+    pub fn get_ram(&self) -> [u8; RAM_SIZE] {
+        self.ram
     }
 
     /// ```
@@ -163,8 +179,11 @@ impl Bus {
     /// Bank Switch
     ///
     /// Switches appropriate ROM bank into RAM
+    ///
+    /// Input:
+    ///     num (u8): The bank number to load into RAM at $4000-$7FFF
     /// ```
-    fn bank_switch(&mut self, num: u8) {
+    fn load_bank_n(&mut self, num: u8) {
         let bank = self.rom.get_bank_n(num);
         &self.ram[0x4000..=0x7FFF].copy_from_slice(&bank);
     }
@@ -185,7 +204,7 @@ impl Bus {
                 if bank_n == 0 {
                     bank_n += 1;
                 }
-                self.bank_switch(bank_n);
+                self.load_bank_n(bank_n);
             },
             0x8000..=0xFFFF => {
                 // TODO: This should not be all writable
