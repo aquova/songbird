@@ -34,10 +34,26 @@ pub fn main() {
 
     canvas.clear();
     canvas.present();
-    println!("{}", gb.bus.get_title());
-    // let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut event_pump = sdl_context.event_pump().unwrap();
 
-    // // Main loop
+    // A loop used only for incremental testing
+    // TODO: Delete
+    'testloop: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit{..} | Event::KeyDown{keycode: Some(Keycode::Escape), ..} => {
+                    break 'testloop;
+                },
+                Event::KeyDown{keycode: Some(Keycode::Space), ..} => {
+                    gb.print_info();
+                    gb.tick();
+                },
+                _ => {}
+            }
+        }
+    }
+
+    // Main loop
     // 'gameloop: loop {
     //     // Check for key presses
     //     for event in event_pump.poll_iter() {

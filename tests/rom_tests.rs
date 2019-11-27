@@ -47,19 +47,8 @@ fn test_mbc_none() {
     let mut f = File::open(GAME_PATH).expect("Error opening test ROM");
     f.read_to_end(&mut buffer).expect("Error reading to buffer");
 
-    // Not sure why this didn't work
-    // assert_eq!(&ram[..], buffer.as_slice());
-
-    let mut i = 0;
     // Ensure that RAM values equal those in the buffer
-    for _ in 0..buffer.len() {
+    for i in 0..buffer.len() {
         assert_eq!(ram[i], buffer[i]);
-        i += 1;
-    }
-
-    // Ensure that the remaining values in RAM are all 0
-    for _ in i..ram.len() {
-        assert_eq!(ram[i], 0);
-        i += 1;
     }
 }

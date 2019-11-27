@@ -101,9 +101,35 @@ impl Cpu {
         new_cpu
     }
 
+    /// ```
+    /// Tick
+    ///
+    /// Performs one operation
+    ///
+    /// Output:
+    ///     Number of cycles needed to complete operation (u8)
+    /// ```
     pub fn tick(&mut self) -> u8 {
         let cycles = execute(self);
         cycles
+    }
+
+    /// ```
+    /// Print Info
+    ///
+    /// Prints debug info about state of the CPU
+    /// ```
+    pub fn print_info(&self) {
+        println!("PC: {:#06x} SP: {:#06x}", self.pc, self.sp);
+        println!(
+            "AF: {:#06x} BC: {:#06x} DE: {:#06x} HL: {:#06x}",
+            self.get_reg_16(Regs16::AF),
+            self.get_reg_16(Regs16::BC),
+            self.get_reg_16(Regs16::DE),
+            self.get_reg_16(Regs16::HL)
+        );
+        println!("Current operation: {:#04x}", self.read_ram(self.pc));
+        println!("-----");
     }
 
     /// ```

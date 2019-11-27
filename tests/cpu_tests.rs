@@ -38,8 +38,8 @@ fn test_flags() {
 fn test_inc_8() {
     let mut gb = Cpu::new();
 
-    assert_eq!(gb.a, 0);
-    assert_eq!(gb.f, 0);
+    gb.a = 0;
+    gb.f = 0;
 
     // Check that basic increment works
     gb.inc_8(Regs::A);
@@ -86,9 +86,9 @@ fn test_inc_8() {
 fn test_inc_16() {
     let mut gb = Cpu::new();
 
-    assert_eq!(gb.b, 0);
-    assert_eq!(gb.c, 0);
-    assert_eq!(gb.f, 0);
+    gb.b = 0;
+    gb.c = 0;
+    gb.f = 0;
 
     // Check that basic increment works
     // Don't need to test flags - they are not modified
