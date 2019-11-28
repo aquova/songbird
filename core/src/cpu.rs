@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::debug::*;
 use crate::opcodes::execute;
 use crate::utils::*;
 
@@ -128,7 +129,13 @@ impl Cpu {
             self.get_reg_16(Regs16::DE),
             self.get_reg_16(Regs16::HL)
         );
-        println!("Current operation: {:#04x}", self.read_ram(self.pc));
+        let curr_op = self.read_ram(self.pc);
+        println!("Current operation: {:#04x}", curr_op);
+        print_opcode(curr_op);
+        let operand_num = get_opcode_length(curr_op);
+        for i in 0..operand_num {
+            println!("{:#04x}", self.read_ram(self.pc + i as u16 + 1));
+        }
         println!("-----");
     }
 
