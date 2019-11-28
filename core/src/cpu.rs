@@ -664,15 +664,15 @@ impl Cpu {
     ///     Whether or not to push in carry flag (bool)
     /// ```
     pub fn rot_right(&mut self, reg: Regs, carry: bool) {
-        // TODO: This might not be right. Not sure if C flag gets swapped in, or just logical/arithmetic
         let mut byte = self.get_reg(reg);
         let lsb = byte.get_bit(0);
-        byte >>= 1;
+        byte = byte.rotate_right(1);
         if carry {
             let old_c = self.get_flag(Flags::C);
             byte.write_bit(7, old_c);
         }
         self.set_reg(reg, byte);
+        // I'm pretty sure C flag gets set, even if not rotating with carry
         self.write_flag(Flags::C, lsb);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
@@ -691,7 +691,7 @@ impl Cpu {
     pub fn rot_left(&mut self, reg: Regs, carry: bool) {
         let mut byte = self.get_reg(reg);
         let msb = byte.get_bit(7);
-        byte <<= 1;
+        byte = byte.rotate_left(1);
         if carry {
             let old_c = self.get_flag(Flags::C);
             byte.write_bit(0, old_c);
@@ -772,5 +772,52 @@ impl Cpu {
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.clear_flag(Flags::C);
+    }
+
+    /// ```
+    /// Shift Right
+    ///
+    /// Shifts the value in a register right by one bit
+    ///
+    /// Inputs:
+    ///     Register to shift (Regs enum value)
+    ///     Whether to shift arithmetically (true), or logically (bool)
+    /// ```
+    pub fn shift_right(&mut self, reg: Regs, arith: bool) {
+        let byte = self.get_reg(reg);
+        let lsb = byte.get_bit(0);
+        // Another option is to cast to i8, shift then cast back to u8
+        // But instead, just duplicate the msb if needed
+        let msb = byte.get_bit(7);
+        let mut shifted = byte.wrapping_shr(1);
+        if arith {
+            shifted.write_bit(7, msb);
+        }
+
+        self.set_reg(reg, shifted);
+        self.write_flag(Flags::Z, byte == 0);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, lsb);
+    }
+
+    /// ```
+    /// Shift Left
+    ///
+    /// Shifts the value in a register right by one bit
+    ///
+    /// Inputs:
+    ///     Register to shift (Regs enum value)
+    /// ```
+    pub fn shift_left(&mut self, reg: Regs) {
+        let byte = self.get_reg(reg);
+        let msb = byte.get_bit(7);
+        let shifted = byte.wrapping_shl(1);
+
+        self.set_reg(reg, shifted);
+        self.write_flag(Flags::Z, shifted == 0);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, msb);
     }
 }

@@ -64,8 +64,8 @@ fn nop(_cpu: &mut Cpu) -> u8 {
 
 /// LD BC, d16
 fn ld_01(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let val = merge_bytes(high, low);
     cpu.ld_nn_d16(Regs16::BC, val);
     12
@@ -112,8 +112,8 @@ fn rlca_07(cpu: &mut Cpu) -> u8 {
 
 /// LD (a16), SP
 fn ld_08(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let addr = merge_bytes(high, low);
     cpu.write_ram(addr, cpu.sp.get_low_byte());
     cpu.write_ram(addr + 1, cpu.sp.get_high_byte());
@@ -174,8 +174,8 @@ fn stop_10(_cpu: &mut Cpu) -> u8 {
 
 /// LD DE, d16
 fn ld_11(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let val = merge_bytes(high, low);
     cpu.ld_nn_d16(Regs16::DE, val);
     12
@@ -284,8 +284,8 @@ fn jr_20(cpu: &mut Cpu) -> u8 {
 
 /// LD HL, d16
 fn ld_21(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let val = merge_bytes(high, low);
     cpu.ld_nn_d16(Regs16::HL, val);
     12
@@ -1483,8 +1483,8 @@ fn jp_c3(cpu: &mut Cpu) -> u8 {
 
 /// CALL NZ, a16
 fn call_c4(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     if !cpu.get_flag(Flags::Z) {
         let addr = merge_bytes(high, low);
         cpu.push(cpu.pc);
@@ -1555,8 +1555,8 @@ fn prefix_cb(_cpu: &mut Cpu) -> u8 {
 
 /// CALL Z, a16
 fn call_cc(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     if cpu.get_flag(Flags::Z) {
         let addr = merge_bytes(high, low);
         cpu.push(cpu.pc);
@@ -1569,8 +1569,8 @@ fn call_cc(cpu: &mut Cpu) -> u8 {
 
 /// CALL a16
 fn call_cd(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let addr = merge_bytes(high, low);
     cpu.push(cpu.pc);
     cpu.pc = addr;
@@ -1623,8 +1623,8 @@ fn jp_d2(cpu: &mut Cpu) -> u8 {
 
 /// CALL NC, a16
 fn call_d4(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     if !cpu.get_flag(Flags::C) {
         let addr = merge_bytes(high, low);
         cpu.push(cpu.pc);
@@ -1688,8 +1688,8 @@ fn jp_da(cpu: &mut Cpu) -> u8 {
 
 /// CALL C, a16
 fn call_dc(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     if cpu.get_flag(Flags::C) {
         let addr = merge_bytes(high, low);
         cpu.push(cpu.pc);
@@ -1784,8 +1784,8 @@ fn jp_e9(cpu: &mut Cpu) -> u8 {
 
 /// LD (a16), A
 fn ld_ea(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let addr = merge_bytes(high, low);
     let a = cpu.get_reg(Regs::A);
     cpu.write_ram(addr, a);
@@ -1875,8 +1875,8 @@ fn ld_f9(cpu: &mut Cpu) -> u8 {
 
 /// LD A, (a16)
 fn ld_fa(cpu: &mut Cpu) -> u8 {
-    let high = cpu.fetch();
     let low = cpu.fetch();
+    let high = cpu.fetch();
     let addr = merge_bytes(high, low);
     let val = cpu.read_ram(addr);
     cpu.set_reg(Regs::A, val);
@@ -2137,38 +2137,38 @@ fn rr_1f(cpu: &mut Cpu) -> u8 {
 
 /// SLA B
 fn sla_20(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::B);
+    8
 }
 
 /// SLA C
 fn sla_21(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::C);
+    8
 }
 
 /// SLA D
 fn sla_22(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::D);
+    8
 }
 
 /// SLA E
 fn sla_23(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::E);
+    8
 }
 
 /// SLA H
 fn sla_24(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::H);
+    8
 }
 
 /// SLA L
 fn sla_25(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::L);
+    8
 }
 
 /// SLA (HL)
@@ -2179,44 +2179,44 @@ fn sla_26(cpu: &mut Cpu) -> u8 {
 
 /// SLA A
 fn sla_27(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_left(Regs::A);
+    8
 }
 
 /// SRA B
 fn sra_28(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::B, true);
+    8
 }
 
 /// SRA C
 fn sra_29(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::C, true);
+    8
 }
 
 /// SRA D
 fn sra_2a(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::D, true);
+    8
 }
 
 /// SRA E
 fn sra_2b(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::E, true);
+    8
 }
 
 /// SRA H
 fn sra_2c(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::H, true);
+    8
 }
 
 /// SRA L
 fn sra_2d(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::L, true);
+    8
 }
 
 /// SRA (HL)
@@ -2227,8 +2227,8 @@ fn sra_2e(cpu: &mut Cpu) -> u8 {
 
 /// SRA A
 fn sra_2f(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::A, true);
+    8
 }
 
 /// SWAP B
@@ -2281,38 +2281,38 @@ fn swap_37(cpu: &mut Cpu) -> u8 {
 
 /// SRL B
 fn srl_38(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::B, false);
+    8
 }
 
 /// SRL C
 fn srl_39(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::C, false);
+    8
 }
 
 /// SRL D
 fn srl_3a(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::D, false);
+    8
 }
 
 /// SRL E
 fn srl_3b(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::E, false);
+    8
 }
 
 /// SRL H
 fn srl_3c(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::H, false);
+    8
 }
 
 /// SRL L
 fn srl_3d(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::L, false);
+    8
 }
 
 /// SRL (HL)
@@ -2323,8 +2323,8 @@ fn srl_3e(cpu: &mut Cpu) -> u8 {
 
 /// SRL A
 fn srl_3f(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    cpu.shift_right(Regs::A, false);
+    8
 }
 
 /// BIT 0,B
