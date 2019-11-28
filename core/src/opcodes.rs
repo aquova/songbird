@@ -106,7 +106,7 @@ fn ld_06(cpu: &mut Cpu) -> u8 {
 
 /// RLCA
 fn rlca_07(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::A, false);
+    cpu.rot_left_reg(Regs::A, false);
     4
 }
 
@@ -162,7 +162,7 @@ fn ld_0e(cpu: &mut Cpu) -> u8 {
 
 /// RRCA
 fn rrca_0f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::A, false);
+    cpu.rot_right_reg(Regs::A, false);
     4
 }
 
@@ -216,7 +216,7 @@ fn ld_16(cpu: &mut Cpu) -> u8 {
 
 /// RLA
 fn rla_17(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::A, true);
+    cpu.rot_left_reg(Regs::A, true);
     4
 }
 
@@ -269,7 +269,7 @@ fn ld_1e(cpu: &mut Cpu) -> u8 {
 
 /// RRA
 fn rra_1f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::A, true);
+    cpu.rot_right_reg(Regs::A, true);
     4
 }
 
@@ -387,7 +387,8 @@ fn ld_2e(cpu: &mut Cpu) -> u8 {
 
 /// CPL
 fn cpl_2f(cpu: &mut Cpu) -> u8 {
-    cpu.a = !cpu.a;
+    let val = cpu.get_reg(Regs::A);
+    cpu.set_reg(Regs::A, !val);
     cpu.set_flag(Flags::N);
     cpu.set_flag(Flags::H);
     4
@@ -1903,811 +1904,817 @@ fn rst_ff(cpu: &mut Cpu) -> u8 {
     16
 }
 
-/* ------------------
-    * $CB Opcode block
-    * ---------------- */
+/*
+ * ----------------
+ * $CB Opcode block
+ * ----------------
+ */
 
 /// RLC B
 fn rlc_00(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::B, false);
+    cpu.rot_left_reg(Regs::B, false);
     8
 }
 
 /// RLC C
 fn rlc_01(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::C, false);
+    cpu.rot_left_reg(Regs::C, false);
     8
 }
 
 /// RLC D
 fn rlc_02(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::D, false);
+    cpu.rot_left_reg(Regs::D, false);
     8
 }
 
 /// RLC E
 fn rlc_03(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::E, false);
+    cpu.rot_left_reg(Regs::E, false);
     8
 }
 
 /// RLC H
 fn rlc_04(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::H, false);
+    cpu.rot_left_reg(Regs::H, false);
     8
 }
 
 /// RLC L
 fn rlc_05(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::L, false);
+    cpu.rot_left_reg(Regs::L, false);
     8
 }
 
 /// RLC (HL)
 fn rlc_06(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut byte = cpu.read_ram(hl);
-    cpu.write_flag(Flags::C, byte.get_bit(7));
-    byte <<= 1;
-    cpu.write_ram(hl, byte);
-
-    cpu.write_flag(Flags::Z, byte == 0);
-    cpu.clear_flag(Flags::N);
-    cpu.clear_flag(Flags::H);
+    let byte = cpu.read_ram(hl);
+    let rot = cpu.rot_left(byte, false);
+    cpu.write_ram(hl, rot);
     8
 }
 
 /// RLC A
 fn rlc_07(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::A, false);
+    cpu.rot_left_reg(Regs::A, false);
     8
 }
 
 /// RRC B
 fn rrc_08(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::B, false);
+    cpu.rot_right_reg(Regs::B, false);
     8
 }
 
 /// RRC C
 fn rrc_09(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::C, false);
+    cpu.rot_right_reg(Regs::C, false);
     8
 }
 
 /// RRC D
 fn rrc_0a(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::D, false);
+    cpu.rot_right_reg(Regs::D, false);
     8
 }
 
 /// RRC E
 fn rrc_0b(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::E, false);
+    cpu.rot_right_reg(Regs::E, false);
     8
 }
 
 /// RRC H
 fn rrc_0c(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::H, false);
+    cpu.rot_right_reg(Regs::H, false);
     8
 }
 
 /// RRC L
 fn rrc_0d(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::L, false);
+    cpu.rot_right_reg(Regs::L, false);
     8
 }
 
 /// RRC (HL)
 fn rrc_0e(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut byte = cpu.read_ram(hl);
-    cpu.write_flag(Flags::C, byte.get_bit(0));
-    byte >>= 1;
-    cpu.write_ram(hl, byte);
-
-    cpu.write_flag(Flags::Z, byte == 0);
-    cpu.clear_flag(Flags::N);
-    cpu.clear_flag(Flags::H);
+    let byte = cpu.read_ram(hl);
+    let rot = cpu.rot_right(byte, false);
+    cpu.write_ram(hl, rot);
     8
 }
 
 /// RRC A
 fn rrc_0f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::A, false);
+    cpu.rot_right_reg(Regs::A, false);
     8
 }
 
 /// RL B
 fn rl_10(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::B, true);
+    cpu.rot_left_reg(Regs::B, true);
     8
 }
 
 /// RL C
 fn rl_11(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::C, true);
+    cpu.rot_left_reg(Regs::C, true);
     8
 }
 
 /// RL D
 fn rl_12(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::D, true);
+    cpu.rot_left_reg(Regs::D, true);
     8
 }
 
 /// RL E
 fn rl_13(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::E, true);
+    cpu.rot_left_reg(Regs::E, true);
     8
 }
 
 /// RL H
 fn rl_14(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::H, true);
+    cpu.rot_left_reg(Regs::H, true);
     8
 }
 
 /// RL L
 fn rl_15(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::L, true);
+    cpu.rot_left_reg(Regs::L, true);
     8
 }
 
 /// RL (HL)
 fn rl_16(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut byte = cpu.read_ram(hl);
-    let old_c = byte.get_bit(7);
-    cpu.write_flag(Flags::C, byte.get_bit(7));
-    byte <<= 1;
-    byte.write_bit(7, old_c);
-    cpu.write_ram(hl, byte);
-
-    cpu.write_flag(Flags::Z, byte == 0);
-    cpu.clear_flag(Flags::N);
-    cpu.clear_flag(Flags::H);
+    let byte = cpu.read_ram(hl);
+    let rot = cpu.rot_left(byte, true);
+    cpu.write_ram(hl, rot);
     8
 }
 
 /// RL A
 fn rl_17(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left(Regs::A, true);
+    cpu.rot_left_reg(Regs::A, true);
     8
 }
 
 /// RR B
 fn rr_18(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::B, true);
+    cpu.rot_right_reg(Regs::B, true);
     8
 }
 
 /// RR C
 fn rr_19(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::C, true);
+    cpu.rot_right_reg(Regs::C, true);
     8
 }
 
 /// RR D
 fn rr_1a(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::D, true);
+    cpu.rot_right_reg(Regs::D, true);
     8
 }
 
 /// RR E
 fn rr_1b(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::E, true);
+    cpu.rot_right_reg(Regs::E, true);
     8
 }
 
 /// RR H
 fn rr_1c(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::H, true);
+    cpu.rot_right_reg(Regs::H, true);
     8
 }
 
 /// RR L
 fn rr_1d(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::L, true);
+    cpu.rot_right_reg(Regs::L, true);
     8
 }
 
 /// RR (HL)
 fn rr_1e(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut byte = cpu.read_ram(hl);
-    let old_c = byte.get_bit(0);
-    cpu.write_flag(Flags::C, byte.get_bit(0));
-    byte >>= 1;
-    byte.write_bit(0, old_c);
-    cpu.write_ram(hl, byte);
-
-    cpu.write_flag(Flags::Z, byte == 0);
-    cpu.clear_flag(Flags::N);
-    cpu.clear_flag(Flags::H);
+    let byte = cpu.read_ram(hl);
+    let rot = cpu.rot_right(byte, true);
+    cpu.write_ram(hl, rot);
     8
 }
 
 /// RR A
 fn rr_1f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right(Regs::A, true);
+    cpu.rot_right_reg(Regs::A, true);
     8
 }
 
 /// SLA B
 fn sla_20(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::B);
+    cpu.shift_left_reg(Regs::B);
     8
 }
 
 /// SLA C
 fn sla_21(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::C);
+    cpu.shift_left_reg(Regs::C);
     8
 }
 
 /// SLA D
 fn sla_22(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::D);
+    cpu.shift_left_reg(Regs::D);
     8
 }
 
 /// SLA E
 fn sla_23(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::E);
+    cpu.shift_left_reg(Regs::E);
     8
 }
 
 /// SLA H
 fn sla_24(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::H);
+    cpu.shift_left_reg(Regs::H);
     8
 }
 
 /// SLA L
 fn sla_25(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::L);
+    cpu.shift_left_reg(Regs::L);
     8
 }
 
 /// SLA (HL)
 fn sla_26(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let addr = cpu.get_reg_16(Regs16::HL);
+    let byte = cpu.read_ram(addr);
+    let shifted = cpu.shift_left(byte);
+    cpu.write_ram(addr, shifted);
+    8
 }
 
 /// SLA A
 fn sla_27(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left(Regs::A);
+    cpu.shift_left_reg(Regs::A);
     8
 }
 
 /// SRA B
 fn sra_28(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::B, true);
+    cpu.shift_right_reg(Regs::B, true);
     8
 }
 
 /// SRA C
 fn sra_29(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::C, true);
+    cpu.shift_right_reg(Regs::C, true);
     8
 }
 
 /// SRA D
 fn sra_2a(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::D, true);
+    cpu.shift_right_reg(Regs::D, true);
     8
 }
 
 /// SRA E
 fn sra_2b(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::E, true);
+    cpu.shift_right_reg(Regs::E, true);
     8
 }
 
 /// SRA H
 fn sra_2c(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::H, true);
+    cpu.shift_right_reg(Regs::H, true);
     8
 }
 
 /// SRA L
 fn sra_2d(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::L, true);
+    cpu.shift_right_reg(Regs::L, true);
     8
 }
 
 /// SRA (HL)
 fn sra_2e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    let shifted = cpu.shift_right(val, true);
+    cpu.write_ram(hl, shifted);
+    8
 }
 
 /// SRA A
 fn sra_2f(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::A, true);
+    cpu.shift_right_reg(Regs::A, true);
     8
 }
 
 /// SWAP B
 fn swap_30(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::B);
+    cpu.swap_bits_reg(Regs::B);
     8
 }
 
 /// SWAP C
 fn swap_31(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::C);
+    cpu.swap_bits_reg(Regs::C);
     8
 }
 
 /// SWAP D
 fn swap_32(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::D);
+    cpu.swap_bits_reg(Regs::D);
     8
 }
 
 /// SWAP E
 fn swap_33(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::E);
+    cpu.swap_bits_reg(Regs::E);
     8
 }
 
 /// SWAP H
 fn swap_34(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::H);
+    cpu.swap_bits_reg(Regs::H);
     8
 }
 
 /// SWAP L
 fn swap_35(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::L);
+    cpu.swap_bits_reg(Regs::L);
     8
 }
 
 /// SWAP (HL)
 fn swap_36(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    let swapped = cpu.swap_bits(val);
+    cpu.write_ram(hl, swapped);
+    8
 }
 
 /// SWAP A
 fn swap_37(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits(Regs::A);
+    cpu.swap_bits_reg(Regs::A);
     8
 }
 
 /// SRL B
 fn srl_38(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::B, false);
+    cpu.shift_right_reg(Regs::B, false);
     8
 }
 
 /// SRL C
 fn srl_39(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::C, false);
+    cpu.shift_right_reg(Regs::C, false);
     8
 }
 
 /// SRL D
 fn srl_3a(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::D, false);
+    cpu.shift_right_reg(Regs::D, false);
     8
 }
 
 /// SRL E
 fn srl_3b(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::E, false);
+    cpu.shift_right_reg(Regs::E, false);
     8
 }
 
 /// SRL H
 fn srl_3c(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::H, false);
+    cpu.shift_right_reg(Regs::H, false);
     8
 }
 
 /// SRL L
 fn srl_3d(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::L, false);
+    cpu.shift_right_reg(Regs::L, false);
     8
 }
 
 /// SRL (HL)
 fn srl_3e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    let shifted = cpu.shift_right(val, false);
+    cpu.write_ram(hl, shifted);
+    8
 }
 
 /// SRL A
 fn srl_3f(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right(Regs::A, false);
+    cpu.shift_right_reg(Regs::A, false);
     8
 }
 
 /// BIT 0,B
 fn bit_40(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 0);
+    cpu.test_bit_reg(Regs::B, 0);
     8
 }
 
 /// BIT 0,C
 fn bit_41(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 0);
+    cpu.test_bit_reg(Regs::C, 0);
     8
 }
 
 /// BIT 0,D
 fn bit_42(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 0);
+    cpu.test_bit_reg(Regs::D, 0);
     8
 }
 
 /// BIT 0,E
 fn bit_43(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 0);
+    cpu.test_bit_reg(Regs::E, 0);
     8
 }
 
 /// BIT 0,H
 fn bit_44(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 0);
+    cpu.test_bit_reg(Regs::H, 0);
     8
 }
 
 /// BIT 0,L
 fn bit_45(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 0);
+    cpu.test_bit_reg(Regs::L, 0);
     8
 }
 
 /// BIT 0,(HL)
 fn bit_46(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 0);
+    8
 }
 
 /// BIT 0,A
 fn bit_47(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 0);
+    cpu.test_bit_reg(Regs::A, 0);
     8
 }
 
 /// BIT 1,B
 fn bit_48(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 1);
+    cpu.test_bit_reg(Regs::B, 1);
     8
 }
 
 /// BIT 1,C
 fn bit_49(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 1);
+    cpu.test_bit_reg(Regs::C, 1);
     8
 }
 
 /// BIT 1,D
 fn bit_4a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 1);
+    cpu.test_bit_reg(Regs::D, 1);
     8
 }
 
 /// BIT 1,E
 fn bit_4b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 1);
+    cpu.test_bit_reg(Regs::E, 1);
     8
 }
 
 /// BIT 1,H
 fn bit_4c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 1);
+    cpu.test_bit_reg(Regs::H, 1);
     8
 }
 
 /// BIT 1,L
 fn bit_4d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 1);
+    cpu.test_bit_reg(Regs::L, 1);
     8
 }
 
 /// BIT 1,(HL)
 fn bit_4e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 1);
+    8
 }
 
 /// BIT 1,A
 fn bit_4f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 1);
+    cpu.test_bit_reg(Regs::A, 1);
     8
 }
 
 /// BIT 2,B
 fn bit_50(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 2);
+    cpu.test_bit_reg(Regs::B, 2);
     8
 }
 
 /// BIT 2,C
 fn bit_51(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 2);
+    cpu.test_bit_reg(Regs::C, 2);
     8
 }
 
 /// BIT 2,D
 fn bit_52(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 2);
+    cpu.test_bit_reg(Regs::D, 2);
     8
 }
 
 /// BIT 2,E
 fn bit_53(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 2);
+    cpu.test_bit_reg(Regs::E, 2);
     8
 }
 
 /// BIT 2,H
 fn bit_54(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 2);
+    cpu.test_bit_reg(Regs::H, 2);
     8
 }
 
 /// BIT 2,L
 fn bit_55(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 2);
+    cpu.test_bit_reg(Regs::L, 2);
     8
 }
 
 /// BIT 2,(HL)
 fn bit_56(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 2);
+    8
 }
 
 /// BIT 2,A
 fn bit_57(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 2);
+    cpu.test_bit_reg(Regs::A, 2);
     8
 }
 
 /// BIT 3,B
 fn bit_58(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 3);
+    cpu.test_bit_reg(Regs::B, 3);
     8
 }
 
 /// BIT 3,C
 fn bit_59(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 3);
+    cpu.test_bit_reg(Regs::C, 3);
     8
 }
 
 /// BIT 3,D
 fn bit_5a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 3);
+    cpu.test_bit_reg(Regs::D, 3);
     8
 }
 
 /// BIT 3,E
 fn bit_5b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 3);
+    cpu.test_bit_reg(Regs::E, 3);
     8
 }
 
 /// BIT 3,H
 fn bit_5c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 3);
+    cpu.test_bit_reg(Regs::H, 3);
     8
 }
 
 /// BIT 3,L
 fn bit_5d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 3);
+    cpu.test_bit_reg(Regs::L, 3);
     8
 }
 
 /// BIT 3,(HL)
 fn bit_5e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 3);
+    8
 }
 
 /// BIT 3,A
 fn bit_5f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 3);
+    cpu.test_bit_reg(Regs::A, 3);
     8
 }
 
 /// BIT 4,B
 fn bit_60(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 4);
+    cpu.test_bit_reg(Regs::B, 4);
     8
 }
 
 /// BIT 4,C
 fn bit_61(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 4);
+    cpu.test_bit_reg(Regs::C, 4);
     8
 }
 
 /// BIT 4,D
 fn bit_62(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 4);
+    cpu.test_bit_reg(Regs::D, 4);
     8
 }
 
 /// BIT 4,E
 fn bit_63(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 4);
+    cpu.test_bit_reg(Regs::E, 4);
     8
 }
 
 /// BIT 4,H
 fn bit_64(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 4);
+    cpu.test_bit_reg(Regs::H, 4);
     8
 }
 
 /// BIT 4,L
 fn bit_65(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 4);
+    cpu.test_bit_reg(Regs::L, 4);
     8
 }
 
 /// BIT 4,(HL)
 fn bit_66(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 4);
+    8
 }
 
 /// BIT 4,A
 fn bit_67(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 4);
+    cpu.test_bit_reg(Regs::A, 4);
     8
 }
 
 /// BIT 5,B
 fn bit_68(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 5);
+    cpu.test_bit_reg(Regs::B, 5);
     8
 }
 
 /// BIT 5,C
 fn bit_69(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 5);
+    cpu.test_bit_reg(Regs::C, 5);
     8
 }
 
 /// BIT 5,D
 fn bit_6a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 5);
+    cpu.test_bit_reg(Regs::D, 5);
     8
 }
 
 /// BIT 5,E
 fn bit_6b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 5);
+    cpu.test_bit_reg(Regs::E, 5);
     8
 }
 
 /// BIT 5,H
 fn bit_6c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 5);
+    cpu.test_bit_reg(Regs::H, 5);
     8
 }
 
 /// BIT 5,L
 fn bit_6d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 5);
+    cpu.test_bit_reg(Regs::L, 5);
     8
 }
 
 /// BIT 5,(HL)
 fn bit_6e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 5);
+    8
 }
 
 /// BIT 5,A
 fn bit_6f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 5);
+    cpu.test_bit_reg(Regs::A, 5);
     8
 }
 
 /// BIT 6,B
 fn bit_70(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 6);
+    cpu.test_bit_reg(Regs::B, 6);
     8
 }
 
 /// BIT 6,C
 fn bit_71(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 6);
+    cpu.test_bit_reg(Regs::C, 6);
     8
 }
 
 /// BIT 6,D
 fn bit_72(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 6);
+    cpu.test_bit_reg(Regs::D, 6);
     8
 }
 
 /// BIT 6,E
 fn bit_73(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 6);
+    cpu.test_bit_reg(Regs::E, 6);
     8
 }
 
 /// BIT 6,H
 fn bit_74(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 6);
+    cpu.test_bit_reg(Regs::H, 6);
     8
 }
 
 /// BIT 6,L
 fn bit_75(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 6);
+    cpu.test_bit_reg(Regs::L, 6);
     8
 }
 
 /// BIT 6,(HL)
 fn bit_76(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 6);
+    8
 }
 
 /// BIT 6,A
 fn bit_77(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 6);
+    cpu.test_bit_reg(Regs::A, 6);
     8
 }
 
 /// BIT 7,B
 fn bit_78(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::B, 7);
+    cpu.test_bit_reg(Regs::B, 7);
     8
 }
 
 /// BIT 7,C
 fn bit_79(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::C, 7);
+    cpu.test_bit_reg(Regs::C, 7);
     8
 }
 
 /// BIT 7,D
 fn bit_7a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::D, 7);
+    cpu.test_bit_reg(Regs::D, 7);
     8
 }
 
 /// BIT 7,E
 fn bit_7b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::E, 7);
+    cpu.test_bit_reg(Regs::E, 7);
     8
 }
 
 /// BIT 7,H
 fn bit_7c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::H, 7);
+    cpu.test_bit_reg(Regs::H, 7);
     8
 }
 
 /// BIT 7,L
 fn bit_7d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::L, 7);
+    cpu.test_bit_reg(Regs::L, 7);
     8
 }
 
 /// BIT 7,(HL)
 fn bit_7e(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode!");
-    // 8
+    let hl = cpu.get_reg_16(Regs16::HL);
+    let val = cpu.read_ram(hl);
+    cpu.test_bit(val, 7);
+    8
 }
 
 /// BIT 7,A
 fn bit_7f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit(Regs::A, 7);
+    cpu.test_bit_reg(Regs::A, 7);
     8
 }
 
