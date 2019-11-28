@@ -367,3 +367,39 @@ fn test_invalid_stack() {
     let mut gb = Cpu::new();
     gb.pop();
 }
+
+#[test]
+/// Test rotate right functions
+fn test_rot_right() {
+    let mut gb = Cpu::new();
+
+    gb.a = 0b0101_1010;
+    gb.f = 0;
+
+    gb.rot_right_reg(Regs::A, false);
+    assert_eq!(gb.get_reg(Regs::A), 0b0010_1101);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.rot_right_reg(Regs::A, false);
+    assert_eq!(gb.get_reg(Regs::A), 0b1001_0110);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    gb.rot_right_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b1100_1011);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.rot_right_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b0110_0101);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    gb.a = 0b0000_0001;
+    gb.f = 0;
+    gb.rot_right_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b0000_0000);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}

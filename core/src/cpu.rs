@@ -166,31 +166,157 @@ impl Cpu {
     }
 
     /// ```
-    /// Read RAM
+    /// ADD A d8
     ///
-    /// Returns the byte at the specified address in RAM
+    /// Adds specified value to A register
     ///
-    /// Input:
-    ///     Address in RAM (u16)
-    ///
-    /// Output:
-    ///     Byte at specified address (u8)
+    /// Inputs:
+    ///     Value to add to register (u8)
+    ///     Whether or not to add with carry (bool)
     /// ```
-    pub fn read_ram(&self, addr: u16) -> u8 {
-        self.bus.read_ram(addr)
+    pub fn add_a_d8(&mut self, val: u8, adc: bool) {
+        let mut carry = 0;
+        if adc && self.get_flag(Flags::C) {
+            carry = 1;
+        }
+        let a = self.get_reg(Regs::A);
+        let result1 = a.overflowing_add(val);
+        let h_check1 = check_h_carry_u8(a, val);
+        let result2 = result1.0.overflowing_add(carry);
+        let h_check2 = check_h_carry_u8(result1.0, carry);
+        let set_h = h_check1 || h_check2;
+        let set_c = result1.1 || result2.1;
+
+        self.clear_flag(Flags::N);
+        self.write_flag(Flags::C, set_c);
+        self.write_flag(Flags::H, set_h);
+        self.write_flag(Flags::Z, result2.0 == 0);
+        self.set_reg(Regs::A, result2.0);
     }
 
     /// ```
-    /// Write RAM
+    /// ADD NN d16
     ///
-    /// Writes the specified byte at the specified address
+    /// Adds value to joint 16-bit register
     ///
     /// Inputs:
-    ///     Address in RAM (u16)
-    ///     Byte to write (u8)
+    ///     Register to add to (Regs16 enum value)
+    ///     Value to add (u16)
     /// ```
-    pub fn write_ram(&mut self, addr: u16, val: u8) {
-        self.bus.write_ram(addr, val);
+    pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
+        let target = self.get_reg_16(reg);
+        let result = target.overflowing_add(source);
+        let set_h = check_h_carry_u16(target, source);
+
+        self.set_reg_16(reg, result.0);
+        self.clear_flag(Flags::N);
+        self.write_flag(Flags::C, result.1);
+        self.write_flag(Flags::H, set_h);
+    }
+
+    /// ```
+    /// AND A d8
+    ///
+    /// Boolean AND value with A register
+    ///
+    /// Input:
+    ///     Value to AND with A register (u8)
+    /// ```
+    pub fn and_a_d8(&mut self, val: u8) {
+        let mut a = self.get_reg(Regs::A);
+        a &= val;
+        self.clear_flag(Flags::N);
+        self.set_flag(Flags::H);
+        self.clear_flag(Flags::C);
+        self.write_flag(Flags::Z, a == 0);
+        self.set_reg(Regs::A, a);
+    }
+
+    /// ```
+    /// Clear Flag
+    ///
+    /// Sets the specified flag to False
+    ///
+    /// Input:
+    ///     Flag to clear (Flags enum value)
+    /// ```
+    pub fn clear_flag(&mut self, f: Flags) {
+        match f {
+            Flags::Z => { self.f &= 0b0111_1111 },
+            Flags::N => { self.f &= 0b1011_1111 },
+            Flags::H => { self.f &= 0b1101_1111 },
+            Flags::C => { self.f &= 0b1110_1111 },
+        }
+    }
+
+    /// ```
+    /// CP A d8
+    ///
+    /// Compare value with A register
+    ///
+    /// Input:
+    ///     Value to compare (u8)
+    /// ```
+    pub fn cp_a_d8(&mut self, val: u8) {
+        let a = self.get_reg(Regs::A);
+        let set_h = check_h_borrow_u8(a, val);
+
+        self.write_flag(Flags::Z, a == val);
+        self.write_flag(Flags::H, set_h);
+        self.write_flag(Flags::C, a < val);
+    }
+
+    /// ```
+    /// DEC d8
+    ///
+    /// Decrements specified register
+    ///
+    /// Input:
+    ///     Register to decrement (Regs enum value)
+    /// ```
+    pub fn dec_8(&mut self, reg: Regs) {
+        let val = self.get_reg(reg);
+        let result = val.wrapping_sub(1);
+        let set_h = check_h_borrow_u8(result, 1);
+        self.set_reg(reg, result);
+
+        self.set_flag(Flags::N);
+        self.write_flag(Flags::Z, result == 0);
+        self.write_flag(Flags::H, set_h);
+    }
+
+    /// ```
+    /// DEC d16
+    ///
+    /// Decrements specified joint register
+    ///
+    /// Input:
+    ///     Register to decrement (Regs16 enum value)
+    /// ```
+    pub fn dec_16(&mut self, reg: Regs16) {
+        let val = self.get_reg_16(reg);
+        let result = val.wrapping_sub(1);
+        self.set_reg_16(reg, result);
+    }
+
+    /// ```
+    /// Get Flag
+    ///
+    /// Returns whether the specified flag is set or cleared
+    ///
+    /// Input:
+    ///     Flag to return (Flags enum value)
+    ///
+    /// Output:
+    ///     Whether the flag is set or not (bool)
+    /// ```
+    pub fn get_flag(&self, f: Flags) -> bool {
+        match f {
+            Flags::Z => { return (self.f & 0b1000_0000) != 0 },
+            Flags::N => { return (self.f & 0b0100_0000) != 0 },
+            Flags::H => { return (self.f & 0b0010_0000) != 0 },
+            Flags::C => { return (self.f & 0b0001_0000) != 0 },
+        }
     }
 
     /// ```
@@ -214,6 +340,270 @@ impl Cpu {
             Regs::F => { self.f },
             Regs::H => { self.h },
             Regs::L => { self.l },
+        }
+    }
+
+    /// ```
+    /// Get 16-bit Register
+    ///
+    /// Gets the value stored in the joint 16-bit register
+    ///
+    /// Input:
+    ///     16-bit register (Regs16 enum value)
+    ///
+    /// Output:
+    ///     Value stored in register (u16)
+    /// ```
+    pub fn get_reg_16(&self, r: Regs16) -> u16 {
+        match r {
+            Regs16::AF => {
+                let high = self.a;
+                let low = self.f;
+                merge_bytes(high, low)
+            },
+            Regs16::BC => {
+                let high = self.b;
+                let low = self.c;
+                merge_bytes(high, low)
+            },
+            Regs16::DE => {
+                let high = self.d;
+                let low = self.e;
+                merge_bytes(high, low)
+            },
+            Regs16::HL => {
+                let high = self.h;
+                let low = self.l;
+                merge_bytes(high, low)
+            }
+        }
+    }
+
+    /// ```
+    /// INC d8
+    ///
+    /// Increments specified register
+    ///
+    /// Input:
+    ///     Register to increment (Regs enum value)
+    /// ```
+    pub fn inc_8(&mut self, reg: Regs) {
+        let val = self.get_reg(reg);
+        let result = val.wrapping_add(1);
+        let set_h = check_h_carry_u8(val, 1);
+        self.set_reg(reg, result);
+
+        self.clear_flag(Flags::N);
+        self.write_flag(Flags::Z, result == 0);
+        self.write_flag(Flags::H, set_h);
+    }
+
+    /// ```
+    /// INC d16
+    ///
+    /// Increments specified join register
+    ///
+    /// Input:
+    ///     Register to increment (Regs16 enum value)
+    /// ```
+    pub fn inc_16(&mut self, reg: Regs16) {
+        let val = self.get_reg_16(reg);
+        let result = val.wrapping_add(1);
+        self.set_reg_16(reg, result);
+    }
+
+    /// ```
+    /// LD N d8
+    ///
+    /// Load 8-bit value into register
+    ///
+    /// Inputs:
+    ///     Register to load (Regs enum value)
+    ///     Value to store (u8)
+    /// ```
+    pub fn ld_n_d8(&mut self, reg: Regs, byte: u8) {
+        self.set_reg(reg, byte);
+    }
+
+    /// ```
+    /// LD NN d16
+    ///
+    /// Load 16-bit value into joint register
+    ///
+    /// Inputs:
+    ///     Register to load (Regs16 enum value)
+    ///     Value to store (u16)
+    /// ```
+    pub fn ld_nn_d16(&mut self, reg: Regs16, val: u16) {
+        self.set_reg_16(reg, val);
+    }
+
+    /// ```
+    /// OR A d8
+    ///
+    /// Boolean OR value with A register
+    ///
+    /// Input:
+    ///     Value to OR with A register (u8)
+    /// ```
+    pub fn or_a_d8(&mut self, val: u8) {
+        let mut a = self.get_reg(Regs::A);
+        a |= val;
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.clear_flag(Flags::C);
+        self.write_flag(Flags::Z, a == 0);
+        self.set_reg(Regs::A, a);
+    }
+
+    /// ```
+    /// POP
+    ///
+    /// Pops 16-bit value off of stack.
+    /// Stack starts at 0xFFFE, goes down as stack increases
+    ///
+    /// Output:
+    ///     Value on top of stack (u16)
+    /// ```
+    pub fn pop(&mut self) -> u16 {
+        // If at $FFFE, then stack is empty, assert?
+        assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
+        self.sp += 2;
+        let byte1 = self.read_ram(self.sp - 1);
+        let byte2 = self.read_ram(self.sp);
+        let byte = merge_bytes(byte1, byte2);
+        byte
+    }
+
+    /// ```
+    /// PUSH
+    ///
+    /// Pushes value onto stack
+    ///
+    /// Input:
+    ///     Value to push onto stack (u16)
+    /// ```
+    pub fn push(&mut self, val: u16) {
+        let byte1 = val.get_high_byte();
+        let byte2 = val.get_low_byte();
+        self.write_ram(self.sp - 1, byte1);
+        self.write_ram(self.sp, byte2);
+        self.sp -= 2;
+    }
+
+    /// ```
+    /// Read RAM
+    ///
+    /// Returns the byte at the specified address in RAM
+    ///
+    /// Input:
+    ///     Address in RAM (u16)
+    ///
+    /// Output:
+    ///     Byte at specified address (u8)
+    /// ```
+    pub fn read_ram(&self, addr: u16) -> u8 {
+        self.bus.read_ram(addr)
+    }
+
+    /// ```
+    /// Rotate Register Left
+    ///
+    /// Rotates bits stored in register left
+    ///
+    /// Input:
+    ///     Register to rotate (Regs enum value)
+    ///     Whether or not to push through carry flag (bool)
+    /// ```
+    pub fn rot_left_reg(&mut self, reg: Regs, carry: bool) {
+        let val = self.get_reg(reg);
+        let rot = self.rot_left(val, carry);
+        self.set_reg(reg, rot);
+    }
+
+    /// ```
+    /// Rotate Left
+    ///
+    /// Rotates value in given register left
+    ///
+    /// Inputs:
+    ///     Register to rotate (Regs enum value)
+    ///     Whether or not to push in carry flag (bool)
+    ///
+    /// Output:
+    ///     Value after being rotated (u8)
+    /// ```
+    pub fn rot_left(&mut self, byte: u8, carry: bool) -> u8 {
+        let msb = byte.get_bit(7);
+        let mut rot = byte.rotate_left(1);
+        if carry {
+            let old_c = self.get_flag(Flags::C);
+            rot.write_bit(0, old_c);
+        }
+        self.write_flag(Flags::C, msb);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::Z, rot == 0);
+
+        rot
+    }
+
+    /// ```
+    /// Rotate Register Right
+    ///
+    /// Rotates the bits stored in the given register right
+    ///
+    /// Inputs:
+    ///     Register of value to shift (Regs enum value)
+    ///     Whether or not to shift through carry (bool)
+    /// ```
+    pub fn rot_right_reg(&mut self, reg: Regs, carry: bool) {
+        let val = self.get_reg(reg);
+        let rotated = self.rot_right(val, carry);
+        self.set_reg(reg, rotated);
+    }
+
+    /// ```
+    /// Rotate right
+    ///
+    /// Rotates value in given register right
+    ///
+    /// Inputs:
+    ///     Value to rotate (u8)
+    ///     Whether or not to push in carry flag (bool)
+    ///
+    /// Output:
+    ///     Value after rotation
+    /// ```
+    pub fn rot_right(&mut self, byte: u8, carry: bool) -> u8 {
+        let lsb = byte.get_bit(0);
+        let mut rot = byte.rotate_right(1);
+        if carry {
+            let old_c = self.get_flag(Flags::C);
+            rot.write_bit(7, old_c);
+        }
+        self.write_flag(Flags::C, lsb);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::Z, rot == 0);
+
+        rot
+    }
+
+    /// ```
+    /// Set Flag
+    ///
+    /// Sets the specified flag to True
+    ///
+    /// Input:
+    ///     Flag to set (Flags enum value)
+    /// ```
+    pub fn set_flag(&mut self, f: Flags) {
+        match f {
+            Flags::Z => { self.f |= 0b1000_0000 },
+            Flags::N => { self.f |= 0b0100_0000 },
+            Flags::H => { self.f |= 0b0010_0000 },
+            Flags::C => { self.f |= 0b0001_0000 },
         }
     }
 
@@ -272,251 +662,85 @@ impl Cpu {
     }
 
     /// ```
-    /// Get 16-bit Register
+    /// Shift Register Left
     ///
-    /// Gets the value stored in the joint 16-bit register
+    /// Shifts the value in a register over one bit
     ///
     /// Input:
-    ///     16-bit register (Regs16 enum value)
+    ///     Register to shift (Regs enum value)
+    /// ```
+    pub fn shift_left_reg(&mut self, reg: Regs) {
+        let byte = self.get_reg(reg);
+        let new_byte = self.shift_left(byte);
+        self.set_reg(reg, new_byte);
+    }
+
+    /// ```
+    /// Shift Left
+    ///
+    /// Shifts the value in a register right by one bit
+    ///
+    /// Inputs:
+    ///     Value to shift (u8)
     ///
     /// Output:
-    ///     Value stored in register (u16)
+    ///     Shifted value (u8)
     /// ```
-    pub fn get_reg_16(&self, r: Regs16) -> u16 {
-        match r {
-            Regs16::AF => {
-                let high = self.a;
-                let low = self.f;
-                merge_bytes(high, low)
-            },
-            Regs16::BC => {
-                let high = self.b;
-                let low = self.c;
-                merge_bytes(high, low)
-            },
-            Regs16::DE => {
-                let high = self.d;
-                let low = self.e;
-                merge_bytes(high, low)
-            },
-            Regs16::HL => {
-                let high = self.h;
-                let low = self.l;
-                merge_bytes(high, low)
-            }
-        }
+    pub fn shift_left(&mut self, byte: u8) -> u8 {
+        let msb = byte.get_bit(7);
+        let shifted = byte.wrapping_shl(1);
+
+        self.write_flag(Flags::Z, shifted == 0);
+        self.clear_flag(Flags::N);
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, msb);
+
+        shifted
     }
 
     /// ```
-    /// Set Flag
+    /// Shift Register Right
     ///
-    /// Sets the specified flag to True
+    /// Shifts the value in a register right one bit
     ///
-    /// Input:
-    ///     Flag to set (Flags enum value)
+    /// Inputs:
+    ///     Register to shift (Regs enum value)
+    ///     Whether to shift arithmetically (true), or logically (bool)
     /// ```
-    pub fn set_flag(&mut self, f: Flags) {
-        match f {
-            Flags::Z => { self.f |= 0b1000_0000 },
-            Flags::N => { self.f |= 0b0100_0000 },
-            Flags::H => { self.f |= 0b0010_0000 },
-            Flags::C => { self.f |= 0b0001_0000 },
-        }
+    pub fn shift_right_reg(&mut self, reg: Regs, arith: bool) {
+        let byte = self.get_reg(reg);
+        let new_byte = self.shift_right(byte, arith);
+        self.set_reg(reg, new_byte);
     }
 
     /// ```
-    /// Clear Flag
+    /// Shift Right
     ///
-    /// Sets the specified flag to False
+    /// Shifts the value in a register right by one bit
     ///
-    /// Input:
-    ///     Flag to clear (Flags enum value)
-    /// ```
-    pub fn clear_flag(&mut self, f: Flags) {
-        match f {
-            Flags::Z => { self.f &= 0b0111_1111 },
-            Flags::N => { self.f &= 0b1011_1111 },
-            Flags::H => { self.f &= 0b1101_1111 },
-            Flags::C => { self.f &= 0b1110_1111 },
-        }
-    }
-
-    /// ```
-    /// Get Flag
-    ///
-    /// Returns whether the specified flag is set or cleared
-    ///
-    /// Input:
-    ///     Flag to return (Flags enum value)
+    /// Inputs:
+    ///     Register to shift (Regs enum value)
+    ///     Whether to shift arithmetically (true), or logically (bool)
     ///
     /// Output:
-    ///     Whether the flag is set or not (bool)
+    ///     Shifted result (u8)
     /// ```
-    pub fn get_flag(&self, f: Flags) -> bool {
-        match f {
-            Flags::Z => { return (self.f & 0b1000_0000) != 0 },
-            Flags::N => { return (self.f & 0b0100_0000) != 0 },
-            Flags::H => { return (self.f & 0b0010_0000) != 0 },
-            Flags::C => { return (self.f & 0b0001_0000) != 0 },
+    pub fn shift_right(&mut self, byte: u8, arith: bool) -> u8 {
+        let lsb = byte.get_bit(0);
+        // Another option is to cast to i8, shift then cast back to u8
+        // But instead, just duplicate the msb if needed
+        let msb = byte.get_bit(7);
+        let mut shifted = byte.wrapping_shr(1);
+        if arith {
+            shifted.write_bit(7, msb);
         }
-    }
 
-    /// ```
-    /// Write Flag
-    ///
-    /// Sets the specified flag to true or false
-    ///
-    /// Inputs:
-    ///     Flag to set (Flags enum value)
-    ///     Whether the flag should be set or not (bool)
-    /// ```
-    pub fn write_flag(&mut self, f: Flags, val: bool) {
-        if val {
-            self.set_flag(f);
-        } else {
-            self.clear_flag(f);
-        }
-    }
-
-    /// ```
-    /// LD N d8
-    ///
-    /// Load 8-bit value into register
-    ///
-    /// Inputs:
-    ///     Register to load (Regs enum value)
-    ///     Value to store (u8)
-    /// ```
-    pub fn ld_n_d8(&mut self, reg: Regs, byte: u8) {
-        self.set_reg(reg, byte);
-    }
-
-    /// ```
-    /// LD NN d16
-    ///
-    /// Load 16-bit value into joint register
-    ///
-    /// Inputs:
-    ///     Register to load (Regs16 enum value)
-    ///     Value to store (u16)
-    /// ```
-    pub fn ld_nn_d16(&mut self, reg: Regs16, val: u16) {
-        self.set_reg_16(reg, val);
-    }
-
-    /// ```
-    /// INC d8
-    ///
-    /// Increments specified register
-    ///
-    /// Input:
-    ///     Register to increment (Regs enum value)
-    /// ```
-    pub fn inc_8(&mut self, reg: Regs) {
-        let val = self.get_reg(reg);
-        let result = val.wrapping_add(1);
-        let set_h = check_h_carry_u8(val, 1);
-        self.set_reg(reg, result);
-
+        self.write_flag(Flags::Z, byte == 0);
         self.clear_flag(Flags::N);
-        self.write_flag(Flags::Z, result == 0);
-        self.write_flag(Flags::H, set_h);
-    }
+        self.clear_flag(Flags::H);
+        self.write_flag(Flags::C, lsb);
 
-    /// ```
-    /// INC d16
-    ///
-    /// Increments specified join register
-    ///
-    /// Input:
-    ///     Register to increment (Regs16 enum value)
-    /// ```
-    pub fn inc_16(&mut self, reg: Regs16) {
-        let val = self.get_reg_16(reg);
-        let result = val.wrapping_add(1);
-        self.set_reg_16(reg, result);
-    }
-
-    /// ```
-    /// DEC d8
-    ///
-    /// Decrements specified register
-    ///
-    /// Input:
-    ///     Register to decrement (Regs enum value)
-    /// ```
-    pub fn dec_8(&mut self, reg: Regs) {
-        let val = self.get_reg(reg);
-        let result = val.wrapping_sub(1);
-        let set_h = check_h_borrow_u8(result, 1);
-        self.set_reg(reg, result);
-
-        self.set_flag(Flags::N);
-        self.write_flag(Flags::Z, result == 0);
-        self.write_flag(Flags::H, set_h);
-    }
-
-    /// ```
-    /// DEC d16
-    ///
-    /// Decrements specified joint register
-    ///
-    /// Input:
-    ///     Register to decrement (Regs16 enum value)
-    /// ```
-    pub fn dec_16(&mut self, reg: Regs16) {
-        let val = self.get_reg_16(reg);
-        let result = val.wrapping_sub(1);
-        self.set_reg_16(reg, result);
-    }
-
-    /// ```
-    /// ADD A d8
-    ///
-    /// Adds specified value to A register
-    ///
-    /// Inputs:
-    ///     Value to add to register (u8)
-    ///     Whether or not to add with carry (bool)
-    /// ```
-    pub fn add_a_d8(&mut self, val: u8, adc: bool) {
-        let mut carry = 0;
-        if adc && self.get_flag(Flags::C) {
-            carry = 1;
-        }
-        let a = self.get_reg(Regs::A);
-        let result1 = a.overflowing_add(val);
-        let h_check1 = check_h_carry_u8(a, val);
-        let result2 = result1.0.overflowing_add(carry);
-        let h_check2 = check_h_carry_u8(result1.0, carry);
-        let set_h = h_check1 || h_check2;
-        let set_c = result1.1 || result2.1;
-
-        self.clear_flag(Flags::N);
-        self.write_flag(Flags::C, set_c);
-        self.write_flag(Flags::H, set_h);
-        self.write_flag(Flags::Z, result2.0 == 0);
-        self.set_reg(Regs::A, result2.0);
-    }
-
-    /// ```
-    /// ADD NN d16
-    ///
-    /// Adds value to joint 16-bit register
-    ///
-    /// Inputs:
-    ///     Register to add to (Regs16 enum value)
-    ///     Value to add (u16)
-    /// ```
-    pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
-        let target = self.get_reg_16(reg);
-        let result = target.overflowing_add(source);
-        let set_h = check_h_carry_u16(target, source);
-
-        self.set_reg_16(reg, result.0);
-        self.clear_flag(Flags::N);
-        self.write_flag(Flags::C, result.1);
-        self.write_flag(Flags::H, set_h);
+        byte
     }
 
     /// ```
@@ -549,194 +773,41 @@ impl Cpu {
     }
 
     /// ```
-    /// AND A d8
+    /// Swap Register Bits
     ///
-    /// Boolean AND value with A register
+    /// Swaps the high and low nibbles of a reigster
     ///
-    /// Input:
-    ///     Value to AND with A register (u8)
+    /// Inputs:
+    ///     Register to swap (Reg enum value)
     /// ```
-    pub fn and_a_d8(&mut self, val: u8) {
-        let mut a = self.get_reg(Regs::A);
-        a &= val;
-        self.clear_flag(Flags::N);
-        self.set_flag(Flags::H);
-        self.clear_flag(Flags::C);
-        self.write_flag(Flags::Z, a == 0);
-        self.set_reg(Regs::A, a);
+    pub fn swap_bits_reg(&mut self, reg: Regs) {
+        let byte = self.get_reg(reg);
+        let swapped = self.swap_bits(byte);
+        self.set_reg(reg, swapped);
     }
 
     /// ```
-    /// OR A d8
+    /// Swap Bits
     ///
-    /// Boolean OR value with A register
+    /// Swaps the high and low nibbles of 8-bit value
     ///
     /// Input:
-    ///     Value to OR with A register (u8)
+    ///     8-bit value to swap bits (u8)
+    ///
+    /// Output:
+    ///     Swapped value (u8)
     /// ```
-    pub fn or_a_d8(&mut self, val: u8) {
-        let mut a = self.get_reg(Regs::A);
-        a |= val;
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
-        self.clear_flag(Flags::C);
-        self.write_flag(Flags::Z, a == 0);
-        self.set_reg(Regs::A, a);
-    }
+    pub fn swap_bits(&mut self, val: u8) -> u8 {
+        let new_high = val & 0xF;
+        let new_low = (val & 0xF0) >> 4;
+        let new_val = (new_high << 4) | new_low;
 
-    /// ```
-    /// XOR A d8
-    ///
-    /// Boolean XOR value with A register
-    ///
-    /// Input:
-    ///     Value to XOR with A register (u8)
-    /// ```
-    pub fn xor_a_d8(&mut self, val: u8) {
-        let mut a = self.get_reg(Regs::A);
-        a ^= val;
+        self.write_flag(Flags::Z, new_val == 0);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.clear_flag(Flags::C);
-        self.write_flag(Flags::Z, a == 0);
-        self.set_reg(Regs::A, a);
-    }
 
-    /// ```
-    /// CP A d8
-    ///
-    /// Compare value with A register
-    ///
-    /// Input:
-    ///     Value to compare (u8)
-    /// ```
-    pub fn cp_a_d8(&mut self, val: u8) {
-        let a = self.get_reg(Regs::A);
-        let set_h = check_h_borrow_u8(a, val);
-
-        self.write_flag(Flags::Z, a == val);
-        self.write_flag(Flags::H, set_h);
-        self.write_flag(Flags::C, a < val);
-    }
-
-    /// ```
-    /// POP
-    ///
-    /// Pops 16-bit value off of stack.
-    /// Stack starts at 0xFFFE, goes down as stack increases
-    ///
-    /// Output:
-    ///     Value on top of stack (u16)
-    /// ```
-    pub fn pop(&mut self) -> u16 {
-        // If at $FFFE, then stack is empty, assert?
-        assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
-        self.sp += 2;
-        let byte1 = self.read_ram(self.sp - 1);
-        let byte2 = self.read_ram(self.sp);
-        let byte = merge_bytes(byte1, byte2);
-        byte
-    }
-
-    /// ```
-    /// PUSH
-    ///
-    /// Pushes value onto stack
-    ///
-    /// Input:
-    ///     Value to push onto stack (u16)
-    /// ```
-    pub fn push(&mut self, val: u16) {
-        let byte1 = val.get_high_byte();
-        let byte2 = val.get_low_byte();
-        self.write_ram(self.sp - 1, byte1);
-        self.write_ram(self.sp, byte2);
-        self.sp -= 2;
-    }
-
-    /// ```
-    /// Rotate Register Right
-    ///
-    /// Rotates the bits stored in the given register right
-    ///
-    /// Inputs:
-    ///     Register of value to shift (Regs enum value)
-    ///     Whether or not to shift through carry (bool)
-    /// ```
-    pub fn rot_right_reg(&mut self, reg: Regs, carry: bool) {
-        let val = self.get_reg(reg);
-        let rotated = self.rot_right(val, carry);
-        self.set_reg(reg, rotated);
-    }
-
-    /// ```
-    /// Rotate right
-    ///
-    /// Rotates value in given register right
-    ///
-    /// Inputs:
-    ///     Value to rotate (u8)
-    ///     Whether or not to push in carry flag (bool)
-    ///
-    /// Output:
-    ///     Value after rotation
-    /// ```
-    pub fn rot_right(&mut self, byte: u8, carry: bool) -> u8 {
-        let lsb = byte.get_bit(0);
-        let mut rot = byte.rotate_right(1);
-        if carry {
-            let old_c = self.get_flag(Flags::C);
-            rot.write_bit(7, old_c);
-        }
-        // I'm pretty sure C flag gets set, even if not rotating with carry
-        self.write_flag(Flags::C, lsb);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
-        self.write_flag(Flags::Z, byte == 0);
-
-        rot
-    }
-
-    /// ```
-    /// Rotate Register Left
-    ///
-    /// Rotates bits stored in register left
-    ///
-    /// Input:
-    ///     Register to rotate (Regs enum value)
-    ///     Whether or not to push through carry flag (bool)
-    /// ```
-    pub fn rot_left_reg(&mut self, reg: Regs, carry: bool) {
-        let val = self.get_reg(reg);
-        let rot = self.rot_left(val, carry);
-        self.set_reg(reg, rot);
-    }
-
-    /// ```
-    /// Rotate Left
-    ///
-    /// Rotates value in given register left
-    ///
-    /// Inputs:
-    ///     Register to rotate (Regs enum value)
-    ///     Whether or not to push in carry flag (bool)
-    ///
-    /// Output:
-    ///     Value after being rotated (u8)
-    /// ```
-    pub fn rot_left(&mut self, byte: u8, carry: bool) -> u8 {
-        let msb = byte.get_bit(7);
-        let mut rot = byte.rotate_left(1);
-        if carry {
-            let old_c = self.get_flag(Flags::C);
-            rot.write_bit(0, old_c);
-        }
-        self.write_flag(Flags::C, msb);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
-        self.write_flag(Flags::Z, byte == 0);
-
-        rot
+        new_val
     }
 
     /// ```
@@ -803,122 +874,50 @@ impl Cpu {
     }
 
     /// ```
-    /// Swap Register Bits
+    /// Write Flag
     ///
-    /// Swaps the high and low nibbles of a reigster
+    /// Sets the specified flag to true or false
     ///
     /// Inputs:
-    ///     Register to swap (Reg enum value)
+    ///     Flag to set (Flags enum value)
+    ///     Whether the flag should be set or not (bool)
     /// ```
-    pub fn swap_bits_reg(&mut self, reg: Regs) {
-        let byte = self.get_reg(reg);
-        let swapped = self.swap_bits(byte);
-        self.set_reg(reg, swapped);
+    pub fn write_flag(&mut self, f: Flags, val: bool) {
+        if val {
+            self.set_flag(f);
+        } else {
+            self.clear_flag(f);
+        }
     }
 
     /// ```
-    /// Swap Bits
+    /// Write RAM
     ///
-    /// Swaps the high and low nibbles of 8-bit value
+    /// Writes the specified byte at the specified address
+    ///
+    /// Inputs:
+    ///     Address in RAM (u16)
+    ///     Byte to write (u8)
+    /// ```
+    pub fn write_ram(&mut self, addr: u16, val: u8) {
+        self.bus.write_ram(addr, val);
+    }
+
+    /// ```
+    /// XOR A d8
+    ///
+    /// Boolean XOR value with A register
     ///
     /// Input:
-    ///     8-bit value to swap bits (u8)
-    ///
-    /// Output:
-    ///     Swapped value (u8)
+    ///     Value to XOR with A register (u8)
     /// ```
-    pub fn swap_bits(&mut self, val: u8) -> u8 {
-        let new_high = val & 0xF;
-        let new_low = (val & 0xF0) >> 4;
-        let new_val = (new_high << 4) | new_low;
-
-        self.write_flag(Flags::Z, new_val == 0);
+    pub fn xor_a_d8(&mut self, val: u8) {
+        let mut a = self.get_reg(Regs::A);
+        a ^= val;
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.clear_flag(Flags::C);
-
-        new_val
-    }
-
-    /// ```
-    /// Shift Register Right
-    ///
-    /// Shifts the value in a register right one bit
-    ///
-    /// Inputs:
-    ///     Register to shift (Regs enum value)
-    ///     Whether to shift arithmetically (true), or logically (bool)
-    /// ```
-    pub fn shift_right_reg(&mut self, reg: Regs, arith: bool) {
-        let byte = self.get_reg(reg);
-        let new_byte = self.shift_right(byte, arith);
-        self.set_reg(reg, new_byte);
-    }
-
-    /// ```
-    /// Shift Right
-    ///
-    /// Shifts the value in a register right by one bit
-    ///
-    /// Inputs:
-    ///     Register to shift (Regs enum value)
-    ///     Whether to shift arithmetically (true), or logically (bool)
-    ///
-    /// Output:
-    ///     Shifted result (u8)
-    /// ```
-    pub fn shift_right(&mut self, byte: u8, arith: bool) -> u8 {
-        let lsb = byte.get_bit(0);
-        // Another option is to cast to i8, shift then cast back to u8
-        // But instead, just duplicate the msb if needed
-        let msb = byte.get_bit(7);
-        let mut shifted = byte.wrapping_shr(1);
-        if arith {
-            shifted.write_bit(7, msb);
-        }
-
-        self.write_flag(Flags::Z, byte == 0);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
-        self.write_flag(Flags::C, lsb);
-
-        byte
-    }
-
-    /// ```
-    /// Shift Register Left
-    ///
-    /// Shifts the value in a register over one bit
-    ///
-    /// Input:
-    ///     Register to shift (Regs enum value)
-    /// ```
-    pub fn shift_left_reg(&mut self, reg: Regs) {
-        let byte = self.get_reg(reg);
-        let new_byte = self.shift_left(byte);
-        self.set_reg(reg, new_byte);
-    }
-
-    /// ```
-    /// Shift Left
-    ///
-    /// Shifts the value in a register right by one bit
-    ///
-    /// Inputs:
-    ///     Value to shift (u8)
-    ///
-    /// Output:
-    ///     Shifted value (u8)
-    /// ```
-    pub fn shift_left(&mut self, byte: u8) -> u8 {
-        let msb = byte.get_bit(7);
-        let shifted = byte.wrapping_shl(1);
-
-        self.write_flag(Flags::Z, shifted == 0);
-        self.clear_flag(Flags::N);
-        self.clear_flag(Flags::H);
-        self.write_flag(Flags::C, msb);
-
-        shifted
+        self.write_flag(Flags::Z, a == 0);
+        self.set_reg(Regs::A, a);
     }
 }
