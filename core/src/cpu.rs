@@ -277,7 +277,7 @@ impl Cpu {
     pub fn dec_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
         let result = val.wrapping_sub(1);
-        let set_h = check_h_borrow_u8(result, 1);
+        let set_h = check_h_borrow_u8(val, 1);
         self.set_reg(reg, result);
 
         self.set_flag(Flags::N);

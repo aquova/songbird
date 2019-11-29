@@ -276,8 +276,10 @@ fn rra_1f(cpu: &mut Cpu) -> u8 {
 /// JR NZ, r8
 fn jr_20(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
+    // Add offset value as signed 8-bit value
+    let signed = offset as i8 as i16 as u16;
     if !cpu.get_flag(Flags::Z) {
-        cpu.pc += offset as u16;
+        cpu.pc = cpu.pc.wrapping_add(signed);
     }
     12
 }
@@ -407,19 +409,18 @@ fn jr_30(cpu: &mut Cpu) -> u8 {
 
 /// LD SP, d16
 fn ld_31(cpu: &mut Cpu) -> u8 {
-    let byte1 = cpu.fetch();
-    let byte2 = cpu.fetch();
-    cpu.sp = merge_bytes(byte1, byte2);
+    let low = cpu.fetch();
+    let high = cpu.fetch();
+    cpu.sp = merge_bytes(high, low);
     12
 }
 
 /// LD (HL-), A
 fn ld_32(cpu: &mut Cpu) -> u8 {
-    let mut hl = cpu.get_reg_16(Regs16::HL);
+    let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.get_reg(Regs::A);
     cpu.write_ram(hl, val);
-    hl -= 1;
-    cpu.set_reg_16(Regs16::HL, hl);
+    cpu.dec_16(Regs16::HL);
     8
 }
 
