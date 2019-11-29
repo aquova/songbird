@@ -223,7 +223,7 @@ fn rla_17(cpu: &mut Cpu) -> u8 {
 /// JR r8
 fn jr_18(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
-    cpu.pc += offset as u16;
+    cpu.pc = cpu.pc.wrapping_add(offset as u16);
     12
 }
 
@@ -280,8 +280,10 @@ fn jr_20(cpu: &mut Cpu) -> u8 {
     let signed = offset as i8 as i16 as u16;
     if !cpu.get_flag(Flags::Z) {
         cpu.pc = cpu.pc.wrapping_add(signed);
+        12
+    } else {
+        8
     }
-    12
 }
 
 /// LD HL, d16
@@ -295,11 +297,10 @@ fn ld_21(cpu: &mut Cpu) -> u8 {
 
 /// LD (HL+), A
 fn ld_22(cpu: &mut Cpu) -> u8 {
-    let mut hl = cpu.get_reg_16(Regs16::HL);
+    let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.get_reg(Regs::A);
     cpu.write_ram(hl, val);
-    hl += 1;
-    cpu.set_reg_16(Regs16::HL, hl);
+    cpu.inc_16(Regs16::HL);
     8
 }
 
@@ -337,8 +338,9 @@ fn daa_27(cpu: &mut Cpu) -> u8 {
 /// JR Z, r8
 fn jr_28(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
+    let signed = offset as i8 as i16 as u16;
     if cpu.get_flag(Flags::Z) {
-        cpu.pc += offset as u16;
+        cpu.pc = cpu.pc.wrapping_add(signed);
         12
     } else {
         8
@@ -354,11 +356,10 @@ fn add_29(cpu: &mut Cpu) -> u8 {
 
 /// LD A, (HL+)
 fn ld_2a(cpu: &mut Cpu) -> u8 {
-    let mut hl = cpu.get_reg_16(Regs16::HL);
+    let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.read_ram(hl);
     cpu.set_reg(Regs::A, val);
-    hl += 1;
-    cpu.set_reg_16(Regs16::HL, hl);
+    cpu.inc_16(Regs16::HL);
     8
 }
 
@@ -399,8 +400,9 @@ fn cpl_2f(cpu: &mut Cpu) -> u8 {
 /// JR NC, r8
 fn jr_30(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
+    let signed = offset as i8 as i16 as u16;
     if !cpu.get_flag(Flags::C) {
-        cpu.pc += offset as u16;
+        cpu.pc = cpu.pc.wrapping_add(signed);
         12
     } else {
         8
@@ -468,8 +470,9 @@ fn scf_37(cpu: &mut Cpu) -> u8 {
 /// JR C, r8
 fn jr_38(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
+    let signed = offset as i8 as i16 as u16;
     if cpu.get_flag(Flags::C) {
-        cpu.pc += offset as u16;
+        cpu.pc = cpu.pc.wrapping_add(signed);
         12
     } else {
         8
@@ -484,11 +487,10 @@ fn add_39(cpu: &mut Cpu) -> u8 {
 
 /// LD A, (HL-)
 fn ld_3a(cpu: &mut Cpu) -> u8 {
-    let mut hl = cpu.get_reg_16(Regs16::HL);
+    let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.read_ram(hl);
     cpu.set_reg(Regs::A, val);
-    hl -= 1;
-    cpu.set_reg_16(Regs16::HL, hl);
+    cpu.dec_16(Regs16::HL);
     8
 }
 
