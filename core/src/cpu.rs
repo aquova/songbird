@@ -735,12 +735,12 @@ impl Cpu {
             shifted.write_bit(7, msb);
         }
 
-        self.write_flag(Flags::Z, byte == 0);
+        self.write_flag(Flags::Z, shifted == 0);
         self.clear_flag(Flags::N);
         self.clear_flag(Flags::H);
         self.write_flag(Flags::C, lsb);
 
-        byte
+        shifted
     }
 
     /// ```

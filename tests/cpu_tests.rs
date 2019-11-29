@@ -372,7 +372,6 @@ fn test_invalid_stack() {
 /// Test rotate right functions
 fn test_rot_right() {
     let mut gb = Cpu::new();
-
     gb.a = 0b0101_1010;
     gb.f = 0;
 
@@ -401,5 +400,75 @@ fn test_rot_right() {
     gb.rot_right_reg(Regs::A, true);
     assert_eq!(gb.get_reg(Regs::A), 0b0000_0000);
     assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Test rotate left functions
+pub fn test_rot_left() {
+    let mut gb = Cpu::new();
+    gb.a = 0b0101_1010;
+    gb.f = 0;
+
+    gb.rot_left_reg(Regs::A, false);
+    assert_eq!(gb.get_reg(Regs::A), 0b1011_0100);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.rot_left_reg(Regs::A, false);
+    assert_eq!(gb.get_reg(Regs::A), 0b0110_1001);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    gb.rot_left_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b1101_0011);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.a = 0b1000_0000;
+    gb.f = 0;
+    gb.rot_left_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b0000_0000);
+    assert_eq!(gb.get_flag(Flags::Z), true);
+    assert_eq!(gb.get_flag(Flags::C), true);
+}
+
+#[test]
+/// Test shift functions
+pub fn test_shift() {
+    let mut gb = Cpu::new();
+    gb.a = 0b0101_1010;
+    gb.f = 0;
+
+    gb.shift_right_reg(Regs::A, false);
+    assert_eq!(gb.get_reg(Regs::A), 0b0010_1101);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.shift_left_reg(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 0b0101_1010);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.shift_left_reg(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 0b1011_0100);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.shift_right_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b1101_1010);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), false);
+
+    gb.shift_left_reg(Regs::A);
+    assert_eq!(gb.get_reg(Regs::A), 0b1011_0100);
+    assert_eq!(gb.get_flag(Flags::Z), false);
+    assert_eq!(gb.get_flag(Flags::C), true);
+
+    gb.shift_right_reg(Regs::A, true);
+    gb.shift_right_reg(Regs::A, true);
+    gb.shift_right_reg(Regs::A, true);
+    assert_eq!(gb.get_reg(Regs::A), 0b1111_0110);
+    assert_eq!(gb.get_flag(Flags::Z), false);
     assert_eq!(gb.get_flag(Flags::C), true);
 }
