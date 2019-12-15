@@ -8,24 +8,60 @@ pub trait ModifyBits {
 }
 
 impl ModifyBits for u8 {
+    /// ```
+    /// Get Bit
+    ///
+    /// Returns true if specified bit is set, false if cleared
+    ///
+    /// Inputs:
+    ///     Digit: Index of digit to check. 0 is LSB, 7 is MSB. (u8)
+    ///
+    /// Outputs:
+    ///     Whether given bit is set (bool)
+    /// ```
     fn get_bit(&self, digit: u8) -> bool {
         let mut mask = 0b1;
         mask <<= digit;
         self & mask != 0
     }
 
+    /// ```
+    /// Set Bit
+    ///
+    /// Sets the specified bit to 1
+    ///
+    /// Input:
+    ///     Digit: Index of digit to set. 0 is LSB, 7 is MSB. (u8)
+    /// ```
     fn set_bit(&mut self, digit: u8) {
         let mut mask = 0b1;
         mask <<= digit;
         *self |= mask;
     }
 
+    /// ```
+    /// Clear Bit
+    ///
+    /// Sets the specified bit to 0
+    ///
+    /// Input:
+    ///     Digit: Index of digit to clear. 0 is LSB, 7 is MSB. (u8)
+    /// ```
     fn clear_bit(&mut self, digit: u8) {
         let mut mask = 0b1;
         mask <<= digit;
         *self &= !mask;
     }
 
+    /// ```
+    /// Write Bit
+    ///
+    /// Sets the bit to the specified value
+    ///
+    /// Input:
+    ///     Digit: Index of digit to write. 0 is LSB, 7 is MSB. (u8)
+    ///     Val: True to set bit, false to clear (bool)
+    /// ```
     fn write_bit(&mut self, digit: u8, val: bool) {
         if val {
             self.set_bit(digit);
@@ -87,10 +123,10 @@ impl ModifyBytes for u16 {
 ///     Low byte (u8)
 ///
 /// Output:
-///     u16 combination of two inputs
+///     Combination of two inputs (u16)
 /// ```
-pub fn merge_bytes(first: u8, second: u8) -> u16 {
-    ((first as u16) << BYTE) | (second as u16)
+pub fn merge_bytes(high: u8, low: u8) -> u16 {
+    ((high as u16) << BYTE) | (low as u16)
 }
 
 /// ```
@@ -102,8 +138,8 @@ pub fn merge_bytes(first: u8, second: u8) -> u16 {
 /// Outputs:
 ///     Whether or not there has been a carry from 3rd to 4th bit (bool)
 /// ```
-pub fn check_h_carry_u8(first: u8, second: u8) -> bool {
-    ((first & 0xF) + (second & 0xF)) & 0x10 == 0x10
+pub fn check_h_carry_u8(high: u8, low: u8) -> bool {
+    ((high & 0xF) + (low & 0xF)) & 0x10 == 0x10
 }
 
 /// ```
@@ -115,8 +151,8 @@ pub fn check_h_carry_u8(first: u8, second: u8) -> bool {
 /// Outputs:
 ///     Whether or not there has been a carry from the 11th to 12th bit (bool)
 /// ```
-pub fn check_h_carry_u16(first: u16, second: u16) -> bool {
-    ((first & 0xFFF) + (second & 0xFFF)) & 0x1000 == 0x1000
+pub fn check_h_carry_u16(high: u16, low: u16) -> bool {
+    ((high & 0xFFF) + (low & 0xFFF)) & 0x1000 == 0x1000
 }
 
 /// ```
@@ -128,8 +164,8 @@ pub fn check_h_carry_u16(first: u16, second: u16) -> bool {
 /// Outputs:
 ///     Whether or not there has been a borrow from the 4th to 3rd bit (bool)
 /// ```
-pub fn check_h_borrow_u8(first: u8, second: u8) -> bool {
-    (first & 0xF).checked_sub(second & 0xF).is_none()
+pub fn check_h_borrow_u8(high: u8, low: u8) -> bool {
+    (high & 0xF).checked_sub(low & 0xF).is_none()
 }
 
 /// ```
@@ -141,7 +177,7 @@ pub fn check_h_borrow_u8(first: u8, second: u8) -> bool {
 /// Outputs:
 ///     Whether or not there has been a borrow from the 12th to 11th bit (bool)
 /// ```
-pub fn check_h_borrow_u16(first: u16, second: u16) -> bool {
+pub fn check_h_borrow_u16(high: u16, low: u16) -> bool {
     // TODO: See if the two borrow functions can be generic-ized
-    (first & 0xF).checked_sub(second & 0xF).is_none()
+    (high & 0xF).checked_sub(low & 0xF).is_none()
 }
