@@ -9,6 +9,8 @@ use sdl2::pixels::Color;
 
 const TILESIZE: usize = 8;
 const MAPSIZE: usize = 32 * TILESIZE;
+const SCREEN_WIDTH: usize = 160;
+const SCREEN_HEIGHT: usize = 144;
 
 // VRAM ranges
 const TILE_SET_0_RANGE: std::ops::Range<usize> = 0x8000..0x9000;
@@ -42,6 +44,10 @@ const PALETTE: [(u8, u8, u8); 4] = [
 // = Public methods =
 // ==================
 pub fn draw_screen(ram: &[u8], canvas: sdl2::video::Window) {
+    let LCD_reg = ram[LCD_DISP_REG];
+    if is_bkgd_dspl(LCD_reg) {
+        let bkgd = render_background(ram);
+    }
 
 }
 
@@ -49,7 +55,7 @@ pub fn draw_screen(ram: &[u8], canvas: sdl2::video::Window) {
 // = Private methods =
 // ===================
 fn render_background(ram: &[u8]) -> [u8; MAPSIZE * MAPSIZE] {
-    let map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];
+    let mut map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];
     let LCD_reg = ram[LCD_DISP_REG];
     let tile_map = if get_bkgd_tile_map(LCD_reg) == 0 {
         get_tile_map_0(ram)
@@ -63,9 +69,38 @@ fn render_background(ram: &[u8]) -> [u8; MAPSIZE * MAPSIZE] {
         get_tile_set_1(ram)
     };
 
-    // TODO: Iterate through tile_map, getting indices for tile_set. Store pixel values (0-3) into map
+    // Iterate through tile_map, getting indices for tile_set. Store pixel values (0-3) into map
+    for i in 0..tile_map.len() {
+        let index = tile_map[i];
+        // This is one row of a tile
+        let row_low = tile_set[index as usize]; // May need to change to be RAM index, rather than offset
+        let row_high = tile_set[(index + 1) as usize];
+        let row = parse_tile_data(row_low, row_high);
+
+        // Copy into map
+        &map[TILESIZE * i..TILESIZE * (i + 1)].copy_from_slice(&row);
+    }
 
     map
+}
+
+fn parse_tile_data(low: u8, high: u8) -> [u8; 8] {
+    let mut output = [0; 8];
+    for i in 0..8 {
+        let low_bit = low.get_bit(i);
+        let high_bit = high.get_bit(i);
+        let concat = concat_bits(low_bit, high_bit);
+        output[7-i as usize] = concat;
+    }
+
+    output
+}
+
+fn concat_bits(low: bool, high: bool) -> u8 {
+    let low_bit = if low { 1 } else { 0 };
+    let high_bit = if high { 1 } else { 0 };
+    let concat = (high_bit << 1) | low_bit;
+    concat
 }
 
 fn get_tile_set_0(ram: &[u8]) -> &[u8] {
