@@ -11,3 +11,4 @@ My Game Boy emulator, written in Rust
 - [Info on Half Carry Flag](https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/)
 - [Good explaination of MBC](https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work)
 - [Documentation about making an emulator in JS](http://imrannazar.com/GameBoy-Emulation-in-JavaScript)
+- [Test ROMs, other information](http://opusgames.com/games/GBDev/GBDev.html)

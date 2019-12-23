@@ -1,4 +1,9 @@
+extern crate sdl2;
+
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
+use crate::ppu::*;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 const RAM_SIZE: usize = 0x10000;
 
@@ -81,6 +86,11 @@ impl Bus {
         if self.mbc == MBC::NONE {
             self.load_bank_n(1);
         }
+    }
+
+    pub fn draw(&self, canvas: &mut Canvas<Window>) {
+        // draw_screen(&self.ram, canvas, scale);
+        draw_tile_set(&self.ram, canvas);
     }
 
     /// ```

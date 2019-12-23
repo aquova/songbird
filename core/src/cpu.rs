@@ -1,7 +1,12 @@
+extern crate sdl2;
+
 use crate::bus::Bus;
 use crate::debug::*;
 use crate::opcodes::execute;
 use crate::utils::*;
+
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 pub enum Flags {
     Z,
@@ -113,6 +118,10 @@ impl Cpu {
     pub fn tick(&mut self) -> u8 {
         let cycles = execute(self);
         cycles
+    }
+
+    pub fn draw(&self, canvas: &mut Canvas<Window>) {
+        self.bus.draw(canvas);
     }
 
     /// ```
