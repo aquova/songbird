@@ -85,7 +85,7 @@ pub fn draw_tile_set(ram: &[u8], canvas: &mut Canvas<Window>) {
         let high = tile_set[(2 * i + 1) as usize];
         let row = parse_tile_data(low, high);
         for index in 0..row.len() {
-            let c = PALETTE[index];
+            let c = PALETTE[row[index] as usize];
             let pixel_color = get_color(c);
             canvas.set_draw_color(pixel_color);
             let pixel = Rect::new(
@@ -186,7 +186,6 @@ fn concat_bits(low: bool, high: bool) -> u8 {
 fn get_color(color: (u8, u8, u8)) -> Color {
     Color::RGB(color.0, color.1, color.2)
 }
-
 
 fn get_tile_set_0(ram: &[u8]) -> &[u8] {
     &ram[TILE_SET_0_RANGE]
