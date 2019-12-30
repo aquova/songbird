@@ -5,16 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
-            "type": "cppdbg",
+            // Requres "CodeLLDB" extension
+            "name": "Launch agba (OS X)",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/agba",
-            "args": ["games/Tetris.gb"],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb"
-        }
+            "args": [
+                "${workspaceFolder}/games/Tetris.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

@@ -42,10 +42,10 @@ const DARK_GRAY: (u8, u8, u8)                   = (169, 169, 169);
 const WHITE: (u8, u8, u8)                       = (255, 255, 255);
 
 const PALETTE: [(u8, u8, u8); 4] = [
-    BLACK,
-    LIGHT_GRAY,
+    WHITE,
     DARK_GRAY,
-    WHITE
+    LIGHT_GRAY,
+    BLACK,
 ];
 
 // ==================
@@ -53,12 +53,12 @@ const PALETTE: [(u8, u8, u8); 4] = [
 // ==================
 pub fn draw_screen(ram: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
     // Clear window
-    let black_color = get_color(BLACK);
-    canvas.set_draw_color(black_color);
+    let draw_color = get_color(WHITE);
+    canvas.set_draw_color(draw_color);
     canvas.clear();
 
-    let LCD_reg = ram[LCD_DISP_REG];
-    if is_bkgd_dspl(LCD_reg) {
+    let lcd_reg = ram[LCD_DISP_REG];
+    if is_bkgd_dspl(lcd_reg) {
         draw_background(ram, canvas, scale);
     }
 
@@ -66,8 +66,8 @@ pub fn draw_screen(ram: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
 }
 
 pub fn draw_tile_set(ram: &[u8], canvas: &mut Canvas<Window>) {
-    let black_color = get_color(BLACK);
-    canvas.set_draw_color(black_color);
+    let draw_color = get_color(WHITE);
+    canvas.set_draw_color(draw_color);
     canvas.clear();
 
     let lcd_reg = ram[LCD_DISP_REG];
@@ -98,7 +98,7 @@ pub fn draw_tile_set(ram: &[u8], canvas: &mut Canvas<Window>) {
         }
 
         x += 8;
-        if x > 255 {
+        if x > 127 {
             x = 0;
             y += 1;
         }

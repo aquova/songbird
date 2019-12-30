@@ -30,7 +30,7 @@ pub fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     // let window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
-    let window = video_subsystem.window("TILE VIEW", 256, 96).position_centered().opengl().build().unwrap();
+    let window = video_subsystem.window("TILE VIEW", 128, 128).position_centered().opengl().build().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
 
     canvas.clear();
@@ -43,7 +43,10 @@ pub fn main() {
         for event in event_pump.poll_iter() {
             match event {
                 // Quit game
-                Event::Quit{..} | Event::KeyDown{keycode: Some(Keycode::Escape), ..} => {
+                Event::Quit{..} |
+                Event::KeyDown{keycode: Some(Keycode::Escape), ..} |
+                Event::KeyDown{keycode: Some(Keycode::Q), ..}
+                => {
                     break 'gameloop;
                 },
                 // Pause with Space
@@ -69,7 +72,7 @@ pub fn main() {
         if !paused {
             gb.print_info();
             gb.tick();
-            gb.draw(&mut canvas);
+            // gb.draw(&mut canvas);
         }
     }
 }
