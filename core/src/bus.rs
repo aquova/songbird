@@ -1,11 +1,23 @@
 extern crate sdl2;
 
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
-use crate::ppu::*;
+use crate::ppu::PPU;
+use crate::utils::ModifyBits;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 const RAM_SIZE: usize = 0x10000;
+
+// VRAM ranges
+const TILE_SET_0_RANGE: std::ops::Range<usize> = 0x8000..0x9000;
+const TILE_SET_1_RANGE: std::ops::Range<usize> = 0x8800..0x9800;
+const TILE_MAP_0_RANGE: std::ops::Range<usize> = 0x9800..0x9C00;
+const TILE_MAP_1_RANGE: std::ops::Range<usize> = 0x9C00..0xA000;
+const SAM:              std::ops::Range<usize> = 0xFE00..0xFEA0;
+
+// VRAM regsiters
+const LCD_DISP_REG: usize                       = 0xFF40;
+const LCD_STAT_REG: usize                       = 0xFF41;
 
 /*
  * RAM Map
@@ -54,7 +66,8 @@ pub struct Bus {
     ram: [u8; RAM_SIZE],
     ram_enabled: bool,
     rom: ROM,
-    mbc: MBC
+    mbc: MBC,
+    ppu: PPU
 }
 
 // ==================
@@ -66,7 +79,8 @@ impl Bus {
             ram: [0; RAM_SIZE],
             ram_enabled: false,
             rom: ROM::new(),
-            mbc: MBC::NONE
+            mbc: MBC::NONE,
+            ppu: PPU::new(1)
         }
     }
 
@@ -90,7 +104,7 @@ impl Bus {
 
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
         // draw_screen(&self.ram, canvas, scale);
-        draw_tile_set(&self.ram, canvas);
+        self.ppu.draw_tile_set(&self.ram, canvas);
     }
 
     /// ```
@@ -169,6 +183,33 @@ impl Bus {
     pub fn get_mbc(&self) -> MBC {
         self.mbc
     }
+
+    pub fn get_tile_set(&self) -> &[u8] {
+        let lcd_reg = self.ram[LCD_DISP_REG];
+
+        let tile_set = if self.get_bkgd_tile_set(lcd_reg) == 0 {
+            self.get_tile_set_0()
+        } else {
+            self.get_tile_set_1()
+        };
+
+        tile_set
+    }
+
+    pub fn get_tile_map(&self) -> &[u8] {
+        let lcd_reg = self.ram[LCD_DISP_REG];
+        let tile_map = if self.get_bkgd_tile_map(lcd_reg) == 0 {
+            self.get_tile_map_0()
+        } else {
+            self.get_tile_map_1()
+        };
+
+        tile_map
+    }
+
+    pub fn get_sprite_attributes(&self) -> &[u8] {
+        &self.ram[SAM]
+    }
 }
 
 // ===================
@@ -234,5 +275,29 @@ impl Bus {
 
     fn write_mbc3(&mut self, addr: u16, val: u8) {
 
+    }
+
+    fn get_bkgd_tile_set(&self, reg: u8) -> u8 {
+        if reg.get_bit(4) { return 1 } else { return 0 }
+    }
+
+    fn get_bkgd_tile_map(&self, reg: u8) -> u8 {
+        if reg.get_bit(3) { return 1 } else { return 0 }
+    }
+
+    fn get_tile_set_0(&self) -> &[u8] {
+        &self.ram[TILE_SET_0_RANGE]
+    }
+
+    fn get_tile_set_1(&self) -> &[u8] {
+        &self.ram[TILE_SET_1_RANGE]
+    }
+
+    fn get_tile_map_0(&self) -> &[u8] {
+        &self.ram[TILE_MAP_0_RANGE]
+    }
+
+    fn get_tile_map_1(&self) -> &[u8] {
+        &self.ram[TILE_MAP_1_RANGE]
     }
 }
