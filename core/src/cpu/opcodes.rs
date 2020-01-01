@@ -1,5 +1,5 @@
 use crate::cpu::*;
-use super::utils::*;
+use crate::utils::*;
 
 // Set up opcode lookup table
 // May god have mercy on our souls

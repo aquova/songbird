@@ -1,9 +1,11 @@
 extern crate sdl2;
 
+pub mod clock;
+pub mod opcodes;
+use clock::Clock;
+
 use crate::bus::Bus;
-use crate::clock::Clock;
 use crate::debug::*;
-use crate::opcodes::execute;
 use crate::utils::*;
 
 use sdl2::render::Canvas;
@@ -115,7 +117,7 @@ impl Cpu {
     /// Performs one operation
     /// ```
     pub fn tick(&mut self) {
-        let cycles = execute(self);
+        let cycles = opcodes::execute(self);
         self.clock.add_cycles(cycles);
     }
 
