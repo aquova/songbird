@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 use crate::bus::Bus;
+use crate::clock::Clock;
 use crate::debug::*;
 use crate::opcodes::execute;
 use crate::utils::*;
@@ -46,10 +47,10 @@ pub struct Cpu {
     pub f: u8,
     pub h: u8,
     pub l: u8,
+    pub clock: Clock,
     pub interupt: bool,
     pub bus: Bus,
 }
-
 
 impl Cpu {
     pub fn new() -> Cpu {
@@ -65,6 +66,7 @@ impl Cpu {
             f: 0xB0,
             h: 0x01,
             l: 0x4D,
+            clock: Clock::new(),
             interupt: false,
             bus: Bus::new()
         };
@@ -111,13 +113,10 @@ impl Cpu {
     /// Tick
     ///
     /// Performs one operation
-    ///
-    /// Output:
-    ///     Number of cycles needed to complete operation (u8)
     /// ```
-    pub fn tick(&mut self) -> u8 {
+    pub fn tick(&mut self) {
         let cycles = execute(self);
-        cycles
+        self.clock.add_cycles(cycles);
     }
 
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
