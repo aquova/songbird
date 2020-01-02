@@ -7,21 +7,9 @@ use crate::utils::ModifyBits;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-const RAM_SIZE: usize = 0x10000;
-
-// VRAM ranges
-const TILE_SET_0_RANGE: std::ops::Range<usize> = 0x8000..0x9000;
-const TILE_SET_1_RANGE: std::ops::Range<usize> = 0x8800..0x9800;
-const TILE_MAP_0_RANGE: std::ops::Range<usize> = 0x9800..0x9C00;
-const TILE_MAP_1_RANGE: std::ops::Range<usize> = 0x9C00..0xA000;
-const SAM:              std::ops::Range<usize> = 0xFE00..0xFEA0;
-
-// VRAM regsiters
-const LCD_DISP_REG: usize                       = 0xFF40;
-const LCD_STAT_REG: usize                       = 0xFF41;
-
 /*
  * RAM Map
+ * Not drawn to scale
  *
  * +----Cartridge-ROM-----+ $0000
  * |                      |
@@ -61,7 +49,30 @@ const LCD_STAT_REG: usize                       = 0xFF41;
  * | Interrupt Enable Reg |
  * +----------------------+ $FFFF
  *
- */
+**/
+
+// =============
+// = Constants =
+// =============
+// Size of internal RAM
+const RAM_SIZE: usize = 0x8000;
+
+// RAM ranges
+// TODO: Add other RAM ranges
+const BANK_N_START: u16 = 0x4000;
+const VRAM_START: u16 = 0x8000;
+const CART_RAM_START: u16 = 0xA000;
+
+// ====================
+// = Helper Functions =
+// ====================
+fn in_cart_rom(addr: u16) -> bool {
+    addr < VRAM_START
+}
+
+fn in_vram(addr: u16) -> bool {
+    addr >= VRAM_START && addr < CART_RAM_START
+}
 
 pub struct Bus {
     ram: [u8; RAM_SIZE],
@@ -120,7 +131,17 @@ impl Bus {
     ///     Value at address (u8)
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
-        self.ram[addr as usize]
+        match addr {
+            in_cart_rom(addr) => {
+                self.ram[addr as usize]
+            },
+            in_vram(addr) => {
+                self.ppu.read_vram(addr)
+            },
+            _ => {
+                panic!("Unimplemented!");
+            }
+        }
     }
 
     /// ```
@@ -133,18 +154,30 @@ impl Bus {
     ///     Value to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        match self.mbc {
-            MBC::NONE => {
-                self.ram[addr as usize] = val;
+        match addr {
+            // Apparently ranges don't work in match statements
+            // So have to use helper functions...
+            in_cart_rom(addr) => {
+                match self.mbc {
+                    MBC::NONE => {
+                        // self.ram[addr as usize] = val;
+                    },
+                    MBC::MBC1 => {
+                        self.write_mbc1(addr, val);
+                    },
+                    MBC::MBC2 => {
+                        self.write_mbc2(addr, val);
+                    },
+                    MBC::MBC3 => {
+                        self.write_mbc3(addr, val);
+                    }
+                }
             },
-            MBC::MBC1 => {
-                self.write_mbc1(addr, val);
+            in_vram(addr) => {
+                self.ppu.write_vram(addr, val);
             },
-            MBC::MBC2 => {
-                self.write_mbc2(addr, val);
-            },
-            MBC::MBC3 => {
-                self.write_mbc3(addr, val);
+            _ => {
+                panic!("Unimplemented!");
             }
         }
     }
@@ -153,6 +186,7 @@ impl Bus {
     /// Get RAM
     ///
     /// Returns the entire RAM array. Used for testing.
+    /// TODO: Delete this
     ///
     /// Output:
     ///     RAM array ([u8])
@@ -183,37 +217,6 @@ impl Bus {
     /// ```
     pub fn get_mbc(&self) -> MBC {
         self.mbc
-    }
-
-    pub fn set_video_regs(&mut self, clock: &Clock) {
-
-    }
-
-    pub fn get_tile_set(&self) -> &[u8] {
-        let lcd_reg = self.ram[LCD_DISP_REG];
-
-        let tile_set = if self.get_bkgd_tile_set(lcd_reg) == 0 {
-            self.get_tile_set_0()
-        } else {
-            self.get_tile_set_1()
-        };
-
-        tile_set
-    }
-
-    pub fn get_tile_map(&self) -> &[u8] {
-        let lcd_reg = self.ram[LCD_DISP_REG];
-        let tile_map = if self.get_bkgd_tile_map(lcd_reg) == 0 {
-            self.get_tile_map_0()
-        } else {
-            self.get_tile_map_1()
-        };
-
-        tile_map
-    }
-
-    pub fn get_sprite_attributes(&self) -> &[u8] {
-        &self.ram[SAM]
     }
 }
 
@@ -282,27 +285,4 @@ impl Bus {
 
     }
 
-    fn get_bkgd_tile_set(&self, reg: u8) -> u8 {
-        if reg.get_bit(4) { return 1 } else { return 0 }
-    }
-
-    fn get_bkgd_tile_map(&self, reg: u8) -> u8 {
-        if reg.get_bit(3) { return 1 } else { return 0 }
-    }
-
-    fn get_tile_set_0(&self) -> &[u8] {
-        &self.ram[TILE_SET_0_RANGE]
-    }
-
-    fn get_tile_set_1(&self) -> &[u8] {
-        &self.ram[TILE_SET_1_RANGE]
-    }
-
-    fn get_tile_map_0(&self) -> &[u8] {
-        &self.ram[TILE_MAP_0_RANGE]
-    }
-
-    fn get_tile_map_1(&self) -> &[u8] {
-        &self.ram[TILE_MAP_1_RANGE]
-    }
 }
