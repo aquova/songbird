@@ -42,16 +42,16 @@ const PALETTE: [(u8, u8, u8); 4] = [
 ];
 
 pub struct PPU {
-    scale: usize
+    // ram: &'a [u8]
 }
 
 impl PPU {
     // ==================
     // = Public methods =
     // ==================
-    pub fn new(scale: usize) -> PPU {
+    pub fn new() -> PPU {
         PPU {
-            scale: scale
+            // ram: ram
         }
     }
 
@@ -62,9 +62,9 @@ impl PPU {
         canvas.clear();
 
         let lcd_reg = ram[LCD_DISP_REG];
-        if self.is_bkgd_dspl(lcd_reg) {
-            self.draw_background(ram, canvas, scale);
-        }
+        // if self.is_bkgd_dspl(lcd_reg) {
+        //     self.draw_background(ram, canvas, scale);
+        // }
 
         canvas.present();
     }
@@ -107,29 +107,29 @@ impl PPU {
     // ===================
     // = Private methods =
     // ===================
-    fn draw_background(&self, tile_set: &[u8], tile_map: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
-        let coords = self.get_scroll_coords(ram);
-        let bkgd = self.get_background(tile_set, tile_map);
-        let start_x = coords.0 as usize;
-        let start_y = coords.1 as usize;
+    // fn draw_background(&self, tile_set: &[u8], tile_map: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
+    //     let coords = self.get_scroll_coords(ram);
+    //     let bkgd = self.get_background(tile_set, tile_map);
+    //     let start_x = coords.0 as usize;
+    //     let start_y = coords.1 as usize;
 
-        for y in start_y..(start_y + SCREEN_WIDTH) {
-            for x in start_x..(start_x + SCREEN_HEIGHT) {
-                let i = y * MAPSIZE + x;
-                let pixel = bkgd[i];
-                if pixel != 0 {
-                    canvas.set_draw_color(PALETTE[pixel as usize]);
-                    let block = Rect::new(
-                        (scale * x) as i32,
-                        (scale * y) as i32,
-                        scale as u32,
-                        scale as u32,
-                    );
-                    canvas.fill_rect(block);
-                }
-            }
-        }
-    }
+    //     for y in start_y..(start_y + SCREEN_WIDTH) {
+    //         for x in start_x..(start_x + SCREEN_HEIGHT) {
+    //             let i = y * MAPSIZE + x;
+    //             let pixel = bkgd[i];
+    //             if pixel != 0 {
+    //                 canvas.set_draw_color(PALETTE[pixel as usize]);
+    //                 let block = Rect::new(
+    //                     (scale * x) as i32,
+    //                     (scale * y) as i32,
+    //                     scale as u32,
+    //                     scale as u32,
+    //                 );
+    //                 canvas.fill_rect(block);
+    //             }
+    //         }
+    //     }
+    // }
 
     fn get_background(&self, tile_set: &[u8], tile_map: &[u8]) -> [u8; MAPSIZE * MAPSIZE] {
         let mut map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];

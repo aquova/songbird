@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
+use crate::cpu::clock::Clock;
 use crate::ppu::PPU;
 use crate::utils::ModifyBits;
 use sdl2::render::Canvas;
@@ -80,7 +81,7 @@ impl Bus {
             ram_enabled: false,
             rom: ROM::new(),
             mbc: MBC::NONE,
-            ppu: PPU::new(1)
+            ppu: PPU::new()
         }
     }
 
@@ -182,6 +183,10 @@ impl Bus {
     /// ```
     pub fn get_mbc(&self) -> MBC {
         self.mbc
+    }
+
+    pub fn set_video_regs(&mut self, clock: &Clock) {
+
     }
 
     pub fn get_tile_set(&self) -> &[u8] {

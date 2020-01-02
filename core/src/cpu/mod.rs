@@ -41,17 +41,17 @@ pub enum Regs16 {
 pub struct Cpu {
     pub pc: u16,
     pub sp: u16,
-    pub a: u8,
-    pub b: u8,
-    pub c: u8,
-    pub d: u8,
-    pub e: u8,
-    pub f: u8,
-    pub h: u8,
-    pub l: u8,
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8,
+    e: u8,
+    f: u8,
+    h: u8,
+    l: u8,
     pub clock: Clock,
     pub interupt: bool,
-    pub bus: Bus,
+    pub bus: Bus
 }
 
 impl Cpu {
@@ -114,13 +114,25 @@ impl Cpu {
     /// ```
     /// Tick
     ///
-    /// Performs one operation
+    /// Performs one CPU operation
+    ///
+    /// Output:
+    ///     Whether or not to render a frame
     /// ```
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> bool {
         let cycles = opcodes::execute(self);
-        self.clock.add_cycles(cycles);
+        let draw_time = self.clock.clock_step(cycles);
+        draw_time
     }
 
+    /// ```
+    /// Draw
+    ///
+    /// Renders one frame on the screen
+    ///
+    /// Input:
+    ///     The window canvas to draw the frame (Canvas<Window>)
+    /// ```
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
         self.bus.draw(canvas);
     }
