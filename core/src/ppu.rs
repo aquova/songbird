@@ -16,28 +16,28 @@ const MAPSIZE: usize = 32 * TILESIZE;
 const SCREEN_WIDTH: usize = 160;
 const SCREEN_HEIGHT: usize = 144;
 
-const VRAM_SIZE: usize = 0x2000;
-const VRAM_OFFSET: u16 = 0x8000;
+const VRAM_SIZE: usize = 0x8000;
+const VRAM_OFFSET: usize = 0x8000;
 
 // VRAM registers
-const LCD_DISP_REG: usize            = 0xFF40;
-const LCD_STAT_REG: usize            = 0xFF41;
-const SCY: usize                     = 0xFF42;
-const SCX: usize                     = 0xFF43;
-const LY: usize                      = 0xFF44;
-const LYC: usize                     = 0xFF45;
-const BGP: usize                     = 0xFF46;
-const OBP0: usize                    = 0xFF47;
-const OBP1: usize                    = 0xFF48;
-const WY: usize                      = 0xFF49;
-const WX: usize                      = 0xFF4A;
+const LCD_DISP_REG: usize            = 0xFF40 - VRAM_OFFSET;
+const LCD_STAT_REG: usize            = 0xFF41 - VRAM_OFFSET;
+const SCY: usize                     = 0xFF42 - VRAM_OFFSET;
+const SCX: usize                     = 0xFF43 - VRAM_OFFSET;
+const LY: usize                      = 0xFF44 - VRAM_OFFSET;
+const LYC: usize                     = 0xFF45 - VRAM_OFFSET;
+const BGP: usize                     = 0xFF46 - VRAM_OFFSET;
+const OBP0: usize                    = 0xFF47 - VRAM_OFFSET;
+const OBP1: usize                    = 0xFF48 - VRAM_OFFSET;
+const WY: usize                      = 0xFF49 - VRAM_OFFSET;
+const WX: usize                      = 0xFF4A - VRAM_OFFSET;
 
 // VRAM ranges
-const TILE_SET_0_RANGE: Range<usize> = 0x8000..0x9000;
-const TILE_SET_1_RANGE: Range<usize> = 0x8800..0x9800;
-const TILE_MAP_0_RANGE: Range<usize> = 0x9800..0x9C00;
-const TILE_MAP_1_RANGE: Range<usize> = 0x9C00..0xA000;
-const SAM:              Range<usize> = 0xFE00..0xFEA0;
+const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
+const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OFFSET);
+const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
+const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
+const SAM:              Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
 
 // Colors
 const BLACK: (u8, u8, u8)            = (0,   0,   0);
@@ -67,13 +67,17 @@ impl PPU {
     }
 
     pub fn write_vram(&mut self, addr: u16, val: u8) {
-        let adjusted_addr = addr - VRAM_OFFSET;
+        let adjusted_addr = addr - VRAM_OFFSET as u16;
         self.vram[adjusted_addr as usize] = val;
     }
 
     pub fn read_vram(&self, addr: u16) -> u8 {
-        let adjusted_addr = addr - VRAM_OFFSET;
+        let adjusted_addr = addr - VRAM_OFFSET as u16;
         self.vram[adjusted_addr as usize]
+    }
+
+    pub fn set_ly(&mut self, line: u8) {
+        self.vram[LY] = line;
     }
 
     // pub fn draw_screen(&self, ram: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
@@ -90,67 +94,43 @@ impl PPU {
     //     canvas.present();
     // }
 
-    // pub fn draw_tile_set(&self, tile_set: &[u8], canvas: &mut Canvas<Window>) {
-    //     let draw_color = self.get_color(WHITE);
-    //     canvas.set_draw_color(draw_color);
-    //     canvas.clear();
+    pub fn draw_tile_set(&self, canvas: &mut Canvas<Window>) {
+        let draw_color = self.get_color(WHITE);
+        canvas.set_draw_color(draw_color);
+        canvas.clear();
 
-    //     let num_pixels = tile_set.len() / 2;
-    //     let mut x = 0;
-    //     let mut y = 0;
-    //     for i in 0..num_pixels {
-    //         let low = tile_set[2 * i as usize];
-    //         let high = tile_set[(2 * i + 1) as usize];
-    //         let row = self.parse_tile_data(low, high);
-    //         for index in 0..row.len() {
-    //             let c = PALETTE[row[index] as usize];
-    //             let pixel_color = self.get_color(c);
-    //             canvas.set_draw_color(pixel_color);
-    //             let pixel = Rect::new(
-    //                 (x + index) as i32,
-    //                 y as i32,
-    //                 1,
-    //                 1
-    //             );
-    //             canvas.fill_rect(pixel);
-    //         }
+        let tile_set = self.get_tile_set();
 
-    //         x += 8;
-    //         if x > 127 {
-    //             x = 0;
-    //             y += 1;
-    //         }
-    //     }
+        let num_pixels = tile_set.len() / 2;
+        let mut x = 0;
+        let mut y = 0;
+        for i in 0..num_pixels {
+            let low = tile_set[2 * i as usize];
+            let high = tile_set[(2 * i + 1) as usize];
+            let row = self.parse_tile_data(low, high);
+            for index in 0..row.len() {
+                let c = PALETTE[row[index] as usize];
+                let pixel_color = self.get_color(c);
+                canvas.set_draw_color(pixel_color);
+                let pixel = Rect::new(
+                    (x + index) as i32,
+                    y as i32,
+                    1,
+                    1
+                );
+                canvas.fill_rect(pixel);
+            }
 
-    //     canvas.present();
+            x += 8;
+            if x > 127 {
+                x = 0;
+                y += 1;
+            }
+        }
 
-        // pub fn get_tile_set(&self) -> &[u8] {
-        //     let lcd_reg = self.ram[LCD_DISP_REG];
-
-        //     let tile_set = if self.get_bkgd_tile_set(lcd_reg) == 0 {
-        //         self.get_tile_set_0()
-        //     } else {
-        //         self.get_tile_set_1()
-        //     };
-
-        //     tile_set
-        // }
-
-        // pub fn get_tile_map(&self) -> &[u8] {
-        //     let lcd_reg = self.ram[LCD_DISP_REG];
-        //     let tile_map = if self.get_bkgd_tile_map(lcd_reg) == 0 {
-        //         self.get_tile_map_0()
-        //     } else {
-        //         self.get_tile_map_1()
-        //     };
-
-        //     tile_map
-        // }
-
-        // pub fn get_sprite_attributes(&self) -> &[u8] {
-        //     &self.ram[SAM]
-        // }
+        canvas.present();
     }
+
 
     // ===================
     // = Private methods =
@@ -197,28 +177,55 @@ impl PPU {
     //     map
     // }
 
-    // fn parse_tile_data(&self, low: u8, high: u8) -> [u8; 8] {
-    //     let mut output = [0; 8];
-    //     for i in 0..8 {
-    //         let low_bit = low.get_bit(i);
-    //         let high_bit = high.get_bit(i);
-    //         let concat = self.concat_bits(low_bit, high_bit);
-    //         output[7-i as usize] = concat;
-    //     }
+    fn parse_tile_data(&self, low: u8, high: u8) -> [u8; 8] {
+        let mut output = [0; 8];
+        for i in 0..8 {
+            let low_bit = low.get_bit(i);
+            let high_bit = high.get_bit(i);
+            let concat = self.concat_bits(low_bit, high_bit);
+            output[7-i as usize] = concat;
+        }
 
-    //     output
-    // }
+        output
+    }
 
-    // fn concat_bits(&self, low: bool, high: bool) -> u8 {
-    //     let low_bit = if low { 1 } else { 0 };
-    //     let high_bit = if high { 1 } else { 0 };
-    //     let concat = (high_bit << 1) | low_bit;
-    //     concat
-    // }
+    fn concat_bits(&self, low: bool, high: bool) -> u8 {
+        let low_bit = if low { 1 } else { 0 };
+        let high_bit = if high { 1 } else { 0 };
+        let concat = (high_bit << 1) | low_bit;
+        concat
+    }
 
-    // fn get_color(&self, color: (u8, u8, u8)) -> Color {
-    //     Color::RGB(color.0, color.1, color.2)
-    // }
+    fn get_color(&self, color: (u8, u8, u8)) -> Color {
+        Color::RGB(color.0, color.1, color.2)
+    }
+
+    fn get_tile_set(&self) -> &[u8] {
+        let lcd_reg = self.vram[LCD_DISP_REG];
+
+        let tile_set = if self.get_bkgd_tile_set(lcd_reg) == 0 {
+            &self.vram[TILE_SET_0_RANGE]
+        } else {
+            &self.vram[TILE_SET_1_RANGE]
+        };
+
+        tile_set
+    }
+
+    fn get_tile_map(&self) -> &[u8] {
+        let lcd_reg = self.vram[LCD_DISP_REG];
+        let tile_map = if self.get_bkgd_tile_map(lcd_reg) == 0 {
+            &self.vram[TILE_MAP_0_RANGE]
+        } else {
+            &self.vram[TILE_MAP_1_RANGE]
+        };
+
+        tile_map
+    }
+
+    fn get_sprite_attributes(&self) -> &[u8] {
+        &self.vram[SAM]
+    }
 
     // fn get_lcd_disp_reg(&self, ram: &[u8]) -> u8 {
     //     ram[LCD_DISP_REG]
@@ -244,13 +251,13 @@ impl PPU {
     //     reg.get_bit(7)
     // }
 
-    // fn get_bkgd_tile_set(&self, reg: u8) -> u8 {
-    //     if reg.get_bit(4) { return 1 } else { return 0 }
-    // }
+    fn get_bkgd_tile_set(&self, reg: u8) -> u8 {
+        if reg.get_bit(4) { return 1 } else { return 0 }
+    }
 
-    // fn get_bkgd_tile_map(&self, reg: u8) -> u8 {
-    //     if reg.get_bit(3) { return 1 } else { return 0 }
-    // }
+    fn get_bkgd_tile_map(&self, reg: u8) -> u8 {
+        if reg.get_bit(3) { return 1 } else { return 0 }
+    }
 
     // fn get_wndw_tile_map(reg: u8) -> u8 {
     //     if reg.get_bit(6) { return 1 } else { return 0 }

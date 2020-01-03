@@ -54,7 +54,7 @@ impl Clock {
 
                     if self.line == VBLANK_LINE_START {
                         self.mode = ModeTypes::VBLANK;
-                        // Draws full screen
+                        // VBLANK is starting, time to draw screen
                         draw_screen = true;
                     } else {
                         self.mode = ModeTypes::OAMReadMode;

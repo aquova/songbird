@@ -1,9 +1,7 @@
 extern crate sdl2;
 
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
-use crate::cpu::clock::Clock;
 use crate::ppu::PPU;
-use crate::utils::ModifyBits;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
@@ -58,10 +56,8 @@ use sdl2::video::Window;
 const RAM_SIZE: usize = 0x8000;
 
 // RAM ranges
-// TODO: Add other RAM ranges
-const BANK_N_START: u16 = 0x4000;
 const VRAM_START: u16 = 0x8000;
-const CART_RAM_START: u16 = 0xA000;
+const RAM_END: u16 = 0xFFFF;
 
 // ====================
 // = Helper Functions =
@@ -71,7 +67,7 @@ fn in_cart_rom(addr: u16) -> bool {
 }
 
 fn in_vram(addr: u16) -> bool {
-    addr >= VRAM_START && addr < CART_RAM_START
+    addr >= VRAM_START && addr <= RAM_END
 }
 
 pub struct Bus {
@@ -116,7 +112,7 @@ impl Bus {
 
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
         // draw_screen(&self.ram, canvas, scale);
-        self.ppu.draw_tile_set(&self.ram, canvas);
+        self.ppu.draw_tile_set(canvas);
     }
 
     /// ```
@@ -132,10 +128,12 @@ impl Bus {
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
         match addr {
-            in_cart_rom(addr) => {
+            // Apparently ranges don't work in match statements
+            // So have to use helper functions...
+            x if in_cart_rom(x) => {
                 self.ram[addr as usize]
             },
-            in_vram(addr) => {
+            x if in_vram(x) => {
                 self.ppu.read_vram(addr)
             },
             _ => {
@@ -157,10 +155,10 @@ impl Bus {
         match addr {
             // Apparently ranges don't work in match statements
             // So have to use helper functions...
-            in_cart_rom(addr) => {
+            x if in_cart_rom(x) => {
                 match self.mbc {
                     MBC::NONE => {
-                        // self.ram[addr as usize] = val;
+                        self.ram[addr as usize] = val;
                     },
                     MBC::MBC1 => {
                         self.write_mbc1(addr, val);
@@ -173,7 +171,7 @@ impl Bus {
                     }
                 }
             },
-            in_vram(addr) => {
+            x if in_vram(x) => {
                 self.ppu.write_vram(addr, val);
             },
             _ => {
@@ -217,6 +215,10 @@ impl Bus {
     /// ```
     pub fn get_mbc(&self) -> MBC {
         self.mbc
+    }
+
+    pub fn set_scanline(&mut self, line: u8) {
+        self.ppu.set_ly(line);
     }
 }
 

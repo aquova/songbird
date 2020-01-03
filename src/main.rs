@@ -70,9 +70,11 @@ pub fn main() {
 
         // Game loop
         if !paused {
-            gb.print_info();
-            gb.tick();
-            // gb.draw(&mut canvas);
+            // gb.print_info();
+            let draw_time = gb.tick();
+            if draw_time {
+                gb.draw(&mut canvas);
+            }
         }
     }
 }
