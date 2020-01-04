@@ -107,10 +107,9 @@ impl PPU {
         for i in 0..num_pixels {
             let low = tile_set[2 * i as usize];
             let high = tile_set[(2 * i + 1) as usize];
-            let row = self.parse_tile_data(low, high);
+            let row = self.get_pixel_row(low, high);
             for index in 0..row.len() {
-                let c = PALETTE[row[index] as usize];
-                let pixel_color = self.get_color(c);
+                let pixel_color = row[index];
                 canvas.set_draw_color(pixel_color);
                 let pixel = Rect::new(
                     (x + index) as i32,
@@ -118,7 +117,7 @@ impl PPU {
                     1,
                     1
                 );
-                canvas.fill_rect(pixel);
+                canvas.fill_rect(pixel).unwrap();
             }
 
             x += 8;
@@ -130,7 +129,6 @@ impl PPU {
 
         canvas.present();
     }
-
 
     // ===================
     // = Private methods =
@@ -177,19 +175,25 @@ impl PPU {
     //     map
     // }
 
-    fn parse_tile_data(&self, low: u8, high: u8) -> [u8; 8] {
-        let mut output = [0; 8];
+    fn get_tile(&self) {
+
+    }
+
+    fn get_pixel_row(&self, low: u8, high: u8) -> [Color; 8] {
+        let mut output = [Color::RGB(0, 0, 0); 8];
         for i in 0..8 {
             let low_bit = low.get_bit(i);
             let high_bit = high.get_bit(i);
             let concat = self.concat_bits(low_bit, high_bit);
-            output[7-i as usize] = concat;
+            // TODO: This eventually needs to reference palette RAM setting
+            let color_data = PALETTE[concat];
+            output[7-i as usize] = self.get_color(color_data);
         }
 
         output
     }
 
-    fn concat_bits(&self, low: bool, high: bool) -> u8 {
+    fn concat_bits(&self, low: bool, high: bool) -> usize {
         let low_bit = if low { 1 } else { 0 };
         let high_bit = if high { 1 } else { 0 };
         let concat = (high_bit << 1) | low_bit;

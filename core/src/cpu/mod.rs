@@ -152,6 +152,7 @@ impl Cpu {
             self.get_reg_16(Regs16::DE),
             self.get_reg_16(Regs16::HL)
         );
+        println!("Scanline: {:#04x}", self.bus.read_ram(0xFF44));
         let curr_op = self.read_ram(self.pc);
         println!("Current operation: {:#04x}", curr_op);
         print_opcode(curr_op);

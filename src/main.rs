@@ -10,9 +10,9 @@ use sdl2::keyboard::Keycode;
 use std::{env, process};
 
 // Constants
-const WIDTH: u32 = 160;
-const HEIGHT: u32 = 144;
-const SCALE: u32 = 1;
+// const WIDTH: u32 = 160;
+// const HEIGHT: u32 = 144;
+// const SCALE: u32 = 1;
 
 pub fn main() {
     let args: Vec<_> = env::args().collect();
@@ -20,7 +20,7 @@ pub fn main() {
         println!("cargo run path/to/game");
         process::exit(1);
     }
-    let mut paused = true;
+    let mut paused = false;
 
     // Start game
     let mut gb = Cpu::new();

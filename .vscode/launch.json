@@ -6,7 +6,7 @@
     "configurations": [
         {
             // Requres "CodeLLDB" extension
-            "name": "Launch agba (OS X)",
+            "name": "Launch agba (OS X/Linux)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/agba",
