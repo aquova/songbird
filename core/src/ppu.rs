@@ -66,16 +66,44 @@ impl PPU {
         }
     }
 
+    /// ```
+    /// Write VRAM
+    ///
+    /// Write value to specified address in VRAM
+    ///
+    /// Input:
+    ///     Address to write to (u16)
+    ///     Value to write (u8)
+    /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8) {
         let adjusted_addr = addr - VRAM_OFFSET as u16;
         self.vram[adjusted_addr as usize] = val;
     }
 
+    /// ```
+    /// Read VRAM
+    ///
+    /// Read value from given address in VRAM
+    ///
+    /// Input:
+    ///     Address to read from (u16)
+    ///
+    /// Output:
+    ///     Value at given address (u8)
+    /// ```
     pub fn read_vram(&self, addr: u16) -> u8 {
         let adjusted_addr = addr - VRAM_OFFSET as u16;
         self.vram[adjusted_addr as usize]
     }
 
+    /// ```
+    /// Set LY register
+    ///
+    /// Sets the value at the LY RAM address
+    ///
+    /// Input:
+    ///     Value to write (u8)
+    /// ```
     pub fn set_ly(&mut self, line: u8) {
         self.vram[LY] = line;
     }

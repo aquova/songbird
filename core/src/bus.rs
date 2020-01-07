@@ -110,6 +110,14 @@ impl Bus {
         }
     }
 
+    /// ```
+    /// Draw
+    ///
+    /// Draws the screen
+    ///
+    /// Input:
+    ///     Canvas to draw upon (Canvas<Window>)
+    /// ```
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
         // draw_screen(&self.ram, canvas, scale);
         self.ppu.draw_tile_set(canvas);
@@ -217,6 +225,14 @@ impl Bus {
         self.mbc
     }
 
+    /// ```
+    /// Set scanline
+    ///
+    /// Sets the current scanline value into the LY RAM address
+    ///
+    /// Input:
+    ///     Line number (u8)
+    /// ```
     pub fn set_scanline(&mut self, line: u8) {
         self.ppu.set_ly(line);
     }
@@ -249,6 +265,15 @@ impl Bus {
         &self.ram[0x4000..=0x7FFF].copy_from_slice(&bank);
     }
 
+    /// ```
+    /// Write MBC1
+    ///
+    /// Writes value to the specified RAM address, given MBC1 chip
+    ///
+    /// Inputs:
+    ///     Address to write to (u16)
+    ///     Value to write to the address (u8)
+    /// ```
     fn write_mbc1(&mut self, addr: u16, val: u8) {
         match addr {
             0x0000..=0x1FFF => {
@@ -279,12 +304,29 @@ impl Bus {
         }
     }
 
+    /// ```
+    /// Write MBC2
+    ///
+    /// Writes value to the specified RAM address, given MBC2 chip
+    ///
+    /// Inputs:
+    ///     Address to write to (u16)
+    ///     Value to write to the address (u8)
+    /// ```
     fn write_mbc2(&mut self, addr: u16, val: u8) {
 
     }
 
+    /// ```
+    /// Write MBC3
+    ///
+    /// Writes value to the specified RAM address, given MBC3 chip
+    ///
+    /// Inputs:
+    ///     Address to write to (u16)
+    ///     Value to write to the address (u8)
+    /// ```
     fn write_mbc3(&mut self, addr: u16, val: u8) {
 
     }
-
 }

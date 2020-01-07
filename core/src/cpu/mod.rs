@@ -74,8 +74,6 @@ impl Cpu {
         };
 
         // More magic values for RAM initialization
-        // TODO: May need a 'set_ram' fn
-        // if not MBC none and not allowed to write
         new_cpu.write_ram(0xFF05, 0x00);
         new_cpu.write_ram(0xFF06, 0x00);
         new_cpu.write_ram(0xFF07, 0x00);
@@ -117,7 +115,7 @@ impl Cpu {
     /// Performs one CPU operation
     ///
     /// Output:
-    ///     Whether or not to render a frame
+    ///     Whether or not to render a frame (bool)
     /// ```
     pub fn tick(&mut self) -> bool {
         let cycles = opcodes::execute(self);
@@ -224,7 +222,7 @@ impl Cpu {
     /// Adds value to joint 16-bit register
     ///
     /// Inputs:
-    ///     Register to add to (Regs16 enum value)
+    ///     Register to add to (Regs16)
     ///     Value to add (u16)
     /// ```
     pub fn add_nn_d16(&mut self, reg: Regs16, source: u16) {
@@ -262,7 +260,7 @@ impl Cpu {
     /// Sets the specified flag to False
     ///
     /// Input:
-    ///     Flag to clear (Flags enum value)
+    ///     Flag to clear (Flags)
     /// ```
     pub fn clear_flag(&mut self, f: Flags) {
         match f {
@@ -296,7 +294,7 @@ impl Cpu {
     /// Decrements specified register
     ///
     /// Input:
-    ///     Register to decrement (Regs enum value)
+    ///     Register to decrement (Regs)
     /// ```
     pub fn dec_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
@@ -315,7 +313,7 @@ impl Cpu {
     /// Decrements specified joint register
     ///
     /// Input:
-    ///     Register to decrement (Regs16 enum value)
+    ///     Register to decrement (Regs16)
     /// ```
     pub fn dec_16(&mut self, reg: Regs16) {
         let val = self.get_reg_16(reg);
@@ -329,7 +327,7 @@ impl Cpu {
     /// Returns whether the specified flag is set or cleared
     ///
     /// Input:
-    ///     Flag to return (Flags enum value)
+    ///     Flag to return (Flags)
     ///
     /// Output:
     ///     Whether the flag is set or not (bool)
@@ -349,7 +347,7 @@ impl Cpu {
     /// Returns the value stored in the specified register
     ///
     /// Input:
-    ///     Desired register (Regs enum value)
+    ///     Desired register (Regs)
     ///
     /// Output:
     ///     Byte stored in register (u8)
@@ -373,7 +371,7 @@ impl Cpu {
     /// Gets the value stored in the joint 16-bit register
     ///
     /// Input:
-    ///     16-bit register (Regs16 enum value)
+    ///     16-bit register (Regs16)
     ///
     /// Output:
     ///     Value stored in register (u16)
@@ -409,7 +407,7 @@ impl Cpu {
     /// Increments specified register
     ///
     /// Input:
-    ///     Register to increment (Regs enum value)
+    ///     Register to increment (Regs)
     /// ```
     pub fn inc_8(&mut self, reg: Regs) {
         let val = self.get_reg(reg);
@@ -428,7 +426,7 @@ impl Cpu {
     /// Increments specified join register
     ///
     /// Input:
-    ///     Register to increment (Regs16 enum value)
+    ///     Register to increment (Regs16)
     /// ```
     pub fn inc_16(&mut self, reg: Regs16) {
         let val = self.get_reg_16(reg);
@@ -442,7 +440,7 @@ impl Cpu {
     /// Load 8-bit value into register
     ///
     /// Inputs:
-    ///     Register to load (Regs enum value)
+    ///     Register to load (Regs)
     ///     Value to store (u8)
     /// ```
     pub fn ld_n_d8(&mut self, reg: Regs, byte: u8) {
@@ -455,7 +453,7 @@ impl Cpu {
     /// Load 16-bit value into joint register
     ///
     /// Inputs:
-    ///     Register to load (Regs16 enum value)
+    ///     Register to load (Regs16)
     ///     Value to store (u16)
     /// ```
     pub fn ld_nn_d16(&mut self, reg: Regs16, val: u16) {
@@ -536,7 +534,7 @@ impl Cpu {
     /// Rotates bits stored in register left
     ///
     /// Input:
-    ///     Register to rotate (Regs enum value)
+    ///     Register to rotate (Regs)
     ///     Whether or not to push through carry flag (bool)
     /// ```
     pub fn rot_left_reg(&mut self, reg: Regs, carry: bool) {
@@ -551,7 +549,7 @@ impl Cpu {
     /// Rotates value in given register left
     ///
     /// Inputs:
-    ///     Register to rotate (Regs enum value)
+    ///     Register to rotate (Regs)
     ///     Whether or not to push in carry flag (bool)
     ///
     /// Output:
@@ -578,7 +576,7 @@ impl Cpu {
     /// Rotates the bits stored in the given register right
     ///
     /// Inputs:
-    ///     Register of value to shift (Regs enum value)
+    ///     Register of value to shift (Regs)
     ///     Whether or not to shift through carry (bool)
     /// ```
     pub fn rot_right_reg(&mut self, reg: Regs, carry: bool) {
@@ -597,7 +595,7 @@ impl Cpu {
     ///     Whether or not to push in carry flag (bool)
     ///
     /// Output:
-    ///     Value after rotation
+    ///     Value after rotation (u8)
     /// ```
     pub fn rot_right(&mut self, byte: u8, carry: bool) -> u8 {
         let lsb = byte.get_bit(0);
@@ -620,7 +618,7 @@ impl Cpu {
     /// Sets the specified flag to True
     ///
     /// Input:
-    ///     Flag to set (Flags enum value)
+    ///     Flag to set (Flags)
     /// ```
     pub fn set_flag(&mut self, f: Flags) {
         match f {
@@ -637,7 +635,7 @@ impl Cpu {
     /// Sets the specified value into specified register
     ///
     /// Input:
-    ///     Desired register (Regs enum value)
+    ///     Desired register (Regs)
     ///     Byte to store (u8)
     /// ```
     pub fn set_reg(&mut self, r: Regs, val: u8) {
@@ -659,7 +657,7 @@ impl Cpu {
     /// Sets the specified u16 value into joint register
     ///
     /// Input:
-    ///     Desired register (Regs16 enum value)
+    ///     Desired register (Regs16)
     ///     Byte to store (u16)
     /// ```
     pub fn set_reg_16(&mut self, r: Regs16, val: u16) {
@@ -691,7 +689,7 @@ impl Cpu {
     /// Shifts the value in a register over one bit
     ///
     /// Input:
-    ///     Register to shift (Regs enum value)
+    ///     Register to shift (Regs)
     /// ```
     pub fn shift_left_reg(&mut self, reg: Regs) {
         let byte = self.get_reg(reg);
@@ -728,7 +726,7 @@ impl Cpu {
     /// Shifts the value in a register right one bit
     ///
     /// Inputs:
-    ///     Register to shift (Regs enum value)
+    ///     Register to shift (Regs)
     ///     Whether to shift arithmetically (true), or logically (bool)
     /// ```
     pub fn shift_right_reg(&mut self, reg: Regs, arith: bool) {
@@ -743,7 +741,7 @@ impl Cpu {
     /// Shifts the value in a register right by one bit
     ///
     /// Inputs:
-    ///     Register to shift (Regs enum value)
+    ///     Register to shift (Regs)
     ///     Whether to shift arithmetically (true), or logically (bool)
     ///
     /// Output:
@@ -774,7 +772,7 @@ impl Cpu {
     ///
     /// Inputs:
     ///     Value to subtract to A register (u8)
-    ///     Whether or not to subtract with carry
+    ///     Whether or not to subtract with carry (bool)
     /// ```
     pub fn sub_a_d8(&mut self, val: u8, sbc: bool) {
         let mut carry = 0;
@@ -802,7 +800,7 @@ impl Cpu {
     /// Swaps the high and low nibbles of a reigster
     ///
     /// Inputs:
-    ///     Register to swap (Reg enum value)
+    ///     Register to swap (Reg)
     /// ```
     pub fn swap_bits_reg(&mut self, reg: Regs) {
         let byte = self.get_reg(reg);
@@ -840,7 +838,7 @@ impl Cpu {
     /// Tests whether or not a specified bit in a register is 1 or 0
     ///
     /// Inputs:
-    ///     Register to test (Regs enum value)
+    ///     Register to test (Regs)
     ///     Which bit to test (u8)
     /// ```
     pub fn test_bit_reg(&mut self, reg: Regs, digit: u8) {
@@ -871,7 +869,7 @@ impl Cpu {
     /// Writes the given value into a value in a register
     ///
     /// Inputs:
-    ///     Which register to modify (Regs enum value)
+    ///     Which register to modify (Regs)
     ///     Which digit to modify (u8)
     ///     Whether to set bit to 1 or 0 (bool)
     /// ```
@@ -903,7 +901,7 @@ impl Cpu {
     /// Sets the specified flag to true or false
     ///
     /// Inputs:
-    ///     Flag to set (Flags enum value)
+    ///     Flag to set (Flags)
     ///     Whether the flag should be set or not (bool)
     /// ```
     pub fn write_flag(&mut self, f: Flags, val: bool) {
