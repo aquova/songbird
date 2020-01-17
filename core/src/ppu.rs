@@ -62,7 +62,7 @@ impl PPU {
     // ==================
     pub fn new() -> PPU {
         PPU {
-            vram: [0; VRAM_SIZE]
+            vram: [0xFF; VRAM_SIZE]
         }
     }
 

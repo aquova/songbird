@@ -20,7 +20,7 @@ pub fn main() {
         println!("cargo run path/to/game");
         process::exit(1);
     }
-    let mut paused = false;
+    let mut paused = true;
 
     // Start game
     let mut gb = Cpu::new();
@@ -74,6 +74,11 @@ pub fn main() {
             let draw_time = gb.tick();
             if draw_time {
                 gb.draw(&mut canvas);
+            }
+
+            if gb.pc == 0x029a {
+                paused = true;
+                gb.print_info();
             }
         }
     }

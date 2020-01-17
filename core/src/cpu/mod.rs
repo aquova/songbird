@@ -41,14 +41,14 @@ pub enum Regs16 {
 pub struct Cpu {
     pub pc: u16,
     pub sp: u16,
-    a: u8,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-    f: u8,
-    h: u8,
-    l: u8,
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub f: u8,
+    pub h: u8,
+    pub l: u8,
     pub clock: Clock,
     pub interupt: bool,
     pub bus: Bus
@@ -58,8 +58,8 @@ impl Cpu {
     pub fn new() -> Cpu {
         // Magic values from pandocs
         let mut new_cpu = Cpu {
-            pc: 0x100,
             sp: 0xFFFE,
+            pc: 0x100,
             a: 0x01,
             b: 0x00,
             c: 0x13,
@@ -142,15 +142,17 @@ impl Cpu {
     /// Prints debug info about state of the CPU
     /// ```
     pub fn print_info(&self) {
-        println!("PC: {:#06x} SP: {:#06x}", self.pc, self.sp);
-        println!(
-            "AF: {:#06x} BC: {:#06x} DE: {:#06x} HL: {:#06x}",
-            self.get_reg_16(Regs16::AF),
-            self.get_reg_16(Regs16::BC),
-            self.get_reg_16(Regs16::DE),
-            self.get_reg_16(Regs16::HL)
-        );
-        println!("Scanline: {:#04x}", self.bus.read_ram(0xFF44));
+        println!("PC: {:#06x}", self.pc);
+        println!("SP: {:#06x}", self.sp);
+        println!("AF: {:#06x}", self.get_reg_16(Regs16::AF));
+        println!("BC: {:#06x}", self.get_reg_16(Regs16::BC));
+        println!("DE: {:#06x}", self.get_reg_16(Regs16::DE));
+        println!("HL: {:#06x}", self.get_reg_16(Regs16::HL));
+        let mut data = String::new();
+        for i in 0..16 {
+            data = format!("{} {:#04x}", data, self.bus.read_ram(0xFF40 + i));
+        }
+        println!("{}", data);
         let curr_op = self.read_ram(self.pc);
         println!("Current operation: {:#04x}", curr_op);
         print_opcode(curr_op);
@@ -831,6 +833,12 @@ impl Cpu {
 
         new_val
     }
+// 48 byte sequence in all ROMs, starting at $0104
+const NINTENDO_LOGO: [u8; 48] = [
+    0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+    0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+    0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+];
 
     /// ```
     /// Test Register Bit
