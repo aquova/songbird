@@ -5,7 +5,7 @@ pub mod opcodes;
 use clock::Clock;
 
 use crate::bus::Bus;
-use crate::debug::*;
+use crate::agbd::info::*;
 use crate::utils::*;
 
 use sdl2::render::Canvas;
