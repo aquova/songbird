@@ -39,16 +39,16 @@ pub enum Regs16 {
 }
 
 pub struct Cpu {
-    pub pc: u16,
-    pub sp: u16,
-    pub a: u8,
-    pub b: u8,
-    pub c: u8,
-    pub d: u8,
-    pub e: u8,
-    pub f: u8,
-    pub h: u8,
-    pub l: u8,
+    pc: u16,
+    sp: u16,
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8,
+    e: u8,
+    f: u8,
+    h: u8,
+    l: u8,
     pub clock: Clock,
     pub interupt: bool,
     pub bus: Bus
@@ -142,8 +142,9 @@ impl Cpu {
     /// Prints debug info about state of the CPU
     /// ```
     pub fn print_info(&self) {
-        println!("PC: {:#06x}", self.pc);
-        println!("SP: {:#06x}", self.sp);
+        let pc = self.get_pc();
+        println!("PC: {:#06x}", pc);
+        println!("SP: {:#06x}", self.get_sp());
         println!("AF: {:#06x}", self.get_reg_16(Regs16::AF));
         println!("BC: {:#06x}", self.get_reg_16(Regs16::BC));
         println!("DE: {:#06x}", self.get_reg_16(Regs16::DE));
@@ -153,12 +154,12 @@ impl Cpu {
             data = format!("{} {:#04x}", data, self.bus.read_ram(0xFF40 + i));
         }
         println!("{}", data);
-        let curr_op = self.read_ram(self.pc);
+        let curr_op = self.read_ram(pc);
         println!("Current operation: {:#04x}", curr_op);
         print_opcode(curr_op);
         let operand_num = get_opcode_length(curr_op);
         for i in 0..operand_num {
-            println!("{:#04x}", self.read_ram(self.pc + i as u16 + 1));
+            println!("{:#04x}", self.read_ram(pc + i as u16 + 1));
         }
         println!("-----");
     }
@@ -172,7 +173,8 @@ impl Cpu {
     ///     Byte at the current PC (u8)
     /// ```
     pub fn fetch(&mut self) -> u8 {
-        let val = self.read_ram(self.pc);
+        let pc = self.get_pc();
+        let val = self.read_ram(pc);
         self.pc += 1;
         val
     }
@@ -404,6 +406,30 @@ impl Cpu {
     }
 
     /// ```
+    /// Get PC
+    ///
+    /// Returns the value in the program counter
+    ///
+    /// Output:
+    ///     PC value (u16)
+    /// ```
+    pub fn get_pc(&self) -> u16 {
+        self.pc
+    }
+
+    /// ```
+    /// Get SP
+    ///
+    /// Returns the value in the stack pointer
+    ///
+    /// Output:
+    ///     SP value (u16)
+    /// ```
+    pub fn get_sp(&self) -> u16 {
+        self.sp
+    }
+
+    /// ```
     /// INC d8
     ///
     /// Increments specified register
@@ -491,11 +517,13 @@ impl Cpu {
     /// ```
     pub fn pop(&mut self) -> u16 {
         // If at $FFFE, then stack is empty, assert?
-        assert_ne!(self.sp, 0xFFFE, "Trying to pop when stack is empty");
-        self.sp += 2;
-        let byte1 = self.read_ram(self.sp - 1);
-        let byte2 = self.read_ram(self.sp);
-        let byte = merge_bytes(byte1, byte2);
+        let mut sp = self.get_sp();
+        assert_ne!(sp, 0xFFFE, "Trying to pop when stack is empty");
+        sp += 2;
+        let high = self.read_ram(sp - 1);
+        let low = self.read_ram(sp);
+        let byte = merge_bytes(high, low);
+        self.set_sp(sp);
         byte
     }
 
@@ -508,11 +536,12 @@ impl Cpu {
     ///     Value to push onto stack (u16)
     /// ```
     pub fn push(&mut self, val: u16) {
-        let byte1 = val.get_high_byte();
-        let byte2 = val.get_low_byte();
-        self.write_ram(self.sp - 1, byte1);
-        self.write_ram(self.sp, byte2);
-        self.sp -= 2;
+        let sp = self.get_sp();
+        let high = val.get_high_byte();
+        let low = val.get_low_byte();
+        self.write_ram(sp - 1, high);
+        self.write_ram(sp, low);
+        self.set_sp(sp - 2);
     }
 
     /// ```
@@ -683,6 +712,30 @@ impl Cpu {
                 self.set_reg(Regs::L, low);
             }
         }
+    }
+
+    /// ```
+    /// Set PC
+    ///
+    /// Sets the program counter to the given value
+    ///
+    /// Input:
+    ///     Value to set PC (u16)
+    /// ```
+    pub fn set_pc(&mut self, val: u16) {
+        self.pc = val;
+    }
+
+    /// ```
+    /// Set SP
+    ///
+    /// Sets the stack pointer to the given value
+    ///
+    /// Input:
+    ///     Value to set SP (u16)
+    /// ```
+    pub fn set_sp(&mut self, val: u16) {
+        self.sp = val;
     }
 
     /// ```

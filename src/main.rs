@@ -75,11 +75,6 @@ pub fn main() {
             if draw_time {
                 gb.draw(&mut canvas);
             }
-
-            if gb.pc == 0x029a {
-                paused = true;
-                gb.print_info();
-            }
         }
     }
 }

@@ -9,8 +9,8 @@ fn test_reg_16() {
     let mut gb = Cpu::new();
 
     gb.set_reg_16(Regs16::BC, 0xABCD);
-    assert_eq!(gb.b, 0xAB);
-    assert_eq!(gb.c, 0xCD);
+    assert_eq!(gb.get_reg(Regs::B), 0xAB);
+    assert_eq!(gb.get_reg(Regs::C), 0xCD);
 
     let bc = gb.get_reg_16(Regs16::BC);
     assert_eq!(bc.get_high_byte(), 0xAB);
@@ -22,14 +22,14 @@ fn test_reg_16() {
 fn test_flags() {
     let mut gb = Cpu::new();
 
-    gb.f = 0;
+    gb.set_reg(Regs::F, 0);
     gb.set_flag(Flags::Z);
-    assert_eq!(gb.f, 0b1000_0000);
+    assert_eq!(gb.get_reg(Regs::F), 0b1000_0000);
     assert!(gb.get_flag(Flags::Z));
 
-    gb.f = 0xF0;
+    gb.set_reg(Regs::F, 0xF0);
     gb.clear_flag(Flags::N);
-    assert_eq!(gb.f, 0b1011_0000);
+    assert_eq!(gb.get_reg(Regs::F), 0b1011_0000);
     assert_eq!(gb.get_flag(Flags::N), false);
 }
 
@@ -38,8 +38,7 @@ fn test_flags() {
 fn test_inc_8() {
     let mut gb = Cpu::new();
 
-    gb.a = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0x0000);
 
     // Check that basic increment works
     gb.inc_8(Regs::A);
@@ -62,7 +61,7 @@ fn test_inc_8() {
     assert_eq!(gb.get_flag(Flags::C), true);
 
     // Check that H flag is set properly
-    gb.a = 0x0F;
+    gb.set_reg(Regs::A, 0x0F);
     gb.inc_8(Regs::A);
     assert_eq!(gb.get_reg(Regs::A), 0x10);
     assert_eq!(gb.get_flag(Flags::Z), false);
@@ -72,7 +71,7 @@ fn test_inc_8() {
 
     // Check that value overflows properly
     // Check that Z flag is set properly
-    gb.a = 0xFF;
+    gb.set_reg(Regs::A, 0xFF);
     gb.inc_8(Regs::A);
     assert_eq!(gb.get_reg(Regs::A), 0);
     assert_eq!(gb.get_flag(Flags::Z), true);
@@ -86,9 +85,8 @@ fn test_inc_8() {
 fn test_inc_16() {
     let mut gb = Cpu::new();
 
-    gb.b = 0;
-    gb.c = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::BC, 0x0000);
+    gb.set_reg(Regs::F, 0);
 
     // Check that basic increment works
     // Don't need to test flags - they are not modified
@@ -96,8 +94,7 @@ fn test_inc_16() {
     assert_eq!(gb.get_reg_16(Regs16::BC), 1);
 
     // Check that value overflows properly
-    gb.b = 0xFF;
-    gb.c = 0xFF;
+    gb.set_reg_16(Regs16::BC, 0xFFFF);
     gb.inc_16(Regs16::BC);
     assert_eq!(gb.get_reg_16(Regs16::BC), 0);
 }
@@ -109,8 +106,7 @@ fn test_inc_16() {
 fn test_add_8() {
     let mut gb = Cpu::new();
 
-    gb.a = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0x0000);
 
     // Test basic addition functionality
     gb.add_a_d8(1, false);
@@ -132,7 +128,7 @@ fn test_add_8() {
     assert_eq!(gb.get_flag(Flags::C), false);
 
     // Test H flag
-    gb.a = 0x7F;
+    gb.set_reg(Regs::A, 0x7F);
     gb.add_a_d8(0x7F, false);
 
     assert_eq!(gb.get_reg(Regs::A), 0xFE);
@@ -143,7 +139,7 @@ fn test_add_8() {
 
     // Test value overflows
     // Test C flag
-    gb.a = 0xFF;
+    gb.set_reg(Regs::A, 0xFF);
     gb.add_a_d8(0x7F, false);
 
     assert_eq!(gb.get_reg(Regs::A), 0x7E);
@@ -158,9 +154,8 @@ fn test_add_8() {
 fn test_add_16() {
     let mut gb = Cpu::new();
 
-    gb.b = 0;
-    gb.c = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::BC, 0x0000);
+    gb.set_reg(Regs::F, 0);
 
     // Test basic addition functionality
     gb.add_nn_d16(Regs16::BC, 1);
@@ -171,8 +166,7 @@ fn test_add_16() {
     assert_eq!(gb.get_flag(Flags::C), false);
 
     // Test H flag
-    gb.b = 0x0F;
-    gb.c = 0xFF;
+    gb.set_reg_16(Regs16::BC, 0x0FFF);
     gb.add_nn_d16(Regs16::BC, 0x000F);
 
     assert_eq!(gb.get_reg_16(Regs16::BC), 0x100E);
@@ -182,8 +176,7 @@ fn test_add_16() {
 
     // Test value overflows
     // Test C flag
-    gb.b = 0x7F;
-    gb.c = 0xFF;
+    gb.set_reg_16(Regs16::BC, 0x7FFF);
     gb.add_nn_d16(Regs16::BC, 0x8001);
 
     assert_eq!(gb.get_reg_16(Regs16::BC), 0);
@@ -197,8 +190,8 @@ fn test_add_16() {
 fn test_sub() {
     let mut gb = Cpu::new();
 
-    gb.a = 10;
-    gb.f = 0;
+    gb.set_reg(Regs::A, 10);
+    gb.set_reg(Regs::F, 0);
 
     // Test basic subtraction functionality
     gb.sub_a_d8(1, false);
@@ -220,7 +213,7 @@ fn test_sub() {
     assert_eq!(gb.get_flag(Flags::C), false);
 
     // Test H flag
-    gb.a = 0x10;
+    gb.set_reg(Regs::A, 0x10);
     gb.sub_a_d8(1, false);
 
     assert_eq!(gb.get_reg(Regs::A), 0x0F);
@@ -231,7 +224,7 @@ fn test_sub() {
 
     // Test value underflows
     // Test C flag
-    gb.a = 0x7F;
+    gb.set_reg(Regs::A, 0x7F);
     gb.sub_a_d8(0x90, false);
 
     assert_eq!(gb.get_reg(Regs::A), 0xEF);
@@ -246,8 +239,7 @@ fn test_sub() {
 fn test_and() {
     let mut gb = Cpu::new();
 
-    gb.a = 0xFF;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0xFF00);
 
     gb.and_a_d8(0xAA);
     assert_eq!(gb.get_reg(Regs::A), 0xAA);
@@ -269,8 +261,7 @@ fn test_and() {
 fn test_or() {
     let mut gb = Cpu::new();
 
-    gb.a = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0);
 
     gb.or_a_d8(0xAA);
     assert_eq!(gb.get_reg(Regs::A), 0xAA);
@@ -286,7 +277,7 @@ fn test_or() {
     assert_eq!(gb.get_flag(Flags::H), false);
     assert_eq!(gb.get_flag(Flags::C), false);
 
-    gb.a = 0;
+    gb.set_reg(Regs::A, 0);
     gb.or_a_d8(0);
     assert_eq!(gb.get_reg(Regs::A), 0);
     assert_eq!(gb.get_flag(Flags::Z), true);
@@ -300,8 +291,7 @@ fn test_or() {
 fn test_xor() {
     let mut gb = Cpu::new();
 
-    gb.a = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0);
 
     gb.xor_a_d8(0xAA);
     assert_eq!(gb.get_reg(Regs::A), 0xAA);
@@ -330,8 +320,7 @@ fn test_xor() {
 fn test_cp() {
     let mut gb = Cpu::new();
 
-    gb.a = 0;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0);
 
     gb.cp_a_d8(0);
     assert_eq!(gb.get_reg(Regs::A), 0);
@@ -347,16 +336,16 @@ fn test_stack() {
 
     gb.push(0xABCD);
     gb.push(0x1234);
-    assert_eq!(gb.sp, 0xFFFA);
+    assert_eq!(gb.get_sp(), 0xFFFA);
     assert_eq!(gb.read_ram(0xFFFB), 0x12);
     assert_eq!(gb.read_ram(0xFFFC), 0x34);
     assert_eq!(gb.read_ram(0xFFFD), 0xAB);
     assert_eq!(gb.read_ram(0xFFFE), 0xCD);
 
     assert_eq!(gb.pop(), 0x1234);
-    assert_eq!(gb.sp, 0xFFFC);
+    assert_eq!(gb.get_sp(), 0xFFFC);
     assert_eq!(gb.pop(), 0xABCD);
-    assert_eq!(gb.sp, 0xFFFE);
+    assert_eq!(gb.get_sp(), 0xFFFE);
 }
 
 #[test]
@@ -372,8 +361,7 @@ fn test_invalid_stack() {
 /// Test rotate right functions
 fn test_rot_right() {
     let mut gb = Cpu::new();
-    gb.a = 0b0101_1010;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0b0101_1010_0000_0000);
 
     gb.rot_right_reg(Regs::A, false);
     assert_eq!(gb.get_reg(Regs::A), 0b0010_1101);
@@ -395,8 +383,7 @@ fn test_rot_right() {
     assert_eq!(gb.get_flag(Flags::Z), false);
     assert_eq!(gb.get_flag(Flags::C), true);
 
-    gb.a = 0b0000_0001;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0x0100);
     gb.rot_right_reg(Regs::A, true);
     assert_eq!(gb.get_reg(Regs::A), 0b0000_0000);
     assert_eq!(gb.get_flag(Flags::Z), true);
@@ -407,8 +394,7 @@ fn test_rot_right() {
 /// Test rotate left functions
 pub fn test_rot_left() {
     let mut gb = Cpu::new();
-    gb.a = 0b0101_1010;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0b0101_1010_0000_0000);
 
     gb.rot_left_reg(Regs::A, false);
     assert_eq!(gb.get_reg(Regs::A), 0b1011_0100);
@@ -425,8 +411,7 @@ pub fn test_rot_left() {
     assert_eq!(gb.get_flag(Flags::Z), false);
     assert_eq!(gb.get_flag(Flags::C), false);
 
-    gb.a = 0b1000_0000;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0x8000);
     gb.rot_left_reg(Regs::A, true);
     assert_eq!(gb.get_reg(Regs::A), 0b0000_0000);
     assert_eq!(gb.get_flag(Flags::Z), true);
@@ -437,8 +422,7 @@ pub fn test_rot_left() {
 /// Test shift functions
 pub fn test_shift() {
     let mut gb = Cpu::new();
-    gb.a = 0b0101_1010;
-    gb.f = 0;
+    gb.set_reg_16(Regs16::AF, 0b0101_1010_0000_0000);
 
     gb.shift_right_reg(Regs::A, false);
     assert_eq!(gb.get_reg(Regs::A), 0b0010_1101);

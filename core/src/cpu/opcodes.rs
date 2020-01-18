@@ -115,8 +115,9 @@ fn ld_08(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
     let addr = merge_bytes(high, low);
-    cpu.write_ram(addr, cpu.sp.get_low_byte());
-    cpu.write_ram(addr + 1, cpu.sp.get_high_byte());
+    let sp = cpu.get_sp();
+    cpu.write_ram(addr, sp.get_low_byte());
+    cpu.write_ram(addr + 1, sp.get_high_byte());
     20
 }
 
@@ -223,7 +224,9 @@ fn rla_17(cpu: &mut Cpu) -> u8 {
 /// JR r8
 fn jr_18(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
-    cpu.pc = cpu.pc.wrapping_add(offset as u16);
+    let mut pc = cpu.get_pc();
+    pc = pc.wrapping_add(offset as u16);
+    cpu.set_pc(pc);
     12
 }
 
@@ -279,7 +282,9 @@ fn jr_20(cpu: &mut Cpu) -> u8 {
     // Add offset value as signed 8-bit value
     let signed = offset as i8 as i16 as u16;
     if !cpu.get_flag(Flags::Z) {
-        cpu.pc = cpu.pc.wrapping_add(signed);
+        let mut pc = cpu.get_pc();
+        pc = pc.wrapping_add(signed);
+        cpu.set_pc(pc);
         12
     } else {
         8
@@ -340,7 +345,9 @@ fn jr_28(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
     let signed = offset as i8 as i16 as u16;
     if cpu.get_flag(Flags::Z) {
-        cpu.pc = cpu.pc.wrapping_add(signed);
+        let mut pc = cpu.get_pc();
+        pc = pc.wrapping_add(signed);
+        cpu.set_pc(pc);
         12
     } else {
         8
@@ -402,7 +409,9 @@ fn jr_30(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
     let signed = offset as i8 as i16 as u16;
     if !cpu.get_flag(Flags::C) {
-        cpu.pc = cpu.pc.wrapping_add(signed);
+        let mut pc = cpu.get_pc();
+        pc = pc.wrapping_add(signed);
+        cpu.set_pc(pc);
         12
     } else {
         8
@@ -413,7 +422,7 @@ fn jr_30(cpu: &mut Cpu) -> u8 {
 fn ld_31(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
-    cpu.sp = merge_bytes(high, low);
+    cpu.set_sp(merge_bytes(high, low));
     12
 }
 
@@ -429,7 +438,8 @@ fn ld_32(cpu: &mut Cpu) -> u8 {
 /// INC SP
 fn inc_33(cpu: &mut Cpu) -> u8 {
     // May need to check for flags
-    cpu.sp += 1;
+    let sp = cpu.get_sp();
+    cpu.set_sp(sp + 1);
     8
 }
 
@@ -472,7 +482,9 @@ fn jr_38(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
     let signed = offset as i8 as i16 as u16;
     if cpu.get_flag(Flags::C) {
-        cpu.pc = cpu.pc.wrapping_add(signed);
+        let mut pc = cpu.get_pc();
+        pc = pc.wrapping_add(signed);
+        cpu.set_pc(pc);
         12
     } else {
         8
@@ -481,7 +493,8 @@ fn jr_38(cpu: &mut Cpu) -> u8 {
 
 /// ADD HL, SP
 fn add_39(cpu: &mut Cpu) -> u8 {
-    cpu.add_nn_d16(Regs16::HL, cpu.sp);
+    let sp = cpu.get_sp();
+    cpu.add_nn_d16(Regs16::HL, sp);
     8
 }
 
@@ -496,7 +509,8 @@ fn ld_3a(cpu: &mut Cpu) -> u8 {
 
 /// DEC SP
 fn dec_3b(cpu: &mut Cpu) -> u8 {
-    cpu.sp -= 1;
+    let sp = cpu.get_sp();
+    cpu.set_sp(sp - 1);
     8
 }
 
@@ -1449,7 +1463,7 @@ fn cp_bf(cpu: &mut Cpu) -> u8 {
 fn ret_c0(cpu: &mut Cpu) -> u8 {
     if !cpu.get_flag(Flags::Z) {
         let addr = cpu.pop();
-        cpu.pc = addr;
+        cpu.set_pc(addr);
         20
     } else {
         8
@@ -1469,7 +1483,7 @@ fn jp_c2(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     let offset = merge_bytes(high, low);
     if !cpu.get_flag(Flags::Z) {
-        cpu.pc = offset;
+        cpu.set_pc(offset);
         16
     } else {
         12
@@ -1481,7 +1495,7 @@ fn jp_c3(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
     let offset = merge_bytes(high, low);
-    cpu.pc = offset;
+    cpu.set_pc(offset);
     16
 }
 
@@ -1491,8 +1505,8 @@ fn call_c4(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     if !cpu.get_flag(Flags::Z) {
         let addr = merge_bytes(high, low);
-        cpu.push(cpu.pc);
-        cpu.pc = addr;
+        cpu.push(cpu.get_pc());
+        cpu.set_pc(addr);
         24
     } else {
         12
@@ -1517,8 +1531,8 @@ fn add_c6(cpu: &mut Cpu) -> u8 {
 /// Push PC onto stack
 /// Jump to $0000 + $00
 fn rst_c7(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0000;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0000);
     16
 }
 
@@ -1526,7 +1540,7 @@ fn rst_c7(cpu: &mut Cpu) -> u8 {
 fn ret_c8(cpu: &mut Cpu) -> u8 {
     if cpu.get_flag(Flags::Z) {
         let addr = cpu.pop();
-        cpu.pc = addr;
+        cpu.set_pc(addr);
         20
     } else {
         8
@@ -1535,7 +1549,8 @@ fn ret_c8(cpu: &mut Cpu) -> u8 {
 
 /// RET
 fn ret_c9(cpu: &mut Cpu) -> u8 {
-    cpu.pc = cpu.pop();
+    let val = cpu.pop();
+    cpu.set_pc(val);
     16
 }
 
@@ -1545,7 +1560,7 @@ fn jp_ca(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     let offset = merge_bytes(high, low);
     if cpu.get_flag(Flags::Z) {
-        cpu.pc = offset;
+        cpu.set_pc(offset);
         16
     } else {
         12
@@ -1563,8 +1578,8 @@ fn call_cc(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     if cpu.get_flag(Flags::Z) {
         let addr = merge_bytes(high, low);
-        cpu.push(cpu.pc);
-        cpu.pc = addr;
+        cpu.push(cpu.get_pc());
+        cpu.set_pc(addr);
         24
     } else {
         12
@@ -1576,8 +1591,8 @@ fn call_cd(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
     let addr = merge_bytes(high, low);
-    cpu.push(cpu.pc);
-    cpu.pc = addr;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(addr);
     24
 }
 
@@ -1590,15 +1605,16 @@ fn adc_ce(cpu: &mut Cpu) -> u8 {
 
 /// RST 08
 fn rst_cf(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0008;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0008);
     16
 }
 
 /// RET NC
 fn ret_d0(cpu: &mut Cpu) -> u8 {
     if !cpu.get_flag(Flags::C) {
-        cpu.pc = cpu.pop();
+        let val = cpu.pop();
+        cpu.set_pc(val);
         20
     } else {
         8
@@ -1618,7 +1634,7 @@ fn jp_d2(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     let offset = merge_bytes(high, low);
     if !cpu.get_flag(Flags::C) {
-        cpu.pc = offset;
+        cpu.set_pc(offset);
         16
     } else {
         12
@@ -1631,8 +1647,8 @@ fn call_d4(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     if !cpu.get_flag(Flags::C) {
         let addr = merge_bytes(high, low);
-        cpu.push(cpu.pc);
-        cpu.pc = addr;
+        cpu.push(cpu.get_pc());
+        cpu.set_pc(addr);
         24
     } else {
         12
@@ -1655,15 +1671,16 @@ fn sub_d6(cpu: &mut Cpu) -> u8 {
 
 /// RST 10
 fn rst_d7(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0010;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0010);
     16
 }
 
 /// RET C
 fn ret_d8(cpu: &mut Cpu) -> u8 {
     if cpu.get_flag(Flags::C) {
-        cpu.pc = cpu.pop();
+        let val = cpu.pop();
+        cpu.set_pc(val);
         20
     } else {
         8
@@ -1672,7 +1689,8 @@ fn ret_d8(cpu: &mut Cpu) -> u8 {
 
 /// RETI
 fn reti_d9(cpu: &mut Cpu) -> u8 {
-    cpu.pc = cpu.pop();
+    let val = cpu.pop();
+    cpu.set_pc(val);
     cpu.interupt = true;
     16
 }
@@ -1683,7 +1701,7 @@ fn jp_da(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     let offset = merge_bytes(high, low);
     if cpu.get_flag(Flags::C) {
-        cpu.pc = offset;
+        cpu.set_pc(offset);
         16
     } else {
         12
@@ -1696,8 +1714,8 @@ fn call_dc(cpu: &mut Cpu) -> u8 {
     let high = cpu.fetch();
     if cpu.get_flag(Flags::C) {
         let addr = merge_bytes(high, low);
-        cpu.push(cpu.pc);
-        cpu.pc = addr;
+        cpu.push(cpu.get_pc());
+        cpu.set_pc(addr);
         24
     } else {
         12
@@ -1713,8 +1731,8 @@ fn sbc_de(cpu: &mut Cpu) -> u8 {
 
 /// RST 18
 fn rst_df(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0018;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0018);
     16
 }
 
@@ -1758,8 +1776,8 @@ fn and_e6(cpu: &mut Cpu) -> u8 {
 
 /// RST 20
 fn rst_e7(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0020;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0020);
     16
 }
 
@@ -1767,9 +1785,10 @@ fn rst_e7(cpu: &mut Cpu) -> u8 {
 fn add_e8(cpu: &mut Cpu) -> u8 {
     let val = cpu.fetch();
     let signed = val as i8 as i16 as u16;
-    let result = cpu.sp.overflowing_add(signed);
-    let set_h = check_h_carry_u16(cpu.sp, signed);
-    cpu.sp = result.0;
+    let sp = cpu.get_sp();
+    let result = sp.overflowing_add(signed);
+    let set_h = check_h_carry_u16(sp, signed);
+    cpu.set_sp(result.0);
 
     cpu.clear_flag(Flags::Z);
     cpu.clear_flag(Flags::N);
@@ -1782,7 +1801,7 @@ fn add_e8(cpu: &mut Cpu) -> u8 {
 fn jp_e9(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.read_ram(hl);
-    cpu.pc = val as u16;
+    cpu.set_pc(val as u16);
     4
 }
 
@@ -1805,8 +1824,8 @@ fn xor_ee(cpu: &mut Cpu) -> u8 {
 
 /// RST 28
 fn rst_ef(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0028;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0028);
     16
 }
 
@@ -1857,8 +1876,8 @@ fn or_f6(cpu: &mut Cpu) -> u8 {
 
 /// RST 30
 fn rst_f7(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0030;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0030);
     16
 }
 
@@ -1866,14 +1885,15 @@ fn rst_f7(cpu: &mut Cpu) -> u8 {
 /// Put SP + n into HL
 fn ld_f8(cpu: &mut Cpu) -> u8 {
     let n = cpu.fetch();
-    cpu.set_reg_16(Regs16::HL, cpu.sp + n as u16);
+    let sp = cpu.get_sp();
+    cpu.set_reg_16(Regs16::HL, sp + n as u16);
     12
 }
 
 /// LD SP, HL
 fn ld_f9(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.sp = hl;
+    cpu.set_sp(hl);
     8
 }
 
@@ -1902,8 +1922,8 @@ fn cp_fe(cpu: &mut Cpu) -> u8 {
 
 /// RST 38
 fn rst_ff(cpu: &mut Cpu) -> u8 {
-    cpu.push(cpu.pc);
-    cpu.pc = 0x0038;
+    cpu.push(cpu.get_pc());
+    cpu.set_pc(0x0038);
     16
 }
 
