@@ -5,7 +5,6 @@ pub mod opcodes;
 use clock::Clock;
 
 use crate::bus::Bus;
-use crate::debug::info::*;
 use crate::utils::*;
 
 use sdl2::render::Canvas;
@@ -134,34 +133,6 @@ impl Cpu {
     /// ```
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
         self.bus.draw(canvas);
-    }
-
-    /// ```
-    /// Print Info
-    ///
-    /// Prints debug info about state of the CPU
-    /// ```
-    pub fn print_info(&self) {
-        let pc = self.get_pc();
-        println!("PC: {:#06x}", pc);
-        println!("SP: {:#06x}", self.get_sp());
-        println!("AF: {:#06x}", self.get_reg_16(Regs16::AF));
-        println!("BC: {:#06x}", self.get_reg_16(Regs16::BC));
-        println!("DE: {:#06x}", self.get_reg_16(Regs16::DE));
-        println!("HL: {:#06x}", self.get_reg_16(Regs16::HL));
-        let mut data = String::new();
-        for i in 0..16 {
-            data = format!("{} {:#04x}", data, self.bus.read_ram(0xFF40 + i));
-        }
-        println!("{}", data);
-        let curr_op = self.read_ram(pc);
-        println!("Current operation: {:#04x}", curr_op);
-        print_opcode(curr_op);
-        let operand_num = get_opcode_length(curr_op);
-        for i in 0..operand_num {
-            println!("{:#04x}", self.read_ram(pc + i as u16 + 1));
-        }
-        println!("-----");
     }
 
     /// ```

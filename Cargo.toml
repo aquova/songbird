@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 gb_core = { path = "core" }
-sdl2 = "^0.32.2"
+sdl2 = { version = "^0.32.2", features = [ "image" ] }
+# sdl2 = "^0.32.2"
