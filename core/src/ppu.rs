@@ -108,51 +108,19 @@ impl PPU {
         self.vram[LY] = line;
     }
 
-    // pub fn draw_screen(&self, ram: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
-    //     // Clear window
-    //     let draw_color = self.get_color(WHITE);
-    //     canvas.set_draw_color(draw_color);
-    //     canvas.clear();
+    pub fn set_status(&mut self, mode: u8) {
+        self.vram[LCD_STAT_REG] &= 0b1111_1100;
+        self.vram[LCD_STAT_REG] |= mode;
+    }
 
-    //     let lcd_reg = ram[LCD_DISP_REG];
-    //     // if self.is_bkgd_dspl(lcd_reg) {
-    //     //     self.draw_background(ram, canvas, scale);
-    //     // }
-
-    //     canvas.present();
-    // }
-
-    pub fn draw_tile_set(&self, canvas: &mut Canvas<Window>) {
+    pub fn draw_screen(&self, canvas: &mut Canvas<Window>) {
+        // Clear window
         let draw_color = self.get_color(WHITE);
         canvas.set_draw_color(draw_color);
         canvas.clear();
 
-        let tile_set = self.get_tile_set();
-
-        let num_pixels = tile_set.len() / 2;
-        let mut x = 0;
-        let mut y = 0;
-        for i in 0..num_pixels {
-            let low = tile_set[2 * i as usize];
-            let high = tile_set[(2 * i + 1) as usize];
-            let row = self.get_pixel_row(low, high);
-            for index in 0..row.len() {
-                let pixel_color = row[index];
-                canvas.set_draw_color(pixel_color);
-                let pixel = Rect::new(
-                    (x + index) as i32,
-                    y as i32,
-                    1,
-                    1
-                );
-                canvas.fill_rect(pixel).unwrap();
-            }
-
-            x += 8;
-            if x > 127 {
-                x = 0;
-                y += 1;
-            }
+        if self.is_bkgd_dspl() {
+            self.draw_background(canvas);
         }
 
         canvas.present();
@@ -161,67 +129,64 @@ impl PPU {
     // ===================
     // = Private methods =
     // ===================
-    // fn draw_background(&self, tile_set: &[u8], tile_map: &[u8], canvas: &mut Canvas<Window>, scale: usize) {
-    //     let coords = self.get_scroll_coords(ram);
-    //     let bkgd = self.get_background(tile_set, tile_map);
-    //     let start_x = coords.0 as usize;
-    //     let start_y = coords.1 as usize;
+    fn draw_background(&self, canvas: &mut Canvas<Window>) {
+        let scroll_x = self.vram[SCX] as usize;
+        let scroll_y = self.vram[SCY] as usize;
+        let bkgd = self.get_background();
+        let dim = canvas.output_size().unwrap();
+        let scale = (dim.0 as usize) / SCREEN_HEIGHT;
 
-    //     for y in start_y..(start_y + SCREEN_WIDTH) {
-    //         for x in start_x..(start_x + SCREEN_HEIGHT) {
-    //             let i = y * MAPSIZE + x;
-    //             let pixel = bkgd[i];
-    //             if pixel != 0 {
-    //                 canvas.set_draw_color(PALETTE[pixel as usize]);
-    //                 let block = Rect::new(
-    //                     (scale * x) as i32,
-    //                     (scale * y) as i32,
-    //                     scale as u32,
-    //                     scale as u32,
-    //                 );
-    //                 canvas.fill_rect(block);
-    //             }
-    //         }
-    //     }
-    // }
-
-    // fn get_background(&self, tile_set: &[u8], tile_map: &[u8]) -> [u8; MAPSIZE * MAPSIZE] {
-    //     let mut map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];
-
-    //     // Iterate through tile_map, getting indices for tile_set. Store pixel values (0-3) into map
-    //     for i in 0..tile_map.len() {
-    //         let index = tile_map[i];
-    //         // This is one row of a tile
-    //         let row_low = tile_set[index as usize]; // May need to change to be RAM index, rather than offset
-    //         let row_high = tile_set[(index + 1) as usize];
-    //         let row = self.parse_tile_data(row_low, row_high);
-
-    //         // Copy into map
-    //         &map[TILESIZE * i..TILESIZE * (i + 1)].copy_from_slice(&row);
-    //     }
-
-    //     map
-    // }
-
-    fn get_tile(&self) {
-
+        for y in scroll_y..(scroll_y + SCREEN_WIDTH) {
+            for x in scroll_x..(scroll_x + SCREEN_HEIGHT) {
+                let i = y * MAPSIZE + x;
+                let pixel = bkgd[i];
+                if pixel != 0 {
+                    canvas.set_draw_color(PALETTE[pixel as usize]);
+                    let block = Rect::new(
+                        (scale * x) as i32,
+                        (scale * y) as i32,
+                        scale as u32,
+                        scale as u32,
+                    );
+                    canvas.fill_rect(block).unwrap();
+                }
+            }
+        }
     }
 
-    fn get_pixel_row(&self, low: u8, high: u8) -> [Color; 8] {
-        let mut output = [Color::RGB(0, 0, 0); 8];
+    fn get_background(&self) -> [u8; MAPSIZE * MAPSIZE] {
+        let mut map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];
+        let tile_set = self.get_bkgd_tile_set();
+        let tile_map = self.get_bkgd_tile_map();
+
+        // Iterate through tile_map, getting indices for tile_set. Store pixel values (0-3) into map
+        for i in 0..tile_map.len() {
+            let index = tile_map[i];
+            // This is one row of a tile
+            let row_low = tile_set[index as usize]; // May need to change to be RAM index, rather than offset
+            let row_high = tile_set[(index + 1) as usize];
+            let row = self.get_pixel_row(row_low, row_high);
+
+            // Copy into map
+            &map[TILESIZE * i..TILESIZE * (i + 1)].copy_from_slice(&row);
+        }
+
+        map
+    }
+
+    fn get_pixel_row(&self, low: u8, high: u8) -> [u8; 8] {
+        let mut output = [0; 8];
         for i in 0..8 {
             let low_bit = low.get_bit(i);
             let high_bit = high.get_bit(i);
             let concat = self.concat_bits(low_bit, high_bit);
-            // TODO: This eventually needs to reference palette RAM setting
-            let color_data = PALETTE[concat];
-            output[7-i as usize] = self.get_color(color_data);
+            output[7-i as usize] = concat;
         }
 
         output
     }
 
-    fn concat_bits(&self, low: bool, high: bool) -> usize {
+    fn concat_bits(&self, low: bool, high: bool) -> u8 {
         let low_bit = if low { 1 } else { 0 };
         let high_bit = if high { 1 } else { 0 };
         let concat = (high_bit << 1) | low_bit;
@@ -232,10 +197,8 @@ impl PPU {
         Color::RGB(color.0, color.1, color.2)
     }
 
-    fn get_tile_set(&self) -> &[u8] {
-        let lcd_reg = self.vram[LCD_DISP_REG];
-
-        let tile_set = if self.get_bkgd_tile_set(lcd_reg) == 0 {
+    fn get_bkgd_tile_set(&self) -> &[u8] {
+        let tile_set = if self.get_bkgd_tile_set_index() == 0 {
             &self.vram[TILE_SET_0_RANGE]
         } else {
             &self.vram[TILE_SET_1_RANGE]
@@ -244,9 +207,8 @@ impl PPU {
         tile_set
     }
 
-    fn get_tile_map(&self) -> &[u8] {
-        let lcd_reg = self.vram[LCD_DISP_REG];
-        let tile_map = if self.get_bkgd_tile_map(lcd_reg) == 0 {
+    fn get_bkgd_tile_map(&self) -> &[u8] {
+        let tile_map = if self.get_bkgd_tile_map_index() == 0 {
             &self.vram[TILE_MAP_0_RANGE]
         } else {
             &self.vram[TILE_MAP_1_RANGE]
@@ -255,66 +217,18 @@ impl PPU {
         tile_map
     }
 
-    fn get_sprite_attributes(&self) -> &[u8] {
-        &self.vram[SAM]
+    fn is_bkgd_dspl(&self) -> bool {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        lcd_control.get_bit(0)
     }
 
-    // fn get_lcd_disp_reg(&self, ram: &[u8]) -> u8 {
-    //     ram[LCD_DISP_REG]
-    // }
-
-    // fn get_lcd_stat_reg(&self, ram: &[u8]) -> u8 {
-    //     ram[LCD_STAT_REG]
-    // }
-
-    // fn is_bkgd_dspl(&self, reg: u8) -> bool {
-    //     reg.get_bit(0)
-    // }
-
-    // fn is_spr_dspl(&self, reg: u8) -> bool {
-    //     reg.get_bit(1)
-    // }
-
-    // fn is_wndw_dspl(&self, reg: u8) -> bool {
-    //     reg.get_bit(5)
-    // }
-
-    // fn is_lcd_enabled(&self, reg: u8) -> bool {
-    //     reg.get_bit(7)
-    // }
-
-    fn get_bkgd_tile_set(&self, reg: u8) -> u8 {
-        if reg.get_bit(4) { return 1 } else { return 0 }
+    fn get_bkgd_tile_set_index(&self) -> u8 {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        if lcd_control.get_bit(4) { return 1 } else { return 0 }
     }
 
-    fn get_bkgd_tile_map(&self, reg: u8) -> u8 {
-        if reg.get_bit(3) { return 1 } else { return 0 }
+    fn get_bkgd_tile_map_index(&self) -> u8 {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        if lcd_control.get_bit(3) { return 1 } else { return 0 }
     }
-
-    // fn get_wndw_tile_map(reg: u8) -> u8 {
-    //     if reg.get_bit(6) { return 1 } else { return 0 }
-    // }
-
-    // fn get_scroll_coords(&self, ram: &[u8]) -> (u8, u8) {
-    //     let x_coord = ram[SCX];
-    //     let y_coord = ram[SCY];
-
-    //     (x_coord, y_coord)
-    // }
-
-    // fn get_wndw_coords(&self, ram: &[u8]) -> (u8, u8) {
-    //     let x_win = ram[WX];
-    //     let y_win = ram[WY];
-
-    //     (x_win, y_win)
-    // }
-
-    // fn parse_sprite_attributes(&self, attrs: &[u8], offset: usize) -> (u8, u8, u8, u8) {
-    //     let x = attrs[offset];
-    //     let y = attrs[offset + 1];
-    //     let tile_num = attrs[offset + 2];
-    //     let flags = attrs[offset + 3];
-
-    //     (x, y, tile_num, flags)
-    // }
 }

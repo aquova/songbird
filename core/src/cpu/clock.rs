@@ -103,6 +103,15 @@ impl Clock {
         self.line
     }
 
+    pub fn get_mode(&self) -> u8 {
+        match self.mode {
+            ModeTypes::HBLANK => { 0 },
+            ModeTypes::VBLANK => { 1 },
+            ModeTypes::OAMReadMode => { 2 },
+            ModeTypes::VRAMReadMode => { 3 }
+        }
+    }
+
     /// ```
     /// Reset Line
     ///

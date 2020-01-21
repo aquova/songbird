@@ -119,8 +119,7 @@ impl Bus {
     ///     Canvas to draw upon (Canvas<Window>)
     /// ```
     pub fn draw(&self, canvas: &mut Canvas<Window>) {
-        // draw_screen(&self.ram, canvas, scale);
-        self.ppu.draw_tile_set(canvas);
+        self.ppu.draw_screen(canvas);
     }
 
     /// ```
@@ -235,6 +234,11 @@ impl Bus {
     /// ```
     pub fn set_scanline(&mut self, line: u8) {
         self.ppu.set_ly(line);
+    }
+
+    pub fn set_status_reg(&mut self, mode: u8) {
+        let mode = mode & 0b0000_0011;
+        self.ppu.set_status(mode);
     }
 }
 

@@ -15,8 +15,8 @@ use std::{env, io, process};
 use std::io::prelude::*;
 
 // Constants
-// const WIDTH: u32 = 160;
-// const HEIGHT: u32 = 144;
+const WIDTH: u32 = 160;
+const HEIGHT: u32 = 144;
 const SCALE: u32 = 5;
 
 pub fn main() {
@@ -25,7 +25,7 @@ pub fn main() {
         println!("cargo run path/to/game");
         process::exit(1);
     }
-    let mut paused = true;
+    let mut paused = false;
     let mut debugging = false;
 
     // Start game
@@ -38,8 +38,7 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    // let window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
-    let mut window = video_subsystem.window("agba", 128 * SCALE, 128 * SCALE).position_centered().opengl().build().unwrap();
+    let mut window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
     let window_icon = Surface::from_file("assets/icon_purple.png").unwrap();
     window.set_icon(window_icon);
     let mut canvas = window.into_canvas().build().unwrap();
@@ -71,13 +70,6 @@ pub fn main() {
                     paused = !paused;
                     if paused {
                         println!("Paused");
-                    }
-                },
-                // Step through operation with N
-                Event::KeyDown{keycode: Some(Keycode::N), ..} => {
-                    if paused {
-                        gb.tick();
-                        gb.draw(&mut canvas);
                     }
                 },
                 _ => {}
@@ -134,6 +126,7 @@ pub fn main() {
                     // Execute next instruction
                     "n" => {
                         gb.tick();
+                        println!("PC: ${:04x}", gb.get_pc());
                     },
                     // Print RAM values at given address
                     "p" => {

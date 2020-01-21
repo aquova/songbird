@@ -119,7 +119,10 @@ impl Cpu {
     pub fn tick(&mut self) -> bool {
         let cycles = opcodes::execute(self);
         let draw_time = self.clock.clock_step(cycles);
+        // TODO: Look at consolidating these
         self.bus.set_scanline(self.clock.get_scanline());
+        // May not need this (right now)
+        self.bus.set_status_reg(self.clock.get_mode());
         draw_time
     }
 
