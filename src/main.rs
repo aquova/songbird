@@ -11,13 +11,14 @@ use sdl2::event::Event;
 use sdl2::image::LoadSurface;
 use sdl2::keyboard::Keycode;
 use sdl2::surface::Surface;
-use std::{env, io, process};
+use std::{env, io, process, thread, time};
 use std::io::prelude::*;
 
 // Constants
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 const SCALE: u32 = 5;
+const CLOCK_SPEED_IN_NS: u64 = 238; // 4.2 MHz
 
 pub fn main() {
     let args: Vec<_> = env::args().collect();
@@ -46,6 +47,8 @@ pub fn main() {
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
+
+    let clock_sleep = time::Duration::from_nanos(CLOCK_SPEED_IN_NS);
 
     // Main loop
     'gameloop: loop {
@@ -166,6 +169,8 @@ pub fn main() {
                 debugging = true;
             }
         }
+
+        thread::sleep(clock_sleep);
     }
 }
 

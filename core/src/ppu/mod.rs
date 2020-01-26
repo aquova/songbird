@@ -1,5 +1,8 @@
 extern crate sdl2;
 
+mod bkgd;
+
+use bkgd::Tile;
 use crate::utils::*;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
@@ -12,9 +15,10 @@ use std::ops::Range;
 // =============
 
 const TILESIZE: usize = 8;
-const MAPSIZE: usize = 32 * TILESIZE;
 const SCREEN_WIDTH: usize = 160;
 const SCREEN_HEIGHT: usize = 144;
+const MAP_WIDTH: usize = SCREEN_WIDTH / TILESIZE;
+const MAP_HEIGHT: usize = SCREEN_HEIGHT / TILESIZE;
 
 const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
@@ -38,19 +42,6 @@ const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OF
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
 const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 const SAM:              Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
-
-// Colors
-const BLACK: (u8, u8, u8)            = (0,   0,   0);
-const LIGHT_GRAY: (u8, u8, u8)       = (211, 211, 211);
-const DARK_GRAY: (u8, u8, u8)        = (169, 169, 169);
-const WHITE: (u8, u8, u8)            = (255, 255, 255);
-
-const PALETTE: [(u8, u8, u8); 4] = [
-    WHITE,
-    DARK_GRAY,
-    LIGHT_GRAY,
-    BLACK,
-];
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE]
@@ -115,13 +106,14 @@ impl PPU {
 
     pub fn draw_screen(&self, canvas: &mut Canvas<Window>) {
         // Clear window
-        let draw_color = self.get_color(WHITE);
+        let draw_color = Color::RGB(255, 255, 255);
         canvas.set_draw_color(draw_color);
         canvas.clear();
 
-        if self.is_bkgd_dspl() {
-            self.draw_background(canvas);
-        }
+        self.draw_background(canvas);
+        // if self.is_bkgd_dspl() {
+        //     self.draw_background(canvas);
+        // }
 
         canvas.present();
     }
@@ -130,71 +122,40 @@ impl PPU {
     // = Private methods =
     // ===================
     fn draw_background(&self, canvas: &mut Canvas<Window>) {
-        let scroll_x = self.vram[SCX] as usize;
-        let scroll_y = self.vram[SCY] as usize;
+        // let scroll_x = self.vram[SCX] as usize;
+        // let scroll_y = self.vram[SCY] as usize;
         let bkgd = self.get_background();
         let dim = canvas.output_size().unwrap();
         let scale = (dim.0 as usize) / SCREEN_HEIGHT;
 
-        for y in scroll_y..(scroll_y + SCREEN_WIDTH) {
-            for x in scroll_x..(scroll_x + SCREEN_HEIGHT) {
-                let i = y * MAPSIZE + x;
-                let pixel = bkgd[i];
-                if pixel != 0 {
-                    canvas.set_draw_color(PALETTE[pixel as usize]);
-                    let block = Rect::new(
-                        (scale * x) as i32,
-                        (scale * y) as i32,
-                        scale as u32,
-                        scale as u32,
-                    );
-                    canvas.fill_rect(block).unwrap();
-                }
+        let tile_map = self.get_bkgd_tile_map();
+
+        // TODO: Only draw window at (SCX, SCY)
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let index = y * MAP_HEIGHT + x;
+                let tile_index = tile_map[index];
+                let tile = &bkgd[tile_index as usize];
+                tile.draw(x, y, scale, canvas);
             }
         }
     }
 
-    fn get_background(&self) -> [u8; MAPSIZE * MAPSIZE] {
-        let mut map: [u8; MAPSIZE * MAPSIZE] = [0; MAPSIZE * MAPSIZE];
+    // Tile set is the tile pixel data
+    // Tile map are the tile indices that make up the current background image
+    // TODO: This 100% can and should be cached
+    fn get_background(&self) -> Vec<Tile> {
+        let mut map = Vec::new();
         let tile_set = self.get_bkgd_tile_set();
-        let tile_map = self.get_bkgd_tile_map();
+        let num_tiles = tile_set.len() / (2 * TILESIZE);
 
-        // Iterate through tile_map, getting indices for tile_set. Store pixel values (0-3) into map
-        for i in 0..tile_map.len() {
-            let index = tile_map[i];
-            // This is one row of a tile
-            let row_low = tile_set[index as usize]; // May need to change to be RAM index, rather than offset
-            let row_high = tile_set[(index + 1) as usize];
-            let row = self.get_pixel_row(row_low, row_high);
-
-            // Copy into map
-            &map[TILESIZE * i..TILESIZE * (i + 1)].copy_from_slice(&row);
+        for i in 0..num_tiles {
+            let tile_data = &tile_set[(2 * TILESIZE * i)..(2 * TILESIZE * (i + 1))];
+            let tile = Tile::new(tile_data);
+            map.push(tile);
         }
 
         map
-    }
-
-    fn get_pixel_row(&self, low: u8, high: u8) -> [u8; 8] {
-        let mut output = [0; 8];
-        for i in 0..8 {
-            let low_bit = low.get_bit(i);
-            let high_bit = high.get_bit(i);
-            let concat = self.concat_bits(low_bit, high_bit);
-            output[7-i as usize] = concat;
-        }
-
-        output
-    }
-
-    fn concat_bits(&self, low: bool, high: bool) -> u8 {
-        let low_bit = if low { 1 } else { 0 };
-        let high_bit = if high { 1 } else { 0 };
-        let concat = (high_bit << 1) | low_bit;
-        concat
-    }
-
-    fn get_color(&self, color: (u8, u8, u8)) -> Color {
-        Color::RGB(color.0, color.1, color.2)
     }
 
     fn get_bkgd_tile_set(&self) -> &[u8] {
