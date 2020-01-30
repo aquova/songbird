@@ -110,12 +110,15 @@ impl debugger {
     /// Prints the debugger help message
     /// ```
     pub fn print_help(&self) {
-        println!("`b #` to break at that PC value");
-        println!("`c` to continue execution");
-        println!("`info` to list break/watchpoints");
-        println!("`n` to run to next instruction");
-        println!("`q` to quit program");
-        println!("`reg` to list register contents");
+        println!("'b #' to break at that PC value");
+        println!("'c' to continue execution");
+        println!("'disass' to show disassembly of next 5 instructions");
+        println!("'help' to print this message");
+        println!("'info' to list break/watchpoints");
+        println!("'n' to run to next instruction");
+        println!("'p' to print 16 bytes at given RAM address (in hex)");
+        println!("'q' to quit program");
+        println!("'reg' to list register contents");
         println!("");
     }
 
@@ -128,12 +131,12 @@ impl debugger {
     ///     Reference to CPU object (&Cpu)
     /// ```
     pub fn print_registers(&self, gb: &Cpu) {
-        println!("PC: {:#06x}", gb.get_pc());
-        println!("SP: {:#06x}", gb.get_sp());
-        println!("AF: {:#06x}", gb.get_reg_16(Regs16::AF));
-        println!("BC: {:#06x}", gb.get_reg_16(Regs16::BC));
-        println!("DE: {:#06x}", gb.get_reg_16(Regs16::DE));
-        println!("HL: {:#06x}", gb.get_reg_16(Regs16::HL));
+        println!("PC: ${:04x}", gb.get_pc());
+        println!("SP: ${:04x}", gb.get_sp());
+        println!("AF: ${:04x}", gb.get_reg_16(Regs16::AF));
+        println!("BC: ${:04x}", gb.get_reg_16(Regs16::BC));
+        println!("DE: ${:04x}", gb.get_reg_16(Regs16::DE));
+        println!("HL: ${:04x}", gb.get_reg_16(Regs16::HL));
         println!("");
     }
 
@@ -145,8 +148,9 @@ impl debugger {
     pub fn list_points(&self) {
         if self.breakpoints.len() > 0 {
             let mut breakstring = String::new();
+            breakstring = format!("Breakpoints:");
             for bp in &self.breakpoints {
-                breakstring = format!("{} {}", breakstring, bp);
+                breakstring = format!("{} ${:04x}", breakstring, bp);
             }
             println!("{}", breakstring);
         } else {
@@ -155,8 +159,9 @@ impl debugger {
 
         if self.watchpoints.len() > 0 {
             let mut watchstring = String::new();
+            watchstring = format!("Watchpoints:");
             for wp in &self.watchpoints {
-                watchstring = format!("{} {:#06x}", watchstring, wp);
+                watchstring = format!("{} ${:04x}", watchstring, wp);
             }
             println!("{}", watchstring);
         } else {
