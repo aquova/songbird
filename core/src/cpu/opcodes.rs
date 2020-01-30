@@ -24,30 +24,31 @@ const OPCODES: [fn(&mut Cpu) -> u8; 0x100] = [
 ];
 
 const CB_OPCODES: [fn(&mut Cpu) -> u8; 0x100] = [
-//  $00,      $01,       $02,       $03,       $04,       $05,       $06,       $07,       $08,      $09,       $0A,       $0B,       $0C,       $0D,       $0E,       $0F
-    rlc_00,   rlc_01,    rlc_02,    rlc_03,    rlc_04,    rlc_05,    rlc_06,    rlc_07,    rrc_08,   rrc_09,    rrc_0a,    rrc_0b,    rrc_0c,    rrc_0d,    rrc_0e,    rrc_0f,  // $00
-    rl_10,    rl_11,     rl_12,     rl_13,     rl_14,     rl_15,     rl_16,     rl_17,     rr_18,    rr_19,     rr_1a,     rr_1b,     rr_1c,     rr_1d,     rr_1e,     rr_1f,   // $10
-    sla_20,   sla_21,    sla_22,    sla_23,    sla_24,    sla_25,    sla_26,    sla_27,    sra_28,   sra_29,    sra_2a,    sra_2b,    sra_2c,    sra_2d,    sra_2e,    sra_2f,  // $20
-    swap_30,  swap_31,   swap_32,   swap_33,   swap_34,   swap_35,   swap_36,   swap_37,   srl_38,   srl_39,    srl_3a,    srl_3b,    srl_3c,    srl_3d,    srl_3e,    srl_3f,  // $30
-    bit_40,   bit_41,    bit_42,    bit_43,    bit_44,    bit_45,    bit_46,    bit_47,    bit_48,   bit_49,    bit_4a,    bit_4b,    bit_4c,    bit_4d,    bit_4e,    bit_4f,  // $40
-    bit_50,   bit_51,    bit_52,    bit_53,    bit_54,    bit_55,    bit_56,    bit_57,    bit_58,   bit_59,    bit_5a,    bit_5b,    bit_5c,    bit_5d,    bit_5e,    bit_5f,  // $50
-    bit_60,   bit_61,    bit_62,    bit_63,    bit_64,    bit_65,    bit_66,    bit_67,    bit_68,   bit_69,    bit_6a,    bit_6b,    bit_6c,    bit_6d,    bit_6e,    bit_6f,  // $60
-    bit_70,   bit_71,    bit_72,    bit_73,    bit_74,    bit_75,    bit_76,    bit_77,    bit_78,   bit_79,    bit_7a,    bit_7b,    bit_7c,    bit_7d,    bit_7e,    bit_7f,  // $70
-    res_80,   res_81,    res_82,    res_83,    res_84,    res_85,    res_86,    res_87,    res_88,   res_89,    res_8a,    res_8b,    res_8c,    res_8d,    res_8e,    res_8f,  // $80
-    res_90,   res_91,    res_92,    res_93,    res_94,    res_95,    res_96,    res_97,    res_98,   res_99,    res_9a,    res_9b,    res_9c,    res_9d,    res_9e,    res_9f,  // $90
-    res_a0,   res_a1,    res_a2,    res_a3,    res_a4,    res_a5,    res_a6,    res_a7,    res_a8,   res_a9,    res_aa,    res_ab,    res_ac,    res_ad,    res_ae,    res_af,  // $A0
-    res_b0,   res_b1,    res_b2,    res_b3,    res_b4,    res_b5,    res_b6,    res_b7,    res_b8,   res_b9,    res_ba,    res_bb,    res_bc,    res_bd,    res_be,    res_bf,  // $B0
-    set_c0,   set_c1,    set_c2,    set_c3,    set_c4,    set_c5,    set_c6,    set_c7,    set_c8,   set_c9,    set_ca,    set_cb,    set_cc,    set_cd,    set_ce,    set_cf,  // $C0
-    set_d0,   set_d1,    set_d2,    set_d3,    set_d4,    set_d5,    set_d6,    set_d7,    set_d8,   set_d9,    set_da,    set_db,    set_dc,    set_dd,    set_de,    set_df,  // $D0
-    set_e0,   set_e1,    set_e2,    set_e3,    set_e4,    set_e5,    set_e6,    set_e7,    set_e8,   set_e9,    set_ea,    set_eb,    set_ec,    set_ed,    set_ee,    set_ef,  // $E0
-    set_f0,   set_f1,    set_f2,    set_f3,    set_f4,    set_f5,    set_f6,    set_f7,    set_f8,   set_f9,    set_fa,    set_fb,    set_fc,    set_fd,    set_fe,    set_ff,  // $F0
+//  $00,     $01,     $02,     $03,     $04,     $05,     $06,     $07,     $08,    $09,    $0A,    $0B,    $0C,    $0D,    $0E,    $0F
+    rlc_00,  rlc_01,  rlc_02,  rlc_03,  rlc_04,  rlc_05,  rlc_06,  rlc_07,  rrc_08, rrc_09, rrc_0a, rrc_0b, rrc_0c, rrc_0d, rrc_0e, rrc_0f,  // $00
+    rl_10,   rl_11,   rl_12,   rl_13,   rl_14,   rl_15,   rl_16,   rl_17,   rr_18,  rr_19,  rr_1a,  rr_1b,  rr_1c,  rr_1d,  rr_1e,  rr_1f,   // $10
+    sla_20,  sla_21,  sla_22,  sla_23,  sla_24,  sla_25,  sla_26,  sla_27,  sra_28, sra_29, sra_2a, sra_2b, sra_2c, sra_2d, sra_2e, sra_2f,  // $20
+    swap_30, swap_31, swap_32, swap_33, swap_34, swap_35, swap_36, swap_37, srl_38, srl_39, srl_3a, srl_3b, srl_3c, srl_3d, srl_3e, srl_3f,  // $30
+    bit_40,  bit_41,  bit_42,  bit_43,  bit_44,  bit_45,  bit_46,  bit_47,  bit_48, bit_49, bit_4a, bit_4b, bit_4c, bit_4d, bit_4e, bit_4f,  // $40
+    bit_50,  bit_51,  bit_52,  bit_53,  bit_54,  bit_55,  bit_56,  bit_57,  bit_58, bit_59, bit_5a, bit_5b, bit_5c, bit_5d, bit_5e, bit_5f,  // $50
+    bit_60,  bit_61,  bit_62,  bit_63,  bit_64,  bit_65,  bit_66,  bit_67,  bit_68, bit_69, bit_6a, bit_6b, bit_6c, bit_6d, bit_6e, bit_6f,  // $60
+    bit_70,  bit_71,  bit_72,  bit_73,  bit_74,  bit_75,  bit_76,  bit_77,  bit_78, bit_79, bit_7a, bit_7b, bit_7c, bit_7d, bit_7e, bit_7f,  // $70
+    res_80,  res_81,  res_82,  res_83,  res_84,  res_85,  res_86,  res_87,  res_88, res_89, res_8a, res_8b, res_8c, res_8d, res_8e, res_8f,  // $80
+    res_90,  res_91,  res_92,  res_93,  res_94,  res_95,  res_96,  res_97,  res_98, res_99, res_9a, res_9b, res_9c, res_9d, res_9e, res_9f,  // $90
+    res_a0,  res_a1,  res_a2,  res_a3,  res_a4,  res_a5,  res_a6,  res_a7,  res_a8, res_a9, res_aa, res_ab, res_ac, res_ad, res_ae, res_af,  // $A0
+    res_b0,  res_b1,  res_b2,  res_b3,  res_b4,  res_b5,  res_b6,  res_b7,  res_b8, res_b9, res_ba, res_bb, res_bc, res_bd, res_be, res_bf,  // $B0
+    set_c0,  set_c1,  set_c2,  set_c3,  set_c4,  set_c5,  set_c6,  set_c7,  set_c8, set_c9, set_ca, set_cb, set_cc, set_cd, set_ce, set_cf,  // $C0
+    set_d0,  set_d1,  set_d2,  set_d3,  set_d4,  set_d5,  set_d6,  set_d7,  set_d8, set_d9, set_da, set_db, set_dc, set_dd, set_de, set_df,  // $D0
+    set_e0,  set_e1,  set_e2,  set_e3,  set_e4,  set_e5,  set_e6,  set_e7,  set_e8, set_e9, set_ea, set_eb, set_ec, set_ed, set_ee, set_ef,  // $E0
+    set_f0,  set_f1,  set_f2,  set_f3,  set_f4,  set_f5,  set_f6,  set_f7,  set_f8, set_f9, set_fa, set_fb, set_fc, set_fd, set_fe, set_ff,  // $F0
 ];
 
 pub fn execute(cpu: &mut Cpu) -> u8 {
     let opcode = cpu.fetch();
     // If opcode is $CB, then use other opcode table
     if opcode == 0xCB {
-        CB_OPCODES[opcode as usize](cpu)
+        let cb_opcode = cpu.fetch();
+        CB_OPCODES[cb_opcode as usize](cpu)
     } else {
         OPCODES[opcode as usize](cpu)
     }
@@ -1691,7 +1692,7 @@ fn ret_d8(cpu: &mut Cpu) -> u8 {
 fn reti_d9(cpu: &mut Cpu) -> u8 {
     let val = cpu.pop();
     cpu.set_pc(val);
-    cpu.interupt = true;
+    cpu.interrupt = true;
     16
 }
 
@@ -1737,7 +1738,7 @@ fn rst_df(cpu: &mut Cpu) -> u8 {
 }
 
 /// LDH (a8), A
-/// Same as LD $FF00+n A
+/// Same as LD ($FF00 + n), A
 fn ldh_e0(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch() as u16;
     let val = cpu.get_reg(Regs::A);
@@ -1753,10 +1754,11 @@ fn pop_e1(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD (C), A
+/// Same as LD ($FF00 + C), A
 fn ld_e2(cpu: &mut Cpu) -> u8 {
-    let c = cpu.get_reg(Regs::C);
+    let c = cpu.get_reg(Regs::C) as u16;
     let val = cpu.get_reg(Regs::A);
-    cpu.write_ram(c as u16, val);
+    cpu.write_ram(0xFF00 + c, val);
     8
 }
 
@@ -1797,11 +1799,10 @@ fn add_e8(cpu: &mut Cpu) -> u8 {
     16
 }
 
-/// JP (HL)
+/// JP HL
 fn jp_e9(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.set_pc(val as u16);
+    cpu.set_pc(hl);
     4
 }
 
@@ -1856,7 +1857,7 @@ fn ld_f2(cpu: &mut Cpu) -> u8 {
 
 /// DI
 fn di_f3(cpu: &mut Cpu) -> u8 {
-    cpu.interupt = false;
+    cpu.interrupt = false;
     4
 }
 
@@ -1884,9 +1885,17 @@ fn rst_f7(cpu: &mut Cpu) -> u8 {
 /// LD HL, SP+r8
 /// Put SP + n into HL
 fn ld_f8(cpu: &mut Cpu) -> u8 {
-    let n = cpu.fetch();
+    let val = cpu.fetch();
+    let signed = val as i8 as i16 as u16;
     let sp = cpu.get_sp();
-    cpu.set_reg_16(Regs16::HL, sp + n as u16);
+    let result = sp.overflowing_add(signed);
+    let set_h = check_h_carry_u8(sp.get_low_byte(), val);
+    cpu.set_reg_16(Regs16::HL, result.0);
+
+    cpu.clear_flag(Flags::Z);
+    cpu.clear_flag(Flags::N);
+    cpu.write_flag(Flags::C, result.1);
+    cpu.write_flag(Flags::H, set_h);
     12
 }
 
@@ -1909,7 +1918,7 @@ fn ld_fa(cpu: &mut Cpu) -> u8 {
 
 /// EI
 fn ei_fb(cpu: &mut Cpu) -> u8 {
-    cpu.interupt = true;
+    cpu.interrupt = true;
     4
 }
 
