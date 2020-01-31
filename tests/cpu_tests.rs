@@ -337,10 +337,11 @@ fn test_stack() {
     gb.push(0xABCD);
     gb.push(0x1234);
     assert_eq!(gb.get_sp(), 0xFFFA);
-    assert_eq!(gb.read_ram(0xFFFB), 0x12);
-    assert_eq!(gb.read_ram(0xFFFC), 0x34);
+    assert_eq!(gb.read_ram(0xFFFE), 0x00);
     assert_eq!(gb.read_ram(0xFFFD), 0xAB);
-    assert_eq!(gb.read_ram(0xFFFE), 0xCD);
+    assert_eq!(gb.read_ram(0xFFFC), 0xCD);
+    assert_eq!(gb.read_ram(0xFFFB), 0x12);
+    assert_eq!(gb.read_ram(0xFFFA), 0x34);
 
     assert_eq!(gb.pop(), 0x1234);
     assert_eq!(gb.get_sp(), 0xFFFC);

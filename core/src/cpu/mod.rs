@@ -493,10 +493,10 @@ impl Cpu {
         // If at $FFFE, then stack is empty, assert?
         let mut sp = self.get_sp();
         assert_ne!(sp, 0xFFFE, "Trying to pop when stack is empty");
-        sp += 2;
-        let high = self.read_ram(sp - 1);
         let low = self.read_ram(sp);
+        let high = self.read_ram(sp + 1);
         let byte = merge_bytes(high, low);
+        sp += 2;
         self.set_sp(sp);
         byte
     }
@@ -510,12 +510,12 @@ impl Cpu {
     ///     Value to push onto stack (u16)
     /// ```
     pub fn push(&mut self, val: u16) {
-        let sp = self.get_sp();
+        let sp = self.get_sp() - 2;
         let high = val.get_high_byte();
         let low = val.get_low_byte();
-        self.write_ram(sp - 1, high);
+        self.write_ram(sp + 1, high);
         self.write_ram(sp, low);
-        self.set_sp(sp - 2);
+        self.set_sp(sp);
     }
 
     /// ```
