@@ -50,6 +50,7 @@ pub struct Cpu {
     l: u8,
     pub clock: Clock,
     pub interrupt: bool,
+    pub halted: bool,
     pub bus: Bus
 }
 
@@ -69,6 +70,7 @@ impl Cpu {
             l: 0x4D,
             clock: Clock::new(),
             interrupt: false,
+            halted: false,
             bus: Bus::new()
         };
 
@@ -264,6 +266,39 @@ impl Cpu {
         self.write_flag(Flags::Z, a == val);
         self.write_flag(Flags::H, set_h);
         self.write_flag(Flags::C, a < val);
+    }
+
+    /// ```
+    /// DAA
+    ///
+    /// Performs BCD operation
+    ///
+    /// Note: Implementation from here: https://forums.nesdev.com/viewtopic.php?t=15944
+    /// ```
+    pub fn daa(&mut self) {
+        let mut a = self.get_reg(Regs::A);
+        if !self.get_flag(Flags::N) {
+            if self.get_flag(Flags::C) || a > 0x99 {
+                a = a.wrapping_add(0x60);
+                self.set_flag(Flags::C);
+            }
+
+            if self.get_flag(Flags::H) || (a & 0x0F) < 0x09 {
+                a = a.wrapping_add(0x06);
+            }
+        } else {
+            if self.get_flag(Flags::C) {
+                a = a.wrapping_sub(0x60);
+            }
+
+            if self.get_flag(Flags::H) {
+                a = a.wrapping_sub(0x06);
+            }
+        }
+
+        self.write_flag(Flags::Z, a == 0);
+        self.clear_flag(Flags::H);
+        self.set_reg(Regs::A, a);
     }
 
     /// ```

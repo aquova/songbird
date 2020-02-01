@@ -108,6 +108,7 @@ fn ld_06(cpu: &mut Cpu) -> u8 {
 /// RLCA
 fn rlca_07(cpu: &mut Cpu) -> u8 {
     cpu.rot_left_reg(Regs::A, false);
+    cpu.clear_flag(Flags::Z);
     4
 }
 
@@ -165,12 +166,13 @@ fn ld_0e(cpu: &mut Cpu) -> u8 {
 /// RRCA
 fn rrca_0f(cpu: &mut Cpu) -> u8 {
     cpu.rot_right_reg(Regs::A, false);
+    cpu.clear_flag(Flags::Z);
     4
 }
 
-/// STOP 0
+/// STOP
 fn stop_10(_cpu: &mut Cpu) -> u8 {
-    // I'm not sure how to implement this
+    // Do nothing?
     4
 }
 
@@ -219,12 +221,13 @@ fn ld_16(cpu: &mut Cpu) -> u8 {
 /// RLA
 fn rla_17(cpu: &mut Cpu) -> u8 {
     cpu.rot_left_reg(Regs::A, true);
+    cpu.clear_flag(Flags::Z);
     4
 }
 
 /// JR r8
 fn jr_18(cpu: &mut Cpu) -> u8 {
-    let offset = cpu.fetch();
+    let offset = cpu.fetch() as i8;
     let mut pc = cpu.get_pc();
     pc = pc.wrapping_add(offset as u16);
     cpu.set_pc(pc);
@@ -274,6 +277,7 @@ fn ld_1e(cpu: &mut Cpu) -> u8 {
 /// RRA
 fn rra_1f(cpu: &mut Cpu) -> u8 {
     cpu.rot_right_reg(Regs::A, true);
+    cpu.clear_flag(Flags::Z);
     4
 }
 
@@ -337,8 +341,8 @@ fn ld_26(cpu: &mut Cpu) -> u8 {
 
 /// DAA
 fn daa_27(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode");
-    // 4
+    cpu.daa();
+    4
 }
 
 /// JR Z, r8
@@ -935,8 +939,8 @@ fn ld_75(cpu: &mut Cpu) -> u8 {
 
 /// HALT
 fn halt_76(cpu: &mut Cpu) -> u8 {
-    panic!("Unimplemented opcode");
-    // 8
+    cpu.halted = true;
+    4
 }
 
 /// LD (HL), A
