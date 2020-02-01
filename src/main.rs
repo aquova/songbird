@@ -27,7 +27,7 @@ pub fn main() {
         process::exit(1);
     }
     let mut paused = false;
-    let mut debugging = false;
+    let mut debugging = true;
 
     // Start game
     let mut gb = Cpu::new();
@@ -114,6 +114,18 @@ pub fn main() {
                         debugging = false;
                         break 'debugloop;
                     },
+                    // Delete breakpoint (if any) at given address
+                    "del" => {
+                        let hex = u16::from_str_radix(words[1], 16);
+                        match hex {
+                            Ok(addr) => {
+                                agbd.del_break(addr);
+                            },
+                            Err(e) => {
+                                println!("{} is not a valid address", e);
+                            }
+                        }
+                    },
                     // Disassemble next 5 instructions
                     "disass" => {
                         agbd.disassemble(&gb);
@@ -151,6 +163,18 @@ pub fn main() {
                     "reg" => {
                         agbd.print_registers(&gb);
                     },
+                    // Set watchpoint
+                    "watch" => {
+                        let hex = u16::from_str_radix(words[1], 16);
+                        match hex {
+                            Ok(addr) => {
+                                agbd.add_watch(addr);
+                            },
+                            Err(e) => {
+                                println!("{} is not a valid address", e);
+                            }
+                        }
+                    },
                     _ => {
                         // Do nothing, accept another input
                     }
@@ -159,12 +183,15 @@ pub fn main() {
         }
 
         if !paused {
+            // let watch_vals = agbd.get_watch_vals(&gb);
+
             // Game loop
             let draw_time = gb.tick();
             if draw_time {
                 gb.draw(&mut canvas);
             }
-            // Break if we hit a breakpoint
+            // Break if we hit a break/watchpoint
+            // if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
             if agbd.check_break(gb.get_pc()) {
                 debugging = true;
             }

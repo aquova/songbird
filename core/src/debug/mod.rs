@@ -110,7 +110,7 @@ impl debugger {
     /// Prints the debugger help message
     /// ```
     pub fn print_help(&self) {
-        println!("'b #' to break at that PC value");
+        println!("'b #' to break at that address");
         println!("'c' to continue execution");
         println!("'disass' to show disassembly of next 5 instructions");
         println!("'help' to print this message");
@@ -119,6 +119,7 @@ impl debugger {
         println!("'p' to print 16 bytes at given RAM address (in hex)");
         println!("'q' to quit program");
         println!("'reg' to list register contents");
+        println!("'watch #' to add (write) watchpoint at that address");
         println!("");
     }
 
@@ -175,6 +176,7 @@ impl debugger {
     /// Add breakpoint
     ///
     /// Adds a breakpoint at specified address
+    /// Note: Doesn't check if breakpoint is already in list
     ///
     /// Input:
     ///     Address to break (u16)
@@ -187,6 +189,7 @@ impl debugger {
     /// Add watchpoint
     ///
     /// Adds a watchpoint at specified address
+    /// Note: Doesn't check if watchpoint is already in list
     ///
     /// Input:
     ///     Address to watch (u16)
@@ -216,6 +219,15 @@ impl debugger {
         println!("${:04x}: {}", addr, valstring);
     }
 
+    pub fn del_break(&mut self, addr: u16) {
+        for i in 0..self.breakpoints.len() {
+            if self.breakpoints[i] == addr {
+                self.breakpoints.remove(i);
+                break;
+            }
+        }
+    }
+
     /// ```
     /// Disassemble
     ///
@@ -235,5 +247,25 @@ impl debugger {
             println!("${:04x} | {}", pc, op_name);
             pc += OPCODE_LENGTH[op as usize] as u16 + 1;
         }
+    }
+
+    pub fn get_watch_vals(&self, gb: &Cpu) -> Vec<u8> {
+        let mut vals = Vec::new();
+        for wp in &self.watchpoints {
+            vals.push(gb.read_ram(*wp));
+        }
+
+        vals
+    }
+
+    pub fn check_watch(&self, gb: &Cpu, prev: Vec<u8>) -> bool {
+        for i in 0..self.watchpoints.len() {
+            let index = self.watchpoints[i];
+            if prev[i] == gb.read_ram(index) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
