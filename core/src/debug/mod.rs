@@ -1,6 +1,7 @@
 // The agba debugger module
 use crate::cpu::*;
 use std::cmp::min;
+use std::collections::HashMap;
 
 const OPCODE_NAMES: [&str; 0x100] = [
     "NOP",          "LD BC, d16",   "LD (BC), A",   "INC BC",       "INC B",        "DEC B",        "LD B, d8",     "RLCA",         // $00
@@ -249,20 +250,24 @@ impl debugger {
         }
     }
 
-    pub fn get_watch_vals(&self, gb: &Cpu) -> Vec<u8> {
-        let mut vals = Vec::new();
+    pub fn get_watch_vals(&self, gb: &Cpu) -> HashMap<u16, u8> {
+        let mut vals = HashMap::new();
         for wp in &self.watchpoints {
-            vals.push(gb.read_ram(*wp));
+            vals.insert(*wp, gb.read_ram(*wp));
         }
 
         vals
     }
 
-    pub fn check_watch(&self, gb: &Cpu, prev: Vec<u8>) -> bool {
-        for i in 0..self.watchpoints.len() {
-            let index = self.watchpoints[i];
-            if prev[i] == gb.read_ram(index) {
-                return true;
+    pub fn check_watch(&self, gb: &Cpu, prev_map: HashMap<u16, u8>) -> bool {
+        for wp in &self.watchpoints {
+            match prev_map.get(wp) {
+                Some(old) => {
+                    if *old != gb.read_ram(*wp) {
+                        return true;
+                    }
+                },
+                None => {}
             }
         }
 

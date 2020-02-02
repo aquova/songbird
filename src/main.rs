@@ -183,16 +183,16 @@ pub fn main() {
         }
 
         if !paused {
-            // let watch_vals = agbd.get_watch_vals(&gb);
+            let watch_vals = agbd.get_watch_vals(&gb);
 
             // Game loop
             let draw_time = gb.tick();
             if draw_time {
                 gb.draw(&mut canvas);
             }
+
             // Break if we hit a break/watchpoint
-            // if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
-            if agbd.check_break(gb.get_pc()) {
+            if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
                 debugging = true;
             }
         }
