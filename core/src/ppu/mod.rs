@@ -4,7 +4,6 @@ mod bkgd;
 
 use bkgd::Tile;
 use crate::utils::*;
-use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::pixels::Color;
 use sdl2::video::Window;
@@ -17,8 +16,7 @@ use std::ops::Range;
 const TILESIZE: usize = 8;
 const SCREEN_WIDTH: usize = 160;
 const SCREEN_HEIGHT: usize = 144;
-const MAP_WIDTH: usize = SCREEN_WIDTH / TILESIZE;
-const MAP_HEIGHT: usize = SCREEN_HEIGHT / TILESIZE;
+const MAP_SIZE: usize = 32; // In tiles
 
 const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
@@ -99,11 +97,27 @@ impl PPU {
         self.vram[LY] = line;
     }
 
+    /// ```
+    /// Set status
+    ///
+    /// Sets the current value of the status register ($FF41)
+    ///
+    /// Input:
+    ///     Current clock mode (u8)
+    /// ```
     pub fn set_status(&mut self, mode: u8) {
         self.vram[LCD_STAT_REG] &= 0b1111_1100;
         self.vram[LCD_STAT_REG] |= mode;
     }
 
+    /// ```
+    /// Draw screen
+    ///
+    /// Renders the current screen
+    ///
+    /// Input:
+    ///     SDL canvas (Canvas<Window>)
+    /// ```
     pub fn draw_screen(&self, canvas: &mut Canvas<Window>) {
         // Clear window
         let draw_color = Color::RGB(255, 255, 255);
@@ -121,19 +135,30 @@ impl PPU {
     // ===================
     // = Private methods =
     // ===================
+
+    /// ```
+    /// Draw background
+    ///
+    /// Renders the background layer
+    ///
+    /// Input:
+    ///     SDL canvas (Canvas<Window>)
+    /// ```
     fn draw_background(&self, canvas: &mut Canvas<Window>) {
-        // let scroll_x = self.vram[SCX] as usize;
-        // let scroll_y = self.vram[SCY] as usize;
-        let bkgd = self.get_background();
+        let bkgd = self.get_background_tiles();
         let dim = canvas.output_size().unwrap();
         let scale = (dim.0 as usize) / SCREEN_HEIGHT;
+        let scroll = self.get_scroll_coords();
 
         let tile_map = self.get_bkgd_tile_map();
 
-        // TODO: Only draw window at (SCX, SCY)
-        for y in 0..MAP_HEIGHT {
-            for x in 0..MAP_WIDTH {
-                let index = y * MAP_HEIGHT + x;
+        for y in 0..MAP_SIZE {
+            for x in 0..MAP_SIZE {
+                // Don't draw tile if it will be off 'camera'
+                if self.is_offscreen(x, y, scroll.0, scroll.1) {
+                    continue;
+                }
+                let index = y * MAP_SIZE + x;
                 let tile_index = tile_map[index];
                 let tile = &bkgd[tile_index as usize];
                 tile.draw(x, y, scale, canvas);
@@ -141,10 +166,18 @@ impl PPU {
         }
     }
 
-    // Tile set is the tile pixel data
-    // Tile map are the tile indices that make up the current background image
-    // TODO: This 100% can and should be cached
-    fn get_background(&self) -> Vec<Tile> {
+    /// ```
+    /// Get background tiles
+    ///
+    /// Fetches the indices of background tiles from VRAM
+    ///
+    /// Output:
+    ///     A vector of tile objects (Vec<Tile>)
+    /// ```
+    fn get_background_tiles(&self) -> Vec<Tile> {
+        // Tile set is the tile pixel data
+        // Tile map are the tile indices that make up the current background image
+        // TODO: This 100% can and should be cached
         let mut map = Vec::new();
         let tile_set = self.get_bkgd_tile_set();
         let num_tiles = tile_set.len() / (2 * TILESIZE);
@@ -158,6 +191,14 @@ impl PPU {
         map
     }
 
+    /// ```
+    /// Get background tile set
+    ///
+    /// Gets the tileset indices currently in use
+    ///
+    /// Output:
+    ///     Slice of tileset indices (&[u8])
+    /// ```
     fn get_bkgd_tile_set(&self) -> &[u8] {
         let tile_set = if self.get_bkgd_tile_set_index() == 0 {
             &self.vram[TILE_SET_0_RANGE]
@@ -168,6 +209,14 @@ impl PPU {
         tile_set
     }
 
+    /// ```
+    /// Get background tile map
+    ///
+    /// Gets the pixel data for the background tiles
+    ///
+    /// Output:
+    ///     Slice of tilemap values (&[u8])
+    /// ```
     fn get_bkgd_tile_map(&self) -> &[u8] {
         let tile_map = if self.get_bkgd_tile_map_index() == 0 {
             &self.vram[TILE_MAP_0_RANGE]
@@ -178,18 +227,75 @@ impl PPU {
         tile_map
     }
 
+    /// ```
+    /// Is background displayed
+    ///
+    /// Is background layer currently visible
+    ///
+    /// Output:
+    ///     Whether or not background is displayed (bool)
+    /// ```
     fn is_bkgd_dspl(&self) -> bool {
         let lcd_control = self.vram[LCD_DISP_REG];
         lcd_control.get_bit(0)
     }
 
+    /// ```
+    /// Get background tileset index
+    ///
+    /// Returns which tileset is being used (0/1)
+    ///
+    /// Output:
+    ///     Tileset index (u8)
+    /// ```
     fn get_bkgd_tile_set_index(&self) -> u8 {
         let lcd_control = self.vram[LCD_DISP_REG];
         if lcd_control.get_bit(4) { return 1 } else { return 0 }
     }
 
+    /// ```
+    /// Get background tilemap index
+    ///
+    /// Returns which tilemap set is being used (0/1)
+    ///
+    /// Output:
+    ///     Tilemap index (u8)
+    /// ```
     fn get_bkgd_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCD_DISP_REG];
         if lcd_control.get_bit(3) { return 1 } else { return 0 }
+    }
+
+    /// ```
+    /// Get scroll coords
+    ///
+    /// Returns the values of the SCX and SCY registers
+    ///
+    /// Output:
+    ///     Tuple of SCX, SCY ( (usize, usize) )
+    /// ```
+    fn get_scroll_coords(&self) -> (usize, usize) {
+        let scroll_x = self.vram[SCX] as usize;
+        let scroll_y = self.vram[SCY] as usize;
+
+        (scroll_x, scroll_y)
+    }
+
+    /// ```
+    /// Is offscreen
+    ///
+    /// Whether the tile at given coords is offscreen
+    ///
+    /// Inputs:
+    ///     X coord of tile (usize)
+    ///     Y coord of tile (usize)
+    ///     SCX value (usize)
+    ///     SCY value (usize)
+    ///
+    /// Output:
+    ///     Whether given tile is offscreen (bool)
+    /// ```
+    fn is_offscreen(&self, x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
+        x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
     }
 }
