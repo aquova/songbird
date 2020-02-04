@@ -149,19 +149,21 @@ impl PPU {
         let dim = canvas.output_size().unwrap();
         let scale = (dim.0 as usize) / SCREEN_HEIGHT;
         let scroll = self.get_scroll_coords();
+        let scroll_tile_x = scroll.0 / TILESIZE;
+        let scroll_tile_y = scroll.1 / TILESIZE;
 
         let tile_map = self.get_bkgd_tile_map();
 
         for y in 0..MAP_SIZE {
             for x in 0..MAP_SIZE {
                 // Don't draw tile if it will be off 'camera'
-                if self.is_offscreen(x, y, scroll.0, scroll.1) {
+                if self.is_offscreen(x, y, scroll_tile_x, scroll_tile_y) {
                     continue;
                 }
                 let index = y * MAP_SIZE + x;
                 let tile_index = tile_map[index];
                 let tile = &bkgd[tile_index as usize];
-                tile.draw(x, y, scale, canvas);
+                tile.draw(x - scroll_tile_x, y - scroll_tile_y, scale, canvas);
             }
         }
     }
@@ -200,7 +202,9 @@ impl PPU {
     ///     Slice of tileset indices (&[u8])
     /// ```
     fn get_bkgd_tile_set(&self) -> &[u8] {
-        let tile_set = if self.get_bkgd_tile_set_index() == 0 {
+        // $01 for $8000-$8FFF
+        // $00 for $8800-$97FF
+        let tile_set = if self.get_bkgd_tile_set_index() == 1 {
             &self.vram[TILE_SET_0_RANGE]
         } else {
             &self.vram[TILE_SET_1_RANGE]
@@ -218,6 +222,8 @@ impl PPU {
     ///     Slice of tilemap values (&[u8])
     /// ```
     fn get_bkgd_tile_map(&self) -> &[u8] {
+        // $00 for $9800-$9BFF
+        // $01 for $9C00-$9FFF
         let tile_map = if self.get_bkgd_tile_map_index() == 0 {
             &self.vram[TILE_MAP_0_RANGE]
         } else {

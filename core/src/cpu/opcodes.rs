@@ -59,11 +59,13 @@ fn invalid(_cpu: &mut Cpu) -> u8 {
 }
 
 /// NOP
+/// ----
 fn nop(_cpu: &mut Cpu) -> u8 {
     4
 }
 
 /// LD BC, d16
+/// ----
 fn ld_01(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
@@ -73,6 +75,7 @@ fn ld_01(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD (BC), A
+/// ----
 fn ld_02(cpu: &mut Cpu) -> u8 {
     let bc = cpu.get_reg_16(Regs16::BC);
     let val = cpu.get_reg(Regs::A);
@@ -81,24 +84,28 @@ fn ld_02(cpu: &mut Cpu) -> u8 {
 }
 
 /// INC BC
+/// ----
 fn inc_03(cpu: &mut Cpu) -> u8 {
     cpu.inc_16(Regs16::BC);
     8
 }
 
 /// INC B
+/// Z0H-
 fn inc_04(cpu: &mut Cpu) -> u8 {
     cpu.inc_8(Regs::B);
     4
 }
 
 /// DEC B
+/// Z1H-
 fn dec_05(cpu: &mut Cpu) -> u8 {
     cpu.dec_8(Regs::B);
     4
 }
 
 /// LD B, d8
+/// ----
 fn ld_06(cpu: &mut Cpu) -> u8 {
     let byte = cpu.fetch();
     cpu.ld_n_d8(Regs::B, byte);
@@ -106,13 +113,16 @@ fn ld_06(cpu: &mut Cpu) -> u8 {
 }
 
 /// RLCA
+/// 000C
 fn rlca_07(cpu: &mut Cpu) -> u8 {
     cpu.rot_left_reg(Regs::A, false);
+    // RLCA wants Z to be cleared (unlike other shift ops)
     cpu.clear_flag(Flags::Z);
     4
 }
 
 /// LD (a16), SP
+/// ----
 fn ld_08(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
@@ -124,6 +134,7 @@ fn ld_08(cpu: &mut Cpu) -> u8 {
 }
 
 /// ADD HL, BC
+/// -0HC
 fn add_09(cpu: &mut Cpu) -> u8 {
     let bc = cpu.get_reg_16(Regs16::BC);
     cpu.add_nn_d16(Regs16::HL, bc);
@@ -131,6 +142,7 @@ fn add_09(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD A, (BC)
+/// ----
 fn ld_0a(cpu: &mut Cpu) -> u8 {
     let bc = cpu.get_reg_16(Regs16::BC);
     let val = cpu.read_ram(bc);
@@ -139,24 +151,28 @@ fn ld_0a(cpu: &mut Cpu) -> u8 {
 }
 
 /// DEC BC
+/// ----
 fn dec_0b(cpu: &mut Cpu) -> u8 {
     cpu.dec_16(Regs16::BC);
     8
 }
 
 /// INC C
+/// Z0H-
 fn inc_0c(cpu: &mut Cpu) -> u8 {
     cpu.inc_8(Regs::C);
     4
 }
 
 /// DEC C
+/// Z1H-
 fn dec_0d(cpu: &mut Cpu) -> u8 {
     cpu.dec_8(Regs::C);
     4
 }
 
 /// LD C, d8
+/// ----
 fn ld_0e(cpu: &mut Cpu) -> u8 {
     let byte = cpu.fetch();
     cpu.ld_n_d8(Regs::C, byte);
@@ -164,19 +180,23 @@ fn ld_0e(cpu: &mut Cpu) -> u8 {
 }
 
 /// RRCA
+/// 000C
 fn rrca_0f(cpu: &mut Cpu) -> u8 {
     cpu.rot_right_reg(Regs::A, false);
+    // RRCA wants Z to be cleared (unlike other shift ops)
     cpu.clear_flag(Flags::Z);
     4
 }
 
 /// STOP
+/// ----
 fn stop_10(_cpu: &mut Cpu) -> u8 {
     // Do nothing?
     4
 }
 
 /// LD DE, d16
+/// ----
 fn ld_11(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
@@ -186,6 +206,7 @@ fn ld_11(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD (DE), A
+/// ----
 fn ld_12(cpu: &mut Cpu) -> u8 {
     let de = cpu.get_reg_16(Regs16::DE);
     let val = cpu.get_reg(Regs::A);
@@ -194,24 +215,28 @@ fn ld_12(cpu: &mut Cpu) -> u8 {
 }
 
 /// INC DE
+/// ----
 fn inc_13(cpu: &mut Cpu) -> u8 {
     cpu.inc_16(Regs16::DE);
     8
 }
 
 /// INC D
+/// Z0H-
 fn inc_14(cpu: &mut Cpu) -> u8 {
     cpu.inc_8(Regs::D);
     4
 }
 
 /// DEC D
+/// Z1H-
 fn dec_15(cpu: &mut Cpu) -> u8 {
     cpu.dec_8(Regs::D);
     4
 }
 
 /// LD D, d8
+/// ----
 fn ld_16(cpu: &mut Cpu) -> u8 {
     let byte = cpu.fetch();
     cpu.ld_n_d8(Regs::D, byte);
@@ -219,13 +244,16 @@ fn ld_16(cpu: &mut Cpu) -> u8 {
 }
 
 /// RLA
+/// 000C
 fn rla_17(cpu: &mut Cpu) -> u8 {
     cpu.rot_left_reg(Regs::A, true);
+    // RLA wants Z to be cleared (unlike other shift ops)
     cpu.clear_flag(Flags::Z);
     4
 }
 
 /// JR r8
+/// ----
 fn jr_18(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch() as i8;
     let mut pc = cpu.get_pc();
@@ -235,6 +263,7 @@ fn jr_18(cpu: &mut Cpu) -> u8 {
 }
 
 /// ADD HL, DE
+/// -0HC
 fn add_19(cpu: &mut Cpu) -> u8 {
     let de = cpu.get_reg_16(Regs16::DE);
     cpu.add_nn_d16(Regs16::HL, de);
@@ -242,6 +271,7 @@ fn add_19(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD A, (DE)
+/// ----
 fn ld_1a(cpu: &mut Cpu) -> u8 {
     let de = cpu.get_reg_16(Regs16::DE);
     let val = cpu.read_ram(de);
@@ -250,24 +280,28 @@ fn ld_1a(cpu: &mut Cpu) -> u8 {
 }
 
 /// DEC DE
+/// ----
 fn dec_1b(cpu: &mut Cpu) -> u8 {
     cpu.dec_16(Regs16::DE);
     8
 }
 
 /// INC E
+/// Z0H-
 fn inc_1c(cpu: &mut Cpu) -> u8 {
     cpu.inc_8(Regs::E);
     4
 }
 
 /// DEC E
+/// Z1H-
 fn dec_1d(cpu: &mut Cpu) -> u8 {
     cpu.dec_8(Regs::E);
     4
 }
 
 /// LD E, d8
+/// ----
 fn ld_1e(cpu: &mut Cpu) -> u8 {
     let byte = cpu.fetch();
     cpu.ld_n_d8(Regs::E, byte);
@@ -275,13 +309,16 @@ fn ld_1e(cpu: &mut Cpu) -> u8 {
 }
 
 /// RRA
+/// 000C
 fn rra_1f(cpu: &mut Cpu) -> u8 {
     cpu.rot_right_reg(Regs::A, true);
+    // RRA wants Z to be cleared (unlike other shift ops)
     cpu.clear_flag(Flags::Z);
     4
 }
 
 /// JR NZ, r8
+/// ----
 fn jr_20(cpu: &mut Cpu) -> u8 {
     let offset = cpu.fetch();
     // Add offset value as signed 8-bit value
@@ -297,6 +334,7 @@ fn jr_20(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD HL, d16
+/// ----
 fn ld_21(cpu: &mut Cpu) -> u8 {
     let low = cpu.fetch();
     let high = cpu.fetch();
@@ -306,6 +344,7 @@ fn ld_21(cpu: &mut Cpu) -> u8 {
 }
 
 /// LD (HL+), A
+/// ----
 fn ld_22(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
     let val = cpu.get_reg(Regs::A);
@@ -315,24 +354,28 @@ fn ld_22(cpu: &mut Cpu) -> u8 {
 }
 
 /// INC HL
+/// ----
 fn inc_23(cpu: &mut Cpu) -> u8 {
     cpu.inc_16(Regs16::HL);
     8
 }
 
 /// INC H
+/// Z0H-
 fn inc_24(cpu: &mut Cpu) -> u8 {
     cpu.inc_8(Regs::H);
     4
 }
 
 /// DEC H
+/// Z1H-
 fn dec_25(cpu: &mut Cpu) -> u8 {
     cpu.dec_8(Regs::H);
     4
 }
 
 /// LD H, d8
+/// ----
 fn ld_26(cpu: &mut Cpu) -> u8 {
     let byte = cpu.fetch();
     cpu.ld_n_d8(Regs::H, byte);
@@ -340,6 +383,7 @@ fn ld_26(cpu: &mut Cpu) -> u8 {
 }
 
 /// DAA
+/// Z-0C
 fn daa_27(cpu: &mut Cpu) -> u8 {
     cpu.daa();
     4

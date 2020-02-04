@@ -11,16 +11,16 @@ const TILESIZE: usize = 8;
 
 // Colors
 const BLACK: (u8, u8, u8)            = (0,   0,   0);
-const LIGHT_GRAY: (u8, u8, u8)       = (211, 211, 211);
-const DARK_GRAY: (u8, u8, u8)        = (169, 169, 169);
+const DARK_GRAY: (u8, u8, u8)        = (148, 148, 165);
+const LIGHT_GRAY: (u8, u8, u8)       = (107, 107, 90);
 const WHITE: (u8, u8, u8)            = (255, 255, 255);
 
 // TODO: Need to reference palette register at some point
 const PALETTE: [(u8, u8, u8); 4] = [
-    WHITE,
+    BLACK,
     DARK_GRAY,
     LIGHT_GRAY,
-    BLACK,
+    WHITE,
 ];
 
 struct Row {
@@ -59,6 +59,9 @@ impl Tile {
     }
 
     pub fn draw(&self, x: usize, y: usize, scale: usize, canvas: &mut Canvas<Window>) {
+        let x_start = x * TILESIZE * scale;
+        let y_start = y * TILESIZE * scale;
+
         for y_index in 0..TILESIZE {
             let curr_row = &self.rows[y_index];
             for x_index in 0..TILESIZE {
@@ -66,11 +69,12 @@ impl Tile {
                 let color_val = PALETTE[pixel as usize];
                 let color = get_color(color_val);
                 canvas.set_draw_color(color);
+
                 let rect = Rect::new(
-                    (x * TILESIZE * scale) as i32,
-                    (y * TILESIZE * scale) as i32,
-                    (TILESIZE * scale) as u32,
-                    (TILESIZE * scale) as u32
+                    (x_start + (x_index * scale)) as i32,
+                    (y_start + (y_index * scale)) as i32,
+                    scale as u32,
+                    scale as u32
                 );
                 canvas.fill_rect(rect).expect("Unable to draw to canvas");
             }
