@@ -1,8 +1,8 @@
 extern crate sdl2;
 
-mod bkgd;
+mod tile;
 
-use bkgd::Tile;
+use tile::{Tile, TILESIZE};
 use crate::utils::*;
 use sdl2::render::Canvas;
 use sdl2::pixels::Color;
@@ -13,7 +13,6 @@ use std::ops::Range;
 // = Constants =
 // =============
 
-const TILESIZE: usize = 8;
 const SCREEN_WIDTH: usize = 160;
 const SCREEN_HEIGHT: usize = 144;
 const MAP_SIZE: usize = 32; // In tiles
@@ -28,11 +27,12 @@ const SCY: usize                     = 0xFF42 - VRAM_OFFSET;
 const SCX: usize                     = 0xFF43 - VRAM_OFFSET;
 const LY: usize                      = 0xFF44 - VRAM_OFFSET;
 const LYC: usize                     = 0xFF45 - VRAM_OFFSET;
-const BGP: usize                     = 0xFF46 - VRAM_OFFSET;
-const OBP0: usize                    = 0xFF47 - VRAM_OFFSET;
-const OBP1: usize                    = 0xFF48 - VRAM_OFFSET;
-const WY: usize                      = 0xFF49 - VRAM_OFFSET;
-const WX: usize                      = 0xFF4A - VRAM_OFFSET;
+const DMA: usize                     = 0xFF46 - VRAM_OFFSET;
+const BGP: usize                     = 0xFF47 - VRAM_OFFSET;
+const OBP0: usize                    = 0xFF48 - VRAM_OFFSET;
+const OBP1: usize                    = 0xFF49 - VRAM_OFFSET;
+const WY: usize                      = 0xFF4A - VRAM_OFFSET;
+const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 
 // VRAM ranges
 const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
@@ -124,10 +124,9 @@ impl PPU {
         canvas.set_draw_color(draw_color);
         canvas.clear();
 
-        self.draw_background(canvas);
-        // if self.is_bkgd_dspl() {
-        //     self.draw_background(canvas);
-        // }
+        if self.is_bkgd_dspl() {
+            self.draw_background(canvas);
+        }
 
         canvas.present();
     }
@@ -153,6 +152,7 @@ impl PPU {
         let scroll_tile_y = scroll.1 / TILESIZE;
 
         let tile_map = self.get_bkgd_tile_map();
+        let palette = self.get_palette();
 
         for y in 0..MAP_SIZE {
             for x in 0..MAP_SIZE {
@@ -163,7 +163,7 @@ impl PPU {
                 let index = y * MAP_SIZE + x;
                 let tile_index = tile_map[index];
                 let tile = &bkgd[tile_index as usize];
-                tile.draw(x - scroll_tile_x, y - scroll_tile_y, scale, canvas);
+                tile.draw(x - scroll_tile_x, y - scroll_tile_y, scale, palette, canvas);
             }
         }
     }
@@ -303,5 +303,16 @@ impl PPU {
     /// ```
     fn is_offscreen(&self, x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
         x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
+    }
+
+    fn get_palette(&self) -> [u8; 4] {
+        let mut palette = [0; 4];
+        let data = self.vram[BGP];
+        palette[0] = data & 0b0000_0011;
+        palette[1] = (data & 0b0000_1100) >> 2;
+        palette[2] = (data & 0b0011_0000) >> 4;
+        palette[3] = (data & 0b1100_0000) >> 6;
+
+        palette
     }
 }

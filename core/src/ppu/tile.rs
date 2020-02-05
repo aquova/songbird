@@ -7,20 +7,20 @@ use sdl2::video::Window;
 // =============
 // = Constants =
 // =============
-const TILESIZE: usize = 8;
+pub const TILESIZE: usize = 8;
 
 // Colors
 const BLACK: (u8, u8, u8)            = (0,   0,   0);
-const DARK_GRAY: (u8, u8, u8)        = (148, 148, 165);
-const LIGHT_GRAY: (u8, u8, u8)       = (107, 107, 90);
+const LIGHT_GRAY: (u8, u8, u8)       = (148, 148, 165);
+const DARK_GRAY: (u8, u8, u8)        = (107, 107, 90);
 const WHITE: (u8, u8, u8)            = (255, 255, 255);
 
 // TODO: Need to reference palette register at some point
-const PALETTE: [(u8, u8, u8); 4] = [
-    BLACK,
-    DARK_GRAY,
-    LIGHT_GRAY,
+const COLORS: [(u8, u8, u8); 4] = [
     WHITE,
+    LIGHT_GRAY,
+    DARK_GRAY,
+    BLACK,
 ];
 
 struct Row {
@@ -58,7 +58,7 @@ impl Tile {
         new_tile
     }
 
-    pub fn draw(&self, x: usize, y: usize, scale: usize, canvas: &mut Canvas<Window>) {
+    pub fn draw(&self, x: usize, y: usize, scale: usize, palette: [u8; 4], canvas: &mut Canvas<Window>) {
         let x_start = x * TILESIZE * scale;
         let y_start = y * TILESIZE * scale;
 
@@ -66,7 +66,7 @@ impl Tile {
             let curr_row = &self.rows[y_index];
             for x_index in 0..TILESIZE {
                 let pixel = curr_row.get_pixel(x_index);
-                let color_val = PALETTE[pixel as usize];
+                let color_val = COLORS[palette[pixel as usize] as usize];
                 let color = get_color(color_val);
                 canvas.set_draw_color(color);
 
