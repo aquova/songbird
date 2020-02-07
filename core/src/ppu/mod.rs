@@ -128,6 +128,10 @@ impl PPU {
             self.draw_background(canvas);
         }
 
+        if self.is_wndw_dspl() {
+            self.draw_window(canvas);
+        }
+
         canvas.present();
     }
 
@@ -166,6 +170,10 @@ impl PPU {
                 tile.draw(x - scroll_tile_x, y - scroll_tile_y, scale, palette, canvas);
             }
         }
+    }
+
+    fn draw_window(&self, canvas: &mut Canvas<Window>) {
+
     }
 
     /// ```
@@ -233,6 +241,20 @@ impl PPU {
         tile_map
     }
 
+    // TODO: Merge this with the background tile map function
+    fn get_wndw_tile_map(&self) -> &[u8] {
+        // $00 for $9800-$9BFF
+        // $01 for $9C00-$9FFF
+        let tile_map = if self.get_wndw_tile_map_index() == 0 {
+            &self.vram[TILE_MAP_0_RANGE]
+        } else {
+            &self.vram[TILE_MAP_1_RANGE]
+        };
+
+        tile_map
+
+    }
+
     /// ```
     /// Is background displayed
     ///
@@ -244,6 +266,16 @@ impl PPU {
     fn is_bkgd_dspl(&self) -> bool {
         let lcd_control = self.vram[LCD_DISP_REG];
         lcd_control.get_bit(0)
+    }
+
+    fn is_wndw_dspl(&self) -> bool {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        lcd_control.get_bit(5)
+    }
+
+    fn is_sprt_dspl(&self) -> bool {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        lcd_control.get_bit(1)
     }
 
     /// ```
@@ -303,6 +335,18 @@ impl PPU {
     /// ```
     fn is_offscreen(&self, x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
         x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
+    }
+
+    fn get_wndw_coords(&self) -> (usize, usize) {
+        let wndw_x = self.vram[WX] as usize;
+        let wndw_y = self.vram[WY] as usize;
+
+        (wndw_x, wndw_y)
+    }
+
+    fn get_wndw_tile_map_index(&self) -> u8 {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        if lcd_control.get_bit(6) { return 1 } else { return 0 }
     }
 
     fn get_palette(&self) -> [u8; 4] {

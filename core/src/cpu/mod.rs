@@ -49,7 +49,7 @@ pub struct Cpu {
     h: u8,
     l: u8,
     pub clock: Clock,
-    pub interrupt: bool,
+    pub interrupted: bool,
     pub halted: bool,
     pub bus: Bus
 }
@@ -69,7 +69,7 @@ impl Cpu {
             h: 0x01,
             l: 0x4D,
             clock: Clock::new(),
-            interrupt: false,
+            interrupted: false,
             halted: false,
             bus: Bus::new()
         };

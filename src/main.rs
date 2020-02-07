@@ -27,7 +27,7 @@ pub fn main() {
         process::exit(1);
     }
     let mut paused = false;
-    let mut debugging = true;
+    let mut debugging = false;
 
     // Start game
     let mut gb = Cpu::new();

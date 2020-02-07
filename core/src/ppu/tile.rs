@@ -15,7 +15,6 @@ const LIGHT_GRAY: (u8, u8, u8)       = (148, 148, 165);
 const DARK_GRAY: (u8, u8, u8)        = (107, 107, 90);
 const WHITE: (u8, u8, u8)            = (255, 255, 255);
 
-// TODO: Need to reference palette register at some point
 const COLORS: [(u8, u8, u8); 4] = [
     WHITE,
     LIGHT_GRAY,
