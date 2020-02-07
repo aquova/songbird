@@ -189,7 +189,7 @@ impl PPU {
         // Tile map are the tile indices that make up the current background image
         // TODO: This 100% can and should be cached
         let mut map = Vec::new();
-        let tile_set = self.get_bkgd_tile_set();
+        let tile_set = self.get_tile_set();
         let num_tiles = tile_set.len() / (2 * TILESIZE);
 
         for i in 0..num_tiles {
@@ -202,14 +202,14 @@ impl PPU {
     }
 
     /// ```
-    /// Get background tile set
+    /// Get tile set
     ///
-    /// Gets the tileset indices currently in use
+    /// Gets the tileset indices currently in use for background and window layers
     ///
     /// Output:
     ///     Slice of tileset indices (&[u8])
     /// ```
-    fn get_bkgd_tile_set(&self) -> &[u8] {
+    fn get_tile_set(&self) -> &[u8] {
         // $01 for $8000-$8FFF
         // $00 for $8800-$97FF
         let tile_set = if self.get_bkgd_tile_set_index() == 1 {
@@ -239,20 +239,6 @@ impl PPU {
         };
 
         tile_map
-    }
-
-    // TODO: Merge this with the background tile map function
-    fn get_wndw_tile_map(&self) -> &[u8] {
-        // $00 for $9800-$9BFF
-        // $01 for $9C00-$9FFF
-        let tile_map = if self.get_wndw_tile_map_index() == 0 {
-            &self.vram[TILE_MAP_0_RANGE]
-        } else {
-            &self.vram[TILE_MAP_1_RANGE]
-        };
-
-        tile_map
-
     }
 
     /// ```
@@ -304,6 +290,11 @@ impl PPU {
         if lcd_control.get_bit(3) { return 1 } else { return 0 }
     }
 
+    fn get_wndw_tile_map_index(&self) -> u8 {
+        let lcd_control = self.vram[LCD_DISP_REG];
+        if lcd_control.get_bit(6) { return 1 } else { return 0 }
+    }
+
     /// ```
     /// Get scroll coords
     ///
@@ -342,11 +333,6 @@ impl PPU {
         let wndw_y = self.vram[WY] as usize;
 
         (wndw_x, wndw_y)
-    }
-
-    fn get_wndw_tile_map_index(&self) -> u8 {
-        let lcd_control = self.vram[LCD_DISP_REG];
-        if lcd_control.get_bit(6) { return 1 } else { return 0 }
     }
 
     fn get_palette(&self) -> [u8; 4] {
