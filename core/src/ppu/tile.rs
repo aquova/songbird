@@ -1,28 +1,9 @@
 use crate::utils::*;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::pixels::Color;
-use sdl2::video::Window;
 
 // =============
 // = Constants =
 // =============
-pub const TILESIZE: usize = 8;
-
-// Colors
-const BLACK: (u8, u8, u8)            = (0,   0,   0);
-const LIGHT_GRAY: (u8, u8, u8)       = (148, 148, 165);
-const DARK_GRAY: (u8, u8, u8)        = (107, 107, 90);
-const WHITE: (u8, u8, u8)            = (255, 255, 255);
-
-const COLORS: [(u8, u8, u8); 4] = [
-    WHITE,
-    LIGHT_GRAY,
-    DARK_GRAY,
-    BLACK,
-];
-
-struct Row {
+pub struct Row {
     pixels: [u8; TILESIZE]
 }
 
@@ -33,7 +14,7 @@ impl Row {
 }
 
 pub struct Tile {
-    rows: Vec<Row>
+    pub rows: Vec<Row>
 }
 
 impl Tile {
@@ -57,27 +38,8 @@ impl Tile {
         new_tile
     }
 
-    pub fn draw(&self, x: usize, y: usize, scale: usize, palette: [u8; 4], canvas: &mut Canvas<Window>) {
-        let x_start = x * TILESIZE * scale;
-        let y_start = y * TILESIZE * scale;
-
-        for y_index in 0..TILESIZE {
-            let curr_row = &self.rows[y_index];
-            for x_index in 0..TILESIZE {
-                let pixel = curr_row.get_pixel(x_index);
-                let color_val = COLORS[palette[pixel as usize] as usize];
-                let color = get_color(color_val);
-                canvas.set_draw_color(color);
-
-                let rect = Rect::new(
-                    (x_start + (x_index * scale)) as i32,
-                    (y_start + (y_index * scale)) as i32,
-                    scale as u32,
-                    scale as u32
-                );
-                canvas.fill_rect(rect).expect("Unable to draw to canvas");
-            }
-        }
+    pub fn get_row(&self, index: usize) -> &[u8] {
+        &self.rows[index].pixels
     }
 }
 
@@ -100,6 +62,3 @@ fn concat_bits(low: bool, high: bool) -> u8 {
     concat
 }
 
-fn get_color(color: (u8, u8, u8)) -> Color {
-    Color::RGB(color.0, color.1, color.2)
-}

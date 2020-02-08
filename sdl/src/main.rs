@@ -7,18 +7,38 @@ extern crate sdl2;
 // Includes
 use agba_core::cpu::Cpu;
 use agba_core::debug::debugger;
+use agba_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+
 use sdl2::event::Event;
 use sdl2::image::LoadSurface;
 use sdl2::keyboard::Keycode;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+use sdl2::render::Canvas;
 use sdl2::surface::Surface;
+use sdl2::video::Window;
+
 use std::{env, io, process, thread, time};
 use std::io::prelude::*;
 
 // Constants
-const WIDTH: u32 = 160;
-const HEIGHT: u32 = 144;
-const SCALE: u32 = 5;
+const WIDTH: usize = 160;
+const HEIGHT: usize = 144;
+const SCALE: usize = 5;
 const CLOCK_SPEED_IN_NS: u64 = 238; // 4.2 MHz
+
+// Colors
+const BLACK: (u8, u8, u8)            = (0,   0,   0);
+const LIGHT_GRAY: (u8, u8, u8)       = (148, 148, 165);
+const DARK_GRAY: (u8, u8, u8)        = (107, 107, 90);
+const WHITE: (u8, u8, u8)            = (255, 255, 255);
+
+const COLORS: [(u8, u8, u8); 4] = [
+    WHITE,
+    LIGHT_GRAY,
+    DARK_GRAY,
+    BLACK,
+];
 
 pub fn main() {
     let args: Vec<_> = env::args().collect();
@@ -39,7 +59,7 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    let mut window = video_subsystem.window(&args[1], SCALE * WIDTH, SCALE * HEIGHT).position_centered().opengl().build().unwrap();
+    let mut window = video_subsystem.window(&args[1], (SCALE * WIDTH) as u32, (SCALE * HEIGHT) as u32).position_centered().opengl().build().unwrap();
     let window_icon = Surface::from_file("assets/icon_purple.png").unwrap();
     window.set_icon(window_icon);
     let mut canvas = window.into_canvas().build().unwrap();
@@ -188,7 +208,9 @@ pub fn main() {
             // Game loop
             let draw_time = gb.tick();
             if draw_time {
-                gb.draw(&mut canvas);
+                let disp_arr = gb.render();
+                let palette = gb.get_palette();
+                draw_screen(palette, disp_arr, &mut canvas);
             }
 
             // Break if we hit a break/watchpoint
@@ -219,4 +241,33 @@ fn trim_newline(s: &mut String) {
             s.pop();
         }
     }
+}
+
+fn get_color(color: (u8, u8, u8)) -> Color {
+    Color::RGB(color.0, color.1, color.2)
+}
+
+fn draw_screen(palette: [u8; 4], data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
+    canvas.set_draw_color(get_color(WHITE));
+    canvas.clear();
+
+    for y in 0..SCREEN_HEIGHT {
+        for x in 0..SCREEN_WIDTH {
+            let index = y * SCREEN_WIDTH + x;
+            let pixel = data[index];
+            let color_val = COLORS[palette[pixel as usize] as usize];
+            let color = get_color(color_val);
+            canvas.set_draw_color(color);
+
+            let rect = Rect::new(
+                (x * SCALE) as i32,
+                (y * SCALE) as i32,
+                SCALE as u32,
+                SCALE as u32
+            );
+            canvas.fill_rect(rect).expect("Unable to draw to canvas");
+        }
+    }
+
+    canvas.present();
 }

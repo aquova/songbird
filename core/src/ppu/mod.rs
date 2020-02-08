@@ -1,22 +1,15 @@
-extern crate sdl2;
-
 mod tile;
 
-use tile::{Tile, TILESIZE};
+use tile::Tile;
 use crate::utils::*;
-use sdl2::render::Canvas;
-use sdl2::pixels::Color;
-use sdl2::video::Window;
 use std::ops::Range;
 
 // =============
 // = Constants =
 // =============
 
-const SCREEN_WIDTH: usize = 160;
-const SCREEN_HEIGHT: usize = 144;
 const MAP_SIZE: usize = 32; // In tiles
-
+const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
 const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
 
@@ -42,7 +35,7 @@ const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OF
 const SAM:              Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
 
 pub struct PPU {
-    vram: [u8; VRAM_SIZE]
+    vram: [u8; VRAM_SIZE],
 }
 
 impl PPU {
@@ -51,7 +44,7 @@ impl PPU {
     // ==================
     pub fn new() -> PPU {
         PPU {
-            vram: [0; VRAM_SIZE]
+            vram: [0; VRAM_SIZE],
         }
     }
 
@@ -110,29 +103,32 @@ impl PPU {
         self.vram[LCD_STAT_REG] |= mode;
     }
 
+    pub fn get_palette(&self) -> [u8; 4] {
+        unpack_u8(self.vram[BGP])
+    }
+
     /// ```
-    /// Draw screen
+    /// Render screen
     ///
     /// Renders the current screen
     ///
-    /// Input:
-    ///     SDL canvas (Canvas<Window>)
+    /// Output:
+    ///     Array of pixels to draw ([u8])
     /// ```
-    pub fn draw_screen(&self, canvas: &mut Canvas<Window>) {
-        // Clear window
-        let draw_color = Color::RGB(255, 255, 255);
-        canvas.set_draw_color(draw_color);
-        canvas.clear();
+    pub fn render_screen(&self) -> [u8; DISP_SIZE] {
+        let mut map_array = [0; MAP_PIXELS * MAP_PIXELS];
 
         if self.is_bkgd_dspl() {
-            self.draw_background(canvas);
+            self.render_background(&mut map_array);
         }
 
-        if self.is_wndw_dspl() {
-            self.draw_window(canvas);
-        }
+        // if self.is_wndw_dspl() {
+        //     self.draw_window();
+        // }
 
-        canvas.present();
+        let screen = self.get_view(&map_array);
+
+        screen
     }
 
     // ===================
@@ -140,40 +136,52 @@ impl PPU {
     // ===================
 
     /// ```
-    /// Draw background
+    /// Render background
     ///
-    /// Renders the background layer
-    ///
-    /// Input:
-    ///     SDL canvas (Canvas<Window>)
+    /// Renders the background tiles onto the pixel array
     /// ```
-    fn draw_background(&self, canvas: &mut Canvas<Window>) {
+    fn render_background(&self, pixel_array: &mut [u8]) {
         let bkgd = self.get_background_tiles();
-        let dim = canvas.output_size().unwrap();
-        let scale = (dim.0 as usize) / SCREEN_HEIGHT;
-        let scroll = self.get_scroll_coords();
-        let scroll_tile_x = scroll.0 / TILESIZE;
-        let scroll_tile_y = scroll.1 / TILESIZE;
-
         let tile_map = self.get_bkgd_tile_map();
-        let palette = self.get_palette();
 
+        // Iterate through every tile in map
         for y in 0..MAP_SIZE {
             for x in 0..MAP_SIZE {
-                // Don't draw tile if it will be off 'camera'
-                if self.is_offscreen(x, y, scroll_tile_x, scroll_tile_y) {
-                    continue;
-                }
                 let index = y * MAP_SIZE + x;
                 let tile_index = tile_map[index];
                 let tile = &bkgd[tile_index as usize];
-                tile.draw(x - scroll_tile_x, y - scroll_tile_y, scale, palette, canvas);
+                // Iterate through row in tile
+                for row in 0..TILESIZE {
+                    let map_x = TILESIZE * x;
+                    let map_y = (TILESIZE * y) + row;
+                    let map_index = (map_y * MAP_SIZE) + map_x;
+                    // Copy row into pixel map
+                    pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+                }
             }
         }
     }
 
-    fn draw_window(&self, canvas: &mut Canvas<Window>) {
+    fn draw_window(&self) {
 
+    }
+
+    fn get_view(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
+        let mut viewport = [0; DISP_SIZE];
+        let scroll = self.get_scroll_coords();
+
+        // Iterate through every visible pixel
+        for y in (scroll.1)..(scroll.1 + SCREEN_HEIGHT) {
+            for x in (scroll.0)..(scroll.0 + SCREEN_WIDTH) {
+                let index = y * MAP_PIXELS + x;
+                let pixel = pixel_array[index];
+
+                let view_index = (y - scroll.1) * SCREEN_WIDTH + (x - scroll.0);
+                viewport[view_index] = pixel;
+            }
+        }
+
+        viewport
     }
 
     /// ```
@@ -310,39 +318,28 @@ impl PPU {
         (scroll_x, scroll_y)
     }
 
-    /// ```
-    /// Is offscreen
-    ///
-    /// Whether the tile at given coords is offscreen
-    ///
-    /// Inputs:
-    ///     X coord of tile (usize)
-    ///     Y coord of tile (usize)
-    ///     SCX value (usize)
-    ///     SCY value (usize)
-    ///
-    /// Output:
-    ///     Whether given tile is offscreen (bool)
-    /// ```
-    fn is_offscreen(&self, x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
-        x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
-    }
-
     fn get_wndw_coords(&self) -> (usize, usize) {
-        let wndw_x = self.vram[WX] as usize;
+        let wndw_x = (self.vram[WX] - 7) as usize;
         let wndw_y = self.vram[WY] as usize;
 
         (wndw_x, wndw_y)
     }
-
-    fn get_palette(&self) -> [u8; 4] {
-        let mut palette = [0; 4];
-        let data = self.vram[BGP];
-        palette[0] = data & 0b0000_0011;
-        palette[1] = (data & 0b0000_1100) >> 2;
-        palette[2] = (data & 0b0011_0000) >> 4;
-        palette[3] = (data & 0b1100_0000) >> 6;
-
-        palette
-    }
 }
+
+// /// ```
+// /// Is offscreen
+// ///
+// /// Whether the tile at given coords is offscreen
+// ///
+// /// Inputs:
+// ///     X coord of tile (usize)
+// ///     Y coord of tile (usize)
+// ///     SCX value (usize)
+// ///     SCY value (usize)
+// ///
+// /// Output:
+// ///     Whether given tile is offscreen (bool)
+// /// ```
+// fn is_offscreen(x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
+//     x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
+// }

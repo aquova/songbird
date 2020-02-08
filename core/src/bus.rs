@@ -1,9 +1,6 @@
-extern crate sdl2;
-
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
 use crate::ppu::PPU;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
+use crate::utils::DISP_SIZE;
 
 /*
  * RAM Map
@@ -111,15 +108,19 @@ impl Bus {
     }
 
     /// ```
-    /// Draw
+    /// Render
     ///
-    /// Draws the screen
+    /// Renders the screen
     ///
-    /// Input:
-    ///     Canvas to draw upon (Canvas<Window>)
+    /// Output:
+    ///     Array of pixels to draw ([u8])
     /// ```
-    pub fn draw(&self, canvas: &mut Canvas<Window>) {
-        self.ppu.draw_screen(canvas);
+    pub fn render(&self) -> [u8; DISP_SIZE] {
+        self.ppu.render_screen()
+    }
+
+    pub fn get_palette(&self) -> [u8; 4] {
+        self.ppu.get_palette()
     }
 
     /// ```

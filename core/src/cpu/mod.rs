@@ -1,14 +1,9 @@
-extern crate sdl2;
-
 pub mod clock;
 pub mod opcodes;
-use clock::Clock;
 
+use clock::Clock;
 use crate::bus::Bus;
 use crate::utils::*;
-
-use sdl2::render::Canvas;
-use sdl2::video::Window;
 
 pub enum Flags {
     Z,
@@ -129,15 +124,19 @@ impl Cpu {
     }
 
     /// ```
-    /// Draw
+    /// Render
     ///
     /// Renders one frame on the screen
     ///
-    /// Input:
-    ///     The window canvas to draw the frame (Canvas<Window>)
+    /// Output:
+    ///     Array of pixels to draw ([u8])
     /// ```
-    pub fn draw(&self, canvas: &mut Canvas<Window>) {
-        self.bus.draw(canvas);
+    pub fn render(&self) -> [u8; DISP_SIZE] {
+        self.bus.render()
+    }
+
+    pub fn get_palette(&self) -> [u8; 4] {
+        self.bus.get_palette()
     }
 
     /// ```

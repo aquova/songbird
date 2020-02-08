@@ -1,4 +1,9 @@
 pub const BYTE: u8 = 8;
+pub const TILESIZE: usize = 8;
+
+pub const SCREEN_WIDTH: usize = 160;
+pub const SCREEN_HEIGHT: usize = 144;
+pub const DISP_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT);
 
 pub trait ModifyBits {
     fn get_bit(&self, digit: u8) -> bool;
@@ -180,4 +185,25 @@ pub fn check_h_borrow_u8(high: u8, low: u8) -> bool {
 pub fn check_h_borrow_u16(high: u16, low: u16) -> bool {
     // TODO: See if the two borrow functions can be generic-ized
     (high & 0xF).checked_sub(low & 0xF).is_none()
+}
+
+pub fn pack_u8(arr: &[u8]) -> u8 {
+    let mut output = arr[0];
+
+    output |= arr[1] << 2;
+    output |= arr[2] << 4;
+    output |= arr[3] << 6;
+
+    output
+}
+
+pub fn unpack_u8(byte: u8) -> [u8; 4] {
+    let mut bytes = [0; 4];
+
+    bytes[0] = byte & 0b0000_0011;
+    bytes[1] = (byte & 0b0000_1100) >> 2;
+    bytes[2] = (byte & 0b0011_0000) >> 4;
+    bytes[3] = (byte & 0b1100_0000) >> 6;
+
+    bytes
 }
