@@ -154,7 +154,7 @@ impl PPU {
                 for row in 0..TILESIZE {
                     let map_x = TILESIZE * x;
                     let map_y = (TILESIZE * y) + row;
-                    let map_index = (map_y * MAP_SIZE) + map_x;
+                    let map_index = (map_y * MAP_SIZE * TILESIZE) + map_x;
                     // Copy row into pixel map
                     pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
                 }
