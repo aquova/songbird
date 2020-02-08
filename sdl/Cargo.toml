@@ -1,10 +1,9 @@
 [package]
-name = "agba"
+name = "agba_sdl"
 version = "0.1.0"
 authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-gb_core = { path = "core" }
+agba_core = { path = "../core" }
 sdl2 = { version = "^0.32.2", features = [ "image" ] }
-# sdl2 = "^0.32.2"

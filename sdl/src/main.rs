@@ -5,8 +5,8 @@
 extern crate sdl2;
 
 // Includes
-use gb_core::cpu::Cpu;
-use gb_core::debug::debugger;
+use agba_core::cpu::Cpu;
+use agba_core::debug::debugger;
 use sdl2::event::Event;
 use sdl2::image::LoadSurface;
 use sdl2::keyboard::Keycode;

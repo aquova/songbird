@@ -1,8 +1,14 @@
+# Rust ignores
 **/target
 **/*.rs.bk
 *.lock
+*.wasm
 
-**/games
+# VSCode
 *.code-workspace
 
+# Hide files that aren't ours
+**/games
+
+# Misc
 *.sav

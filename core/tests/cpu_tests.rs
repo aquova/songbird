@@ -1,7 +1,7 @@
-extern crate gb_core;
+extern crate agba_core;
 
-use gb_core::cpu::*;
-use gb_core::utils::ModifyBytes;
+use agba_core::cpu::*;
+use agba_core::utils::ModifyBytes;
 
 #[test]
 /// Test joint 16-bit register operations

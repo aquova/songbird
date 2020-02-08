@@ -1,13 +1,13 @@
-extern crate gb_core;
+extern crate agba_core;
 
-use gb_core::cartridge::MBC;
-use gb_core::cpu::*;
+use agba_core::cartridge::MBC;
+use agba_core::cpu::*;
 use std::fs::File;
 use std::io::Read;
 
 // Going to use a ROM for testing that definitely doesn't rhyme with "Metris"
 // TODO: Someday make your own ROM you can use for unit tests
-const GAME_PATH: &str = "tests/test_roms/Tetris.gb";
+const GAME_PATH: &str = "tests/Tetris.gb";
 
 #[test]
 /// Tests that the title can be extracted from ROM header
