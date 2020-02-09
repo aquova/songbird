@@ -1,0 +1,13 @@
+[package]
+name = "agba_wasm"
+version = "0.1.0"
+authors = ["aquova <abrick912@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+wasm-bindgen = "0.2"
+lazy_static = "1.4.0"
+agba_core = { path = "../core" }
+
+[lib]
+crate-type = ["cdylib", "rlib"]

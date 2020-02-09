@@ -22,8 +22,6 @@ use std::{env, io, process, thread, time};
 use std::io::prelude::*;
 
 // Constants
-const WIDTH: usize = 160;
-const HEIGHT: usize = 144;
 const SCALE: usize = 5;
 const CLOCK_SPEED_IN_NS: u64 = 238; // 4.2 MHz
 
@@ -59,7 +57,7 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    let mut window = video_subsystem.window(&args[1], (SCALE * WIDTH) as u32, (SCALE * HEIGHT) as u32).position_centered().opengl().build().unwrap();
+    let mut window = video_subsystem.window(&args[1], (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
     let window_icon = Surface::from_file("assets/icon_purple.png").unwrap();
     window.set_icon(window_icon);
     let mut canvas = window.into_canvas().build().unwrap();
