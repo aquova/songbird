@@ -1,3 +1,10 @@
+const COLORS = [
+    "#000000",  // Black
+    "#9494a5",  // Light Gray
+    "#6b6b5a",  // Dark Gray
+    "#ffffff"   // White
+]
+
 async function run() {
     const WIDTH = 160
     const HEIGHT = 144
@@ -11,11 +18,6 @@ async function run() {
     const instance = await WebAssembly.instantiate(module)
     // Exported functions are in 'exports' object
     const exports = instance.exports
-    // load_game()
-
-    // Get memory arrays
-    // const gfx = new Uint8Array(exports.memory.buffer, exports.get_gfx(), HEIGHT * WIDTH)
-    // const ram = new Uint8Array(exports.memory.buffer, exports.get_memory(), 4096)
 
     // Setup canvas
     const canvas = document.getElementById("canvas")
@@ -23,38 +25,39 @@ async function run() {
     canvas.height = HEIGHT * scale
     const ctx = canvas.getContext("2d")
 
+    load_game()
+
     // Load game
     function load_game() {
-        exports.load()
         // Load game into buffer
-        // fetch("games/" + game_title)
-        //     .then(i => i.arrayBuffer())
-        //     .then(buffer => {
-        //         const rom = new DataView(buffer, 0, buffer.byteLength)
-        //         // Reset, then load game data into RAM
-        //         exports.reset()
-        //         for (var i = 0; i < rom.byteLength; i++) {
-        //             ram[0x200 + i] = rom.getUint8(i)
-        //         }
-        //         // Set random seed
-        //         exports.set_seed(Math.random())
-        //     })
+        fetch("../games/test_roms/opus5.gb")
+            .then(i => i.arrayBuffer())
+            .then(buffer => {
+                const rom = new DataView(buffer, 0, buffer.byteLength)
+                // Push data onto ROM vector
+                for (var i = 0; i < rom.byteLength; i++) {
+                    exports.push(rom.getUint8(i))
+                }
+                // Send data to emulator
+                exports.load()
+            })
     }
 
     // Draw canvas
     function draw_screen() {
-        const gfx = new Uint8Array(exports.memory.buffer, exports.get_gfx(), HEIGHT * WIDTH)
+        const gfx = new Uint8Array(exports.get_gfx())
+        const palette = new Uint8Array(exports.get_palette())
 
-        // Background color
-        ctx.fillStyle = "black"
+        // Clear canvas
+        ctx.fillStyle = "blue"
         ctx.fillRect(0, 0, WIDTH * scale, HEIGHT * scale)
-        ctx.fillStyle = color.value
-        // Draw pixel by pixel
-        for (var i = 0; i < gfx.length; i++) {
-            var x = i % WIDTH
-            var y = Math.floor(i / WIDTH)
-            var pixel = gfx[i]
-            if (pixel == 1) {
+
+        for (var y = 0; y < HEIGHT; y++) {
+            for (var x = 0; x < WIDTH; x++) {
+                var index = y * WIDTH + x
+                var pixel = gfx[index]
+                var color = COLORS[palette[pixel]]
+                ctx.fillStyle = color
                 ctx.fillRect(x * scale, y * scale, scale, scale)
             }
         }
@@ -64,13 +67,14 @@ async function run() {
     function runloop() {
         if (!paused) {
             // TODO: Need to run at 4.2 MHz
-            exports.tick()
+            var draw_time = exports.tick()
+            // if (draw_time) {
             draw_screen()
+            // }
         }
         window.requestAnimationFrame(runloop)
     }
     window.requestAnimationFrame(runloop)
-
 }
 
 run()

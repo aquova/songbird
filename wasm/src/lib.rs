@@ -22,7 +22,7 @@ pub fn get_palette() -> [u8; 4] {
 
 #[no_mangle]
 pub fn load() {
-    GB.lock().unwrap().load_game("../games/test_roms/opus5.gb");
+    GB.lock().unwrap().load_game(ROM.lock().unwrap().to_vec());
 }
 
 #[no_mangle]
@@ -31,6 +31,6 @@ pub fn get_gfx() -> [u8; DISP_SIZE] {
 }
 
 #[no_mangle]
-pub fn tick() {
-    GB.lock().unwrap().tick();
+pub fn tick() -> bool {
+    GB.lock().unwrap().tick()
 }

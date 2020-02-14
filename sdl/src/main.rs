@@ -18,6 +18,8 @@ use sdl2::render::Canvas;
 use sdl2::surface::Surface;
 use sdl2::video::Window;
 
+use std::fs::File;
+use std::io::Read;
 use std::{env, io, process, thread, time};
 use std::io::prelude::*;
 
@@ -49,7 +51,8 @@ pub fn main() {
 
     // Start game
     let mut gb = Cpu::new();
-    gb.load_game(&args[1]);
+    let rom = load_rom(&args[1]);
+    gb.load_game(rom);
 
     // Initialize debugger
     let mut agbd = debugger::new();
@@ -268,4 +271,13 @@ fn draw_screen(palette: [u8; 4], data: [u8; DISP_SIZE], canvas: &mut Canvas<Wind
     }
 
     canvas.present();
+}
+
+fn load_rom(path: &str) -> Vec<u8> {
+    let mut buffer: Vec<u8> = Vec::new();
+
+    let mut f = File::open(path).expect("Error opening ROM");
+    f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
+
+    buffer
 }
