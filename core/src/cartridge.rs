@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::Read;
 use std::str::from_utf8;
 
 pub const BANK_SIZE: usize = 0x4000;
@@ -106,13 +104,8 @@ impl ROM {
     /// Input:
     ///     Path to game
     /// ```
-    pub fn load_cart(&mut self, path: &str) {
-        let mut buffer: Vec<u8> = Vec::new();
-
-        let mut f = File::open(path).expect("Error opening ROM");
-        f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
-
-        let num_banks = buffer.len() / BANK_SIZE;
+    pub fn load_cart(&mut self, rom: Vec<u8>) {
+        let num_banks = rom.len() / BANK_SIZE;
 
         // Assuming that buffer length is multiple of bank size
         for i in 0..num_banks {
@@ -121,7 +114,7 @@ impl ROM {
             // Get next bank sized slice
             let starting_index = i * BANK_SIZE;
             let ending_index = (i + 1) * BANK_SIZE;
-            let data = &buffer[starting_index..ending_index];
+            let data = &rom[starting_index..ending_index];
 
             // Copy data into new bank
             new_bank.data.copy_from_slice(data);

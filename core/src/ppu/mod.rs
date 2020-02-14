@@ -103,6 +103,14 @@ impl PPU {
         self.vram[LCD_STAT_REG] |= mode;
     }
 
+    /// ```
+    /// Get palette
+    ///
+    /// Gets the palette indices from the BGP register ($FF47)
+    ///
+    /// Output:
+    ///     Palette indices ([u8])
+    /// ```
     pub fn get_palette(&self) -> [u8; 4] {
         unpack_u8(self.vram[BGP])
     }
@@ -117,14 +125,15 @@ impl PPU {
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; MAP_PIXELS * MAP_PIXELS];
+        let tiles = self.get_background_tiles();
 
         if self.is_bkgd_dspl() {
-            self.render_background(&mut map_array);
+            self.render_background(&mut map_array, &tiles);
         }
 
-        // if self.is_wndw_dspl() {
-        //     self.draw_window();
-        // }
+        if self.is_wndw_dspl() {
+            self.render_window(&mut map_array, &tiles);
+        }
 
         let screen = self.get_view(&map_array);
 
@@ -139,9 +148,12 @@ impl PPU {
     /// Render background
     ///
     /// Renders the background tiles onto the pixel array
+    ///
+    /// Input:
+    ///     Array of pixels to modify (&[u8])
+    ///     Background tile data (&Vec<Tile>)
     /// ```
-    fn render_background(&self, pixel_array: &mut [u8]) {
-        let bkgd = self.get_background_tiles();
+    fn render_background(&self, pixel_array: &mut [u8], bkgd: &Vec<Tile>) {
         let tile_map = self.get_bkgd_tile_map();
 
         // Iterate through every tile in map
@@ -162,10 +174,40 @@ impl PPU {
         }
     }
 
-    fn draw_window(&self) {
+    /// ```
+    /// Render window
+    ///
+    /// Renders the window tiles onto the pixel array
+    ///
+    /// Input:
+    ///     Array of pixels to modify (&[u8])
+    ///     Window tile data (&Vec<Tile>)
+    /// ```
+    fn render_window(&self, pixel_array: &mut [u8], wndw: &Vec<Tile>) {
+        let coords = self.get_wndw_coords();
+        let wndw_map = self.get_wndw_tile_map();
 
+        // Iterate through all pixels in window
+        for y in (coords.1)..(coords.1 + SCREEN_HEIGHT) {
+            for x in (coords.0)..(coords.0 + SCREEN_WIDTH) {
+                let index = y * MAP_PIXELS + x;
+                let pixel = pixel_array[index];
+
+            }
+        }
     }
 
+    /// ```
+    /// Get view
+    ///
+    /// Gets the pixel values for the pixels currently on screen
+    ///
+    /// Input:
+    ///     Entire 256x256 screen pixel array (&[u8])
+    ///
+    /// Output:
+    ///     Index values for on-screen pixels ([u8])
+    /// ```
     fn get_view(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
         let mut viewport = [0; DISP_SIZE];
         let scroll = self.get_scroll_coords();
@@ -250,6 +292,26 @@ impl PPU {
     }
 
     /// ```
+    /// Get window tile map
+    ///
+    /// Gets the pixel data for the window tiles
+    ///
+    /// Output:
+    ///     Slice of tilemap values (&[u8])
+    /// ```
+    fn get_wndw_tile_map(&self) -> &[u8] {
+        // $00 for $9800-$9BFF
+        // $01 for $9C00-$9FFF
+        let wndw_map = if self.get_wndw_tile_map_index() == 0 {
+            &self.vram[TILE_MAP_0_RANGE]
+        } else {
+            &self.vram[TILE_MAP_1_RANGE]
+        };
+
+        wndw_map
+    }
+
+    /// ```
     /// Is background displayed
     ///
     /// Is background layer currently visible
@@ -262,11 +324,27 @@ impl PPU {
         lcd_control.get_bit(0)
     }
 
+    /// ```
+    /// Is window displayed
+    ///
+    /// Is the window layer currently visible
+    ///
+    /// Output:
+    ///     Whether window layer is visible (bool)
+    /// ```
     fn is_wndw_dspl(&self) -> bool {
         let lcd_control = self.vram[LCD_DISP_REG];
         lcd_control.get_bit(5)
     }
 
+    /// ```
+    /// Are sprites displayed
+    ///
+    /// Is the sprite layer visible
+    ///
+    /// Output:
+    ///     Whether the sprite layer is visible (bool)
+    /// ```
     fn is_sprt_dspl(&self) -> bool {
         let lcd_control = self.vram[LCD_DISP_REG];
         lcd_control.get_bit(1)
@@ -298,6 +376,14 @@ impl PPU {
         if lcd_control.get_bit(3) { return 1 } else { return 0 }
     }
 
+    /// ```
+    /// Get window tilemap index
+    ///
+    /// Returns which window tilemap set is being used (0/1)
+    ///
+    /// Output:
+    ///     Tilemap index (u8)
+    /// ```
     fn get_wndw_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCD_DISP_REG];
         if lcd_control.get_bit(6) { return 1 } else { return 0 }
@@ -309,7 +395,7 @@ impl PPU {
     /// Returns the values of the SCX and SCY registers
     ///
     /// Output:
-    ///     Tuple of SCX, SCY ( (usize, usize) )
+    ///     Tuple of SCX, SCY ((usize, usize))
     /// ```
     fn get_scroll_coords(&self) -> (usize, usize) {
         let scroll_x = self.vram[SCX] as usize;
@@ -318,6 +404,13 @@ impl PPU {
         (scroll_x, scroll_y)
     }
 
+    /// ```
+    /// Get window coords
+    ///
+    /// Returns the window position from the WX and WY registers
+    ///
+    /// Output:
+    ///     Location of the window ((usize, usize))
     fn get_wndw_coords(&self) -> (usize, usize) {
         let wndw_x = (self.vram[WX] - 7) as usize;
         let wndw_y = self.vram[WY] as usize;
@@ -325,21 +418,3 @@ impl PPU {
         (wndw_x, wndw_y)
     }
 }
-
-// /// ```
-// /// Is offscreen
-// ///
-// /// Whether the tile at given coords is offscreen
-// ///
-// /// Inputs:
-// ///     X coord of tile (usize)
-// ///     Y coord of tile (usize)
-// ///     SCX value (usize)
-// ///     SCY value (usize)
-// ///
-// /// Output:
-// ///     Whether given tile is offscreen (bool)
-// /// ```
-// fn is_offscreen(x: usize, y: usize, scroll_x: usize, scroll_y: usize) -> bool {
-//     x < scroll_x || x >= (scroll_x + MAP_SIZE) || y < scroll_y || y >= (scroll_y + MAP_SIZE)
-// }

@@ -103,6 +103,14 @@ impl Clock {
         self.line
     }
 
+    /// ```
+    /// Get mode
+    ///
+    /// Returns the current clock mode, as an int
+    ///
+    /// Output:
+    ///     Current mode (u8)
+    /// ```
     pub fn get_mode(&self) -> u8 {
         match self.mode {
             ModeTypes::HBLANK => { 0 },

@@ -135,6 +135,14 @@ impl Cpu {
         self.bus.render()
     }
 
+    /// ```
+    /// Get palette
+    ///
+    /// Gets the indices for the currently set palette
+    ///
+    /// Output:
+    ///     Palette color indices ([u8])
+    /// ```
     pub fn get_palette(&self) -> [u8; 4] {
         self.bus.get_palette()
     }
@@ -162,8 +170,8 @@ impl Cpu {
     /// Input:
     ///     Path to game (&str)
     /// ```
-    pub fn load_game(&mut self, path: &str) {
-        self.bus.load_game(path);
+    pub fn load_game(&mut self, rom: Vec<u8>) {
+        self.bus.load_game(rom);
     }
 
     /// ```

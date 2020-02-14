@@ -187,6 +187,17 @@ pub fn check_h_borrow_u16(high: u16, low: u16) -> bool {
     (high & 0xF).checked_sub(low & 0xF).is_none()
 }
 
+/// ```
+/// Pack u8
+///
+/// Packs four 2-bit values into a u8
+///
+/// Input:
+///     Values to pack (&[u8])
+///
+/// Output:
+///     Packed byte (u8)
+/// ```
 pub fn pack_u8(arr: &[u8]) -> u8 {
     let mut output = arr[0];
 
@@ -197,6 +208,17 @@ pub fn pack_u8(arr: &[u8]) -> u8 {
     output
 }
 
+/// ```
+/// Unpack u8
+///
+/// Unpacks four 2-bit values from a u8
+///
+/// Input:
+///     Packed byte (u8)
+///
+/// Output:
+///     Array of unpacked values ([u8])
+/// ```
 pub fn unpack_u8(byte: u8) -> [u8; 4] {
     let mut bytes = [0; 4];
 

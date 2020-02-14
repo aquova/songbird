@@ -59,10 +59,33 @@ const RAM_END: u16 = 0xFFFF;
 // ====================
 // = Helper Functions =
 // ====================
+
+/// ```
+/// In cart ROM
+///
+/// Whether the given address is in cartridge ROM
+///
+/// Input:
+///     Address to test (u16)
+///
+/// Output:
+///     Whether the address is in cartridge ROM (bool)
+/// ```
 fn in_cart_rom(addr: u16) -> bool {
     addr < VRAM_START
 }
 
+/// ```
+/// In VRAM
+///
+/// Whether the given address is in VRAM
+///
+/// Input:
+///     Address to test (u16)
+///
+/// Output:
+///     Whether the address is in VRAM (bool)
+/// ```
 fn in_vram(addr: u16) -> bool {
     addr >= VRAM_START && addr <= RAM_END
 }
@@ -97,8 +120,8 @@ impl Bus {
     /// Input:
     ///     Path to game (&str)
     /// ```
-    pub fn load_game(&mut self, path: &str) {
-        self.rom.load_cart(path);
+    pub fn load_game(&mut self, rom: Vec<u8>) {
+        self.rom.load_cart(rom);
         self.load_bank_0();
         self.mbc = self.rom.get_mbc();
         // If no MBC, then load the rest of ROM into RAM
@@ -119,6 +142,14 @@ impl Bus {
         self.ppu.render_screen()
     }
 
+    /// ```
+    /// Get palette
+    ///
+    /// Gets the currently used palette
+    ///
+    /// Output:
+    ///     Palette indices ([u8])
+    /// ```
     pub fn get_palette(&self) -> [u8; 4] {
         self.ppu.get_palette()
     }
@@ -237,6 +268,14 @@ impl Bus {
         self.ppu.set_ly(line);
     }
 
+    /// ```
+    /// Set status register
+    ///
+    /// Sets the status register to match current screen mode
+    ///
+    /// Input:
+    ///     Clock mode (u8)
+    /// ```
     pub fn set_status_reg(&mut self, mode: u8) {
         let mode = mode & 0b0000_0011;
         self.ppu.set_status(mode);

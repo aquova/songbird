@@ -8,6 +8,17 @@ pub struct Row {
 }
 
 impl Row {
+    /// ```
+    /// Get pixel
+    ///
+    /// Gets given pixel from row
+    ///
+    /// Input:
+    ///     Pixel offset (usize)
+    ///
+    /// Output:
+    ///     Pixel value (u8)
+    /// ```
     pub fn get_pixel(&self, index: usize) -> u8 {
         return self.pixels[index];
     }
@@ -38,11 +49,34 @@ impl Tile {
         new_tile
     }
 
+    /// ```
+    /// Get row
+    ///
+    /// Returns a given row
+    ///
+    /// Input:
+    ///     Row index (usize)
+    ///
+    /// Output:
+    ///     Row of pixel values (&[u8])
+    /// ```
     pub fn get_row(&self, index: usize) -> &[u8] {
         &self.rows[index].pixels
     }
 }
 
+/// ```
+/// Get pixel row
+///
+/// Converts encoded pixel data from RAM into pixel values
+///
+/// Inputs:
+///     Lower byte of pixel data (u8)
+///     Higher byte of pixel data (u8)
+///
+/// Output:
+///     Array of pixel values ([u8])
+/// ```
 fn get_pixel_row(low: u8, high: u8) -> [u8; TILESIZE] {
     let mut output = [0; TILESIZE];
     for i in 0..TILESIZE {
@@ -55,6 +89,18 @@ fn get_pixel_row(low: u8, high: u8) -> [u8; TILESIZE] {
     output
 }
 
+/// ```
+/// Concatenate bits
+///
+/// Concatenates two bits together
+///
+/// Inputs:
+///     Low bit (bool)
+///     High bit (bool)
+///
+/// Output:
+///     Concatenated value (u8)
+/// ```
 fn concat_bits(low: bool, high: bool) -> u8 {
     let low_bit = if low { 1 } else { 0 };
     let high_bit = if high { 1 } else { 0 };
