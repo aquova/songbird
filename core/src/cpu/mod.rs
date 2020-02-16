@@ -5,6 +5,12 @@ use clock::Clock;
 use crate::bus::Bus;
 use crate::utils::*;
 
+// =============
+// = Constants =
+// =============
+const IE: u16 = 0xFFFF; // Interrupt Enable
+const IF: u16 = 0xFF0F; // Interrupt Flag
+
 pub enum Flags {
     Z,
     N,
@@ -32,6 +38,15 @@ pub enum Regs16 {
     HL
 }
 
+#[derive(Copy, Clone)]
+pub enum Interrupts {
+    VBLANK,
+    LCD_STAT,
+    TIMER,
+    SERIAL,
+    JOYPAD
+}
+
 pub struct Cpu {
     pc: u16,
     sp: u16,
@@ -44,7 +59,7 @@ pub struct Cpu {
     h: u8,
     l: u8,
     pub clock: Clock,
-    pub interrupted: bool,
+    pub interrupt_enabled: bool,
     pub halted: bool,
     pub bus: Bus
 }
@@ -64,7 +79,7 @@ impl Cpu {
             h: 0x01,
             l: 0x4D,
             clock: Clock::new(),
-            interrupted: false,
+            interrupt_enabled: false,
             halted: false,
             bus: Bus::new()
         };
@@ -114,13 +129,25 @@ impl Cpu {
     ///     Whether or not to render a frame (bool)
     /// ```
     pub fn tick(&mut self) -> bool {
-        let cycles = opcodes::execute(self);
-        let draw_time = self.clock.clock_step(cycles);
-        // TODO: Look at consolidating these
-        self.bus.set_scanline(self.clock.get_scanline());
-        // May not need this (right now)
-        self.bus.set_status_reg(self.clock.get_mode());
-        draw_time
+        // First check for interrupts
+        let inter = self.interrupt_check();
+
+        if inter.is_some() {
+            let inter_type = inter.unwrap();
+            let vector = self.get_inter_vector(inter_type);
+
+            // Jump to interrupt vector
+            self.push(self.get_pc());
+            self.set_pc(vector);
+            self.trigger_interrupt(inter_type);
+            false
+        } else {
+            let cycles = opcodes::execute(self);
+            let draw_time = self.clock.clock_step(cycles);
+            self.bus.set_scanline(self.clock.get_scanline());
+            self.bus.set_status_reg(self.clock.get_mode());
+            draw_time
+        }
     }
 
     /// ```
@@ -1018,5 +1045,84 @@ const NINTENDO_LOGO: [u8; 48] = [
         self.clear_flag(Flags::C);
         self.write_flag(Flags::Z, a == 0);
         self.set_reg(Regs::A, a);
+    }
+
+    // ===================
+    // = Private methods =
+    // ===================
+
+    /// ```
+    /// Interrupt Check
+    ///
+    /// Checks whether an interrupt should be triggered
+    ///
+    /// Output:
+    ///     The interrupt that has been triggered (if any) (Option<Interrupt>)
+    /// ```
+    fn interrupt_check(&self) -> Option<Interrupts> {
+        if !self.interrupt_enabled {
+            return None;
+        }
+
+        // Interrupt must be requesting and enabled to occur
+        let ie_reg = self.read_ram(IE);
+        let if_reg = self.read_ram(IF);
+
+        let valid_interrupt = (ie_reg & if_reg) & 0x1F;
+
+        match valid_interrupt {
+            0x00 => { None },
+            0x01 => { Some(Interrupts::VBLANK) },
+            0x02 => { Some(Interrupts::LCD_STAT) },
+            0x04 => { Some(Interrupts::TIMER) },
+            0x08 => { Some(Interrupts::SERIAL) },
+            0x10 => { Some(Interrupts::JOYPAD) },
+            _ => { panic!("Need to implement interrupt priorities"); }
+        }
+    }
+
+    /// ```
+    /// Get interrupt vector
+    ///
+    /// Gets the jump vector for the given interrupt
+    ///
+    /// Input:
+    ///     Interrupt in question (Interrupts)
+    ///
+    /// Output:
+    ///     Interrupt jump address (u16)
+    /// ```
+    fn get_inter_vector(&self, inter: Interrupts) -> u16 {
+        match inter {
+            Interrupts::VBLANK =>   { 0x0040 },
+            Interrupts::LCD_STAT => { 0x0048 },
+            Interrupts::TIMER =>    { 0x0050 },
+            Interrupts::SERIAL =>   { 0x0058 },
+            Interrupts::JOYPAD =>   { 0x0060 },
+        }
+    }
+
+    /// ```
+    /// Trigger interrupt
+    ///
+    /// Triggers an interrupt of the given type
+    ///
+    /// Input:
+    ///     Interrupt type (Interrupts)
+    /// ```
+    fn trigger_interrupt(&mut self, inter: Interrupts) {
+        let mut if_reg = self.read_ram(IF);
+
+        self.interrupt_enabled = false;
+        match inter {
+            Interrupts::VBLANK =>   { if_reg.clear_bit(0) },
+            Interrupts::LCD_STAT => { if_reg.clear_bit(1) },
+            Interrupts::TIMER =>    { if_reg.clear_bit(2) },
+            Interrupts::SERIAL =>   { if_reg.clear_bit(3) },
+            Interrupts::JOYPAD =>   { if_reg.clear_bit(4) },
+        }
+
+        self.write_ram(IF, if_reg);
+        self.clock.clock_step(12);
     }
 }

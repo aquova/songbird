@@ -1740,7 +1740,7 @@ fn ret_d8(cpu: &mut Cpu) -> u8 {
 fn reti_d9(cpu: &mut Cpu) -> u8 {
     let val = cpu.pop();
     cpu.set_pc(val);
-    cpu.interrupted = true;
+    cpu.interrupt_enabled = true;
     16
 }
 
@@ -1905,7 +1905,7 @@ fn ld_f2(cpu: &mut Cpu) -> u8 {
 
 /// DI
 fn di_f3(cpu: &mut Cpu) -> u8 {
-    cpu.interrupted = false;
+    cpu.interrupt_enabled = false;
     4
 }
 
@@ -1966,7 +1966,7 @@ fn ld_fa(cpu: &mut Cpu) -> u8 {
 
 /// EI
 fn ei_fb(cpu: &mut Cpu) -> u8 {
-    cpu.interrupted = true;
+    cpu.interrupt_enabled = true;
     4
 }
 

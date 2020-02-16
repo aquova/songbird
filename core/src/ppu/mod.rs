@@ -7,7 +7,6 @@ use std::ops::Range;
 // =============
 // = Constants =
 // =============
-
 const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
 const VRAM_SIZE: usize = 0x8000;
