@@ -1,6 +1,7 @@
 mod tile;
 
 use tile::Tile;
+use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
 use std::ops::Range;
 
@@ -27,6 +28,9 @@ const WY: usize                      = 0xFF4A - VRAM_OFFSET;
 const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 
 // VRAM ranges
+const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_SIZE);
+const OAM_MEM_RANGE: Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
+
 const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
 const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OFFSET);
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
@@ -52,13 +56,20 @@ impl PPU {
     ///
     /// Write value to specified address in VRAM
     ///
+    /// Can't access OAM memory during OAM Interrupt
+    /// Can't access OAM or VRAM during LCD transfer
+    ///
     /// Input:
     ///     Address to write to (u16)
     ///     Value to write (u8)
     /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8) {
         let adjusted_addr = addr - VRAM_OFFSET as u16;
-        self.vram[adjusted_addr as usize] = val;
+        let lcdc_mode = self.get_LCDC_status();
+
+        if self.is_valid_status(addr) {
+            self.vram[adjusted_addr as usize] = val;
+        }
     }
 
     /// ```
@@ -415,5 +426,33 @@ impl PPU {
         let wndw_y = self.vram[WY] as usize;
 
         (wndw_x, wndw_y)
+    }
+
+    fn get_LCDC_status(&self) -> ModeTypes {
+        let lcd_stat = self.vram[LCD_STAT_REG];
+        let mode = lcd_stat & 0b0000_0011;
+        match mode {
+            0 => { ModeTypes::HBLANK },
+            1 => { ModeTypes::VBLANK },
+            2 => { ModeTypes::OAMReadMode },
+            3 => { ModeTypes::VRAMReadMode },
+            _ => { panic!("Invalid mode") }
+        }
+    }
+
+    fn is_valid_status(&self, addr: u16) -> bool {
+        let lcdc_status = self.get_LCDC_status();
+
+        match lcdc_status {
+            ModeTypes::OAMReadMode => {
+                !OAM_MEM_RANGE.contains(&(addr as usize))
+            },
+            ModeTypes::VRAMReadMode => {
+                !OAM_MEM_RANGE.contains(&(addr as usize)) && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
+            },
+            _ => {
+                true
+            }
+        }
     }
 }
