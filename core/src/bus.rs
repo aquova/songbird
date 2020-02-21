@@ -1,6 +1,8 @@
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
+use crate::io::IO;
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
+use std::ops::{Range, RangeInclusive};
 
 /*
  * RAM Map
@@ -49,51 +51,21 @@ use crate::utils::DISP_SIZE;
 // =============
 // = Constants =
 // =============
-// Size of internal RAM
 const RAM_SIZE: usize = 0x8000;
-
-// RAM ranges
-const VRAM_START: u16 = 0x8000;
+const VRAM_START: u16 = RAM_SIZE as u16;
 const RAM_END: u16 = 0xFFFF;
 
-// ====================
-// = Helper Functions =
-// ====================
+const JOYPAD_REG: u16 = 0xFF00;
 
-/// ```
-/// In cart ROM
-///
-/// Whether the given address is in cartridge ROM
-///
-/// Input:
-///     Address to test (u16)
-///
-/// Output:
-///     Whether the address is in cartridge ROM (bool)
-/// ```
-fn in_cart_rom(addr: u16) -> bool {
-    addr < VRAM_START
-}
-
-/// ```
-/// In VRAM
-///
-/// Whether the given address is in VRAM
-///
-/// Input:
-///     Address to test (u16)
-///
-/// Output:
-///     Whether the address is in VRAM (bool)
-/// ```
-fn in_vram(addr: u16) -> bool {
-    addr >= VRAM_START && addr <= RAM_END
-}
+// RAM ranges
+const CART_ROM_RANGE: Range<u16> = 0x0000..VRAM_START;
+const VRAM_RANGE: RangeInclusive<u16> = VRAM_START..=RAM_END;
 
 pub struct Bus {
     ram: [u8; RAM_SIZE],
     ram_enabled: bool,
     rom: ROM,
+    io: IO,
     mbc: MBC,
     ppu: PPU
 }
@@ -107,6 +79,7 @@ impl Bus {
             ram: [0; RAM_SIZE],
             ram_enabled: false,
             rom: ROM::new(),
+            io: IO::new(),
             mbc: MBC::NONE,
             ppu: PPU::new()
         }
@@ -166,18 +139,16 @@ impl Bus {
     ///     Value at address (u8)
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
-        match addr {
-            // Apparently ranges don't work in match statements
-            // So have to use helper functions...
-            x if in_cart_rom(x) => {
+        if CART_ROM_RANGE.contains(&addr) {
+            if addr == JOYPAD_REG {
+                self.io.read_btns()
+            } else {
                 self.ram[addr as usize]
-            },
-            x if in_vram(x) => {
-                self.ppu.read_vram(addr)
-            },
-            _ => {
-                panic!("Unimplemented!");
             }
+        } else if VRAM_RANGE.contains(&addr) {
+            self.ppu.read_vram(addr)
+        } else {
+            panic!("Unimplemented!");
         }
     }
 
@@ -191,31 +162,28 @@ impl Bus {
     ///     Value to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        match addr {
-            // Apparently ranges don't work in match statements
-            // So have to use helper functions...
-            x if in_cart_rom(x) => {
-                match self.mbc {
-                    MBC::NONE => {
-                        self.ram[addr as usize] = val;
-                    },
-                    MBC::MBC1 => {
-                        self.write_mbc1(addr, val);
-                    },
-                    MBC::MBC2 => {
-                        self.write_mbc2(addr, val);
-                    },
-                    MBC::MBC3 => {
-                        self.write_mbc3(addr, val);
+        if CART_ROM_RANGE.contains(&addr) {
+            match self.mbc {
+                MBC::NONE => {
+                    self.ram[addr as usize] = val;
+                    if addr == JOYPAD_REG {
+                        self.io.set_btns(val);
                     }
+                },
+                MBC::MBC1 => {
+                    self.write_mbc1(addr, val);
+                },
+                MBC::MBC2 => {
+                    self.write_mbc2(addr, val);
+                },
+                MBC::MBC3 => {
+                    self.write_mbc3(addr, val);
                 }
-            },
-            x if in_vram(x) => {
-                self.ppu.write_vram(addr, val);
-            },
-            _ => {
-                panic!("Unimplemented!");
             }
+        } else if VRAM_RANGE.contains(&addr) {
+            self.ppu.write_vram(addr, val);
+        } else {
+            panic!("Unimplemented!");
         }
     }
 

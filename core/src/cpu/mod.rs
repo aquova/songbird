@@ -298,6 +298,7 @@ impl Cpu {
         let set_h = check_h_borrow_u8(a, val);
 
         self.write_flag(Flags::Z, a == val);
+        self.set_flag(Flags::N);
         self.write_flag(Flags::H, set_h);
         self.write_flag(Flags::C, a < val);
     }
