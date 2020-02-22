@@ -140,13 +140,13 @@ impl Bus {
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
         if CART_ROM_RANGE.contains(&addr) {
+            self.ram[addr as usize]
+        } else if VRAM_RANGE.contains(&addr) {
             if addr == JOYPAD_REG {
                 self.io.read_btns()
             } else {
-                self.ram[addr as usize]
+                self.ppu.read_vram(addr)
             }
-        } else if VRAM_RANGE.contains(&addr) {
-            self.ppu.read_vram(addr)
         } else {
             panic!("Unimplemented!");
         }
@@ -166,9 +166,6 @@ impl Bus {
             match self.mbc {
                 MBC::NONE => {
                     self.ram[addr as usize] = val;
-                    if addr == JOYPAD_REG {
-                        self.io.set_btns(val);
-                    }
                 },
                 MBC::MBC1 => {
                     self.write_mbc1(addr, val);
@@ -182,6 +179,9 @@ impl Bus {
             }
         } else if VRAM_RANGE.contains(&addr) {
             self.ppu.write_vram(addr, val);
+            if addr == JOYPAD_REG {
+                self.io.set_btns(val);
+            }
         } else {
             panic!("Unimplemented!");
         }

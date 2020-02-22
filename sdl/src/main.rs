@@ -47,7 +47,7 @@ pub fn main() {
         process::exit(1);
     }
     let mut paused = false;
-    let mut debugging = false;
+    let mut debugging = true;
 
     // Start game
     let mut gb = Cpu::new();
@@ -185,7 +185,7 @@ pub fn main() {
                         agbd.print_registers(&gb);
                     },
                     // Set watchpoint
-                    "watch" => {
+                    "w" => {
                         let hex = u16::from_str_radix(words[1], 16);
                         match hex {
                             Ok(addr) => {

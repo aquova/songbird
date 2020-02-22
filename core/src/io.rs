@@ -70,20 +70,22 @@ impl IO {
 
     // TODO: See if these functions can be merged
     fn pack_btn_keys(&self) -> u8 {
-        let mut output = 0;
+        let mut output = 0b1110_0000;
         for i in 0..4 {
-            let pressed = self.btns[i];
-            output |= (pressed as u8) << (4 - i);
+            // 0 if pressed, 1 if unpressed
+            let pressed = if self.btns[i] { 0 } else { 1 };
+            output |= (pressed << (3 - i));
         }
 
         output
     }
 
     fn pack_dir_keys(&self) -> u8 {
-        let mut output = 0;
+        let mut output = 0b1101_0000;
         for i in 4..8 {
-            let pressed = self.btns[i];
-            output |= (pressed as u8) << (8 - i);
+            // 0 if pressed, 1 if unpressed
+            let pressed = if self.btns[i] { 0 } else { 1 };
+            output |= (pressed << (7 - i));
         }
 
         output
