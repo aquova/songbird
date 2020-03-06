@@ -1,28 +1,27 @@
 // Input/Output functions
 
 pub enum Buttons {
-    START,
-    SELECT,
+    Start,
+    Select,
     B,
     A,
-    DOWN,
-    UP,
-    LEFT,
-    RIGHT
+    Down,
+    Up,
+    Left,
+    Right
 }
 
 impl Buttons {
-    // I really hate this.
     pub fn get_index(&self) -> usize {
         match self {
-            Buttons::START =>  { 0 },
-            Buttons::SELECT => { 1 },
+            Buttons::Start =>  { 0 },
+            Buttons::Select => { 1 },
             Buttons::B =>      { 2 },
             Buttons::A =>      { 3 },
-            Buttons::DOWN =>   { 4 },
-            Buttons::UP =>     { 5 },
-            Buttons::LEFT =>   { 6 },
-            Buttons::RIGHT =>  { 7 },
+            Buttons::Down =>   { 4 },
+            Buttons::Up =>     { 5 },
+            Buttons::Left =>   { 6 },
+            Buttons::Right =>  { 7 },
         }
     }
 }

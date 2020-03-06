@@ -1,5 +1,5 @@
 use crate::cartridge::{BANK_SIZE, MBC, ROM};
-use crate::io::IO;
+use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
 use std::ops::{Range, RangeInclusive};
@@ -185,6 +185,14 @@ impl Bus {
         } else {
             panic!("Unimplemented!");
         }
+    }
+
+    pub fn press_button(&mut self, btn: Buttons) {
+        self.io.btn_pressed(btn);
+    }
+
+    pub fn release_button(&mut self, btn: Buttons) {
+        self.io.btn_released(btn);
     }
 
     /// ```

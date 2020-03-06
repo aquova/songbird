@@ -3,6 +3,7 @@ pub mod opcodes;
 
 use clock::Clock;
 use crate::bus::Bus;
+use crate::io::Buttons;
 use crate::utils::*;
 
 // =============
@@ -199,6 +200,14 @@ impl Cpu {
     /// ```
     pub fn load_game(&mut self, rom: Vec<u8>) {
         self.bus.load_game(rom);
+    }
+
+    pub fn press_button(&mut self, btn: Buttons) {
+        self.bus.press_button(btn);
+    }
+
+    pub fn release_button(&mut self, btn: Buttons) {
+        self.bus.release_button(btn);
     }
 
     /// ```
