@@ -145,6 +145,10 @@ impl PPU {
             self.render_window(&mut map_array, &tiles);
         }
 
+        if self.is_sprt_dspl() {
+            self.render_sprites(&mut map_array);
+        }
+
         let screen = self.get_view(&map_array);
 
         screen
@@ -201,14 +205,34 @@ impl PPU {
         let coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
 
-        // Iterate through all pixels in window
-        for y in (coords.1)..(coords.1 + SCREEN_HEIGHT) {
-            for x in (coords.0)..(coords.0 + SCREEN_WIDTH) {
-                let index = y * MAP_PIXELS + x;
-                let pixel = pixel_array[index];
+        // Iterate through all tiles in window
+        for y in (0..SCREEN_HEIGHT).step_by(TILESIZE) {
+            for x in (0..SCREEN_WIDTH).step_by(TILESIZE) {
+                let index = y * SCREEN_WIDTH + x;
+                let tile_index = wndw_map[index];
+                let tile = &wndw[tile_index];
 
+                // If window is allowed to wrap, this needs to be changed
+                for row in 0..TILESIZE {
+                    let map_x = x + coords.0;
+                    let map_y = y + coords.1 + row;
+                    let map_index = map_y * MAPSIZE + map_x;
+                    pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+                }
             }
         }
+    }
+
+    /// ```
+    /// Render sprites
+    ///
+    /// Renders the sprites onto the graphics array
+    ///
+    /// Input:
+    ///     [u8] - Graphics array to render upon
+    /// ```
+    fn render_sprites(&self, pixel_array: &mut [u8]) {
+
     }
 
     /// ```
@@ -227,6 +251,7 @@ impl PPU {
         let scroll = self.get_scroll_coords();
 
         // Iterate through every visible pixel
+        // TODO: This needs to allow for screen wrapping
         for y in (scroll.1)..(scroll.1 + SCREEN_HEIGHT) {
             for x in (scroll.0)..(scroll.0 + SCREEN_WIDTH) {
                 let index = y * MAP_PIXELS + x;

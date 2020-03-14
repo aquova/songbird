@@ -7,6 +7,7 @@ extern crate sdl2;
 // Includes
 use agba_core::cpu::Cpu;
 use agba_core::debug::debugger;
+use agba_core::io::Buttons;
 use agba_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::event::Event;
@@ -47,7 +48,7 @@ pub fn main() {
         process::exit(1);
     }
     let mut paused = false;
-    let mut debugging = true;
+    let mut debugging = false;
 
     // Start game
     let mut gb = Cpu::new();
@@ -96,6 +97,14 @@ pub fn main() {
                         println!("Paused");
                     }
                 },
+                // Game controls
+                Event::KeyDown{keycode: Some(Keycode::Return), ..} => {
+                    gb.press_button(Buttons::Start);
+                    println!("Button down");
+                },
+                Event::KeyUp{keycode: Some(Keycode::Return), ..} => {
+                    gb.release_button(Buttons::Start);
+                }
                 _ => {}
             }
         }
