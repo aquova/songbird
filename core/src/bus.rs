@@ -187,12 +187,8 @@ impl Bus {
         }
     }
 
-    pub fn press_button(&mut self, btn: Buttons) {
-        self.io.btn_pressed(btn);
-    }
-
-    pub fn release_button(&mut self, btn: Buttons) {
-        self.io.btn_released(btn);
+    pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
+        self.io.btn_toggle(btn, pressed);
     }
 
     /// ```

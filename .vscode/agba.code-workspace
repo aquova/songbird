@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "/home/aquova/Desktop/git/agba"
+		}
+	],
+	"settings": {
+		"search.exclude": {
+			"**/target": true,
+			"**/*.lock": true
+		}
+	}
+}

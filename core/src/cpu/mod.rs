@@ -193,7 +193,7 @@ impl Cpu {
     /// ```
     /// Load game
     ///
-    /// Loads game into ROM
+    /// Wrapper for the load game functionality
     ///
     /// Input:
     ///     Path to game (&str)
@@ -202,12 +202,17 @@ impl Cpu {
         self.bus.load_game(rom);
     }
 
-    pub fn press_button(&mut self, btn: Buttons) {
-        self.bus.press_button(btn);
-    }
-
-    pub fn release_button(&mut self, btn: Buttons) {
-        self.bus.release_button(btn);
+    /// ```
+    /// Press button
+    ///
+    /// Wrapper for button press functionality
+    ///
+    /// Input:
+    ///     Button being toggled (Buttons enum)
+    ///     Whether button is being pressed (bool)
+    /// ```
+    pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
+        self.bus.toggle_button(btn, pressed);
     }
 
     /// ```

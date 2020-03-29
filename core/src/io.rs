@@ -12,7 +12,7 @@ pub enum Buttons {
 }
 
 impl Buttons {
-    pub fn get_index(&self) -> usize {
+    fn get_index(&self) -> usize {
         match self {
             Buttons::Start =>  { 0 },
             Buttons::Select => { 1 },
@@ -41,14 +41,9 @@ impl IO {
         }
     }
 
-    pub fn btn_pressed(&mut self, btn: Buttons) {
+    pub fn btn_toggle(&mut self, btn: Buttons, pressed: bool) {
         let i = btn.get_index();
-        self.btns[i] = true;
-    }
-
-    pub fn btn_released(&mut self, btn: Buttons) {
-        let i = btn.get_index();
-        self.btns[i] = false;
+        self.btns[i] = pressed;
     }
 
     pub fn set_btns(&mut self, val: u8) {

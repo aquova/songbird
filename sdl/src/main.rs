@@ -99,12 +99,29 @@ pub fn main() {
                 },
                 // Game controls
                 Event::KeyDown{keycode: Some(Keycode::Return), ..} => {
-                    gb.press_button(Buttons::Start);
-                    println!("Button down");
+                    gb.toggle_button(Buttons::Start, true);
+                    println!("Start down");
+                },
+                Event::KeyDown{keycode: Some(Keycode::X), ..} => {
+                    gb.toggle_button(Buttons::A, true);
+                    println!("A down");
+                },
+                Event::KeyDown{keycode: Some(Keycode::Z), ..} => {
+                    gb.toggle_button(Buttons::B, true);
+                    println!("B down");
                 },
                 Event::KeyUp{keycode: Some(Keycode::Return), ..} => {
-                    gb.release_button(Buttons::Start);
-                }
+                    gb.toggle_button(Buttons::Start, false);
+                    println!("Start up");
+                },
+                Event::KeyUp{keycode: Some(Keycode::X), ..} => {
+                    gb.toggle_button(Buttons::A, false);
+                    println!("A up");
+                },
+                Event::KeyUp{keycode: Some(Keycode::Z), ..} => {
+                    gb.toggle_button(Buttons::B, false);
+                    println!("B up");
+                },
                 _ => {}
             }
         }

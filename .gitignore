@@ -4,9 +4,6 @@
 *.lock
 *.wasm
 
-# VSCode
-*.code-workspace
-
 # Hide files that aren't ours
 **/games
 
