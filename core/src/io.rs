@@ -73,7 +73,7 @@ impl IO {
         for i in 0..4 {
             // 0 if pressed, 1 if unpressed
             let pressed = if self.btns[i] { 0 } else { 1 };
-            output |= (pressed << (3 - i));
+            output |= pressed << (3 - i);
         }
 
         output
@@ -84,7 +84,7 @@ impl IO {
         for i in 4..8 {
             // 0 if pressed, 1 if unpressed
             let pressed = if self.btns[i] { 0 } else { 1 };
-            output |= (pressed << (7 - i));
+            output |= pressed << (7 - i);
         }
 
         output

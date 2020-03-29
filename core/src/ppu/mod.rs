@@ -210,13 +210,13 @@ impl PPU {
             for x in (0..SCREEN_WIDTH).step_by(TILESIZE) {
                 let index = y * SCREEN_WIDTH + x;
                 let tile_index = wndw_map[index];
-                let tile = &wndw[tile_index];
+                let tile = &wndw[tile_index as usize];
 
                 // If window is allowed to wrap, this needs to be changed
                 for row in 0..TILESIZE {
                     let map_x = x + coords.0;
                     let map_y = y + coords.1 + row;
-                    let map_index = map_y * MAPSIZE + map_x;
+                    let map_index = map_y * MAP_SIZE + map_x;
                     pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
                 }
             }
