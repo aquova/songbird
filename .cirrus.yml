@@ -2,7 +2,7 @@ linux_task:
   container:
     image: rust:latest
 
-  setup_script: apt-get update && apt-get -y install libsdl2-dev libsdl2-image-dev
+  setup_script: apt-get update && apt-get -y install libsdl2-dev libsdl2-image-dev zip
 
   cargo_cache:
     folder: $CARGO_HOME/registry
