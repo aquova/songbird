@@ -2,6 +2,8 @@
 
 My Game Boy emulator, written in Rust
 
+You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/agba/master) (currently Linux only)
+
 ## Resources
 
 - [Blargg test roms](https://github.com/retrio/gb-test-roms)

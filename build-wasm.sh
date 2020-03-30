@@ -1,11 +1,13 @@
 #!/bin/bash
 
 DEBUG=false
+BUILD_FLAGS=""
 
 while test $# -gt 0; do
     case "$1" in
         -d|--debug)
             DEBUG=true
+            BUILD_FLAGS="$BUILD_FLAGS --debug"
             shift
             ;;
         *)
@@ -15,12 +17,13 @@ while test $# -gt 0; do
 done
 
 rm -f web/agba_wasm.wasm
+
 pushd wasm
-if $DEBUG; then
-    wasm-pack build --target web --debug
-    mv target/wasm32-unknown-unknown/debug/agba_wasm.wasm ../web
-else
-    wasm-pack build --target web
-    mv target/wasm32-unknown-unknown/release/agba_wasm.wasm ../web
-fi
+wasm-pack build --target web $BUILD_FLAGS
 popd
+
+if $DEBUG; then
+    mv target/wasm32-unknown-unknown/debug/agba_wasm.wasm web
+else
+    mv target/wasm32-unknown-unknown/release/agba_wasm.wasm web
+fi
