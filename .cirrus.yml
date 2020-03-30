@@ -16,7 +16,7 @@ linux_task:
     - mkdir agba
     - mkdir agba/assets
     - cp sdl/assets/icon_purple.png agba/assets
-    - cp sdl/target/debug/agba_sdl agba/agba
+    - cp target/debug/agba_sdl agba/agba
     - zip -r agba_linux.zip agba
 
   agba_artifacts:
