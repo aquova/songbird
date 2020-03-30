@@ -20,6 +20,6 @@ linux_task:
     - zip -r agba_linux.zip agba
 
   agba_artifacts:
-    path: "agba.zip"
+    path: "agba_linux.zip"
 
   before_cache_script: rm -rf $CARGO_HOME/registry/index
