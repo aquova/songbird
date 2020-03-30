@@ -12,4 +12,14 @@ linux_task:
 
   # test_script: cargo test
 
+  package_script:
+    - mkdir agba
+    - mkdir agba/assets
+    - cp sdl/assets/icon_purple.png agba/assets
+    - cp sdl/target/debug/agba_sdl agba/agba
+    - zip -r agba_linux.zip agba
+
+  agba_artifacts:
+    path: "agba.zip"
+
   before_cache_script: rm -rf $CARGO_HOME/registry/index
