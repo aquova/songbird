@@ -4,6 +4,35 @@ My Game Boy emulator, written in Rust
 
 You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/agba/master) (currently Linux only)
 
+## TODO
+
+- [ ] CPU
+    - [x] Opcode functionality
+    - [ ] Interrupts
+    - [ ] Keyboard input
+    - [ ] Pass Blargg tests
+- [ ] Memory Bank Controllers
+    - [x] None
+    - [ ] MBC1
+    - [ ] MBC2
+    - [ ] MBC3
+- [ ] PPU
+    - [ ] All PPU layers rendered
+    - [ ] 8x16 sprites
+- [ ] Audio
+- [ ] Platforms
+    - [ ] DMG support
+    - [ ] CGB support
+    - [ ] SGB support
+- [ ] CI
+    - [x] Linux Builds
+    - [ ] MacOS Builds
+    - [ ] Windows Builds
+    - [ ] WebAssembly support
+- [ ] Save support
+- [ ] UI Menu
+- [ ] Rebindable keys
+
 ## Resources
 
 - [Blargg test roms](https://github.com/retrio/gb-test-roms)
