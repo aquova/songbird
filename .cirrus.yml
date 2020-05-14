@@ -28,7 +28,7 @@ osx_task:
   osx_instance:
     image: catalina-base
 
-  setup_script: brew update && brew install -y rust sdl2 sdl2_image
+  setup_script: brew update && brew install rust sdl2 sdl2_image
 
   build_script: cargo build
 
