@@ -23,3 +23,21 @@ linux_task:
     path: "agba_linux.zip"
 
   before_cache_script: rm -rf $CARGO_HOME/registry/index
+
+osx_task:
+  osx_instance:
+    image: catalina-base
+
+  setup_script: brew update && brew install -y rust sdl2 sdl2_image
+
+  build_script: cargo build
+
+  package_script:
+    - mkdir agba
+    - mkdir agba/assets
+    - cp sdl/assets/icon_purple.png agba/assets
+    - cp target/debug/agba_sdl agba/agba
+    - zip -r agba_mac.zip agba
+
+  agba_artifacts:
+    path: agba_mac.zip
