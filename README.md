@@ -2,7 +2,11 @@
 
 My Game Boy emulator, written in Rust
 
-You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/agba/master) (currently Linux only)
+You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/agba/master)
+
+## CI Builds
+
+- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=linux)
 
 ## TODO
 
