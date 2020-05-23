@@ -9,8 +9,8 @@ use crate::utils::*;
 // =============
 // = Constants =
 // =============
-const IE: u16 = 0xFFFF; // Interrupt Enable
 const IF: u16 = 0xFF0F; // Interrupt Flag
+const IE: u16 = 0xFFFF; // Interrupt Enable
 
 pub enum Flags {
     Z,
@@ -137,7 +137,7 @@ impl Cpu {
             let inter_type = inter.unwrap();
             let vector = self.get_inter_vector(inter_type);
 
-            // Jump to interrupt vector
+            // Save current PC, jump to interrupt vector
             self.push(self.get_pc());
             self.set_pc(vector);
             self.trigger_interrupt(inter_type);
