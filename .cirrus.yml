@@ -2,7 +2,10 @@ linux_task:
   container:
     image: rust:latest
 
-  setup_script: apt-get update && apt-get -y install libsdl2-dev libsdl2-image-dev zip
+  setup_script:
+    - apt-get update
+    - apt-get -y install libsdl2-dev libsdl2-image-dev zip
+    - cd sdl
 
   cargo_cache:
     folder: $CARGO_HOME/registry
@@ -10,17 +13,14 @@ linux_task:
 
   build_script: cargo build
 
-  # test_script: cargo test
-
   package_script:
-    - mkdir agba
-    - mkdir agba/assets
-    - cp sdl/assets/icon_purple.png agba/assets
+    - mkdir -p agba/assets
+    - cp assets/icon_purple.png agba/assets
     - cp target/debug/agba_sdl agba/agba
     - zip -r agba_linux.zip agba
 
   agba_artifacts:
-    path: "agba_linux.zip"
+    path: sdl/agba_linux.zip
 
   before_cache_script: rm -rf $CARGO_HOME/registry/index
 
@@ -28,16 +28,18 @@ osx_task:
   osx_instance:
     image: catalina-base
 
-  setup_script: brew update && brew install rust sdl2 sdl2_image
+  setup_script:
+    - brew update
+    - brew install rust sdl2 sdl2_image
+    - cd sdl
 
   build_script: cargo build
 
   package_script:
-    - mkdir agba
-    - mkdir agba/assets
-    - cp sdl/assets/icon_purple.png agba/assets
+    - mkdir -p agba/assets
+    - cp assets/icon_purple.png agba/assets
     - cp target/debug/agba_sdl agba/agba
     - zip -r agba_mac.zip agba
 
   agba_artifacts:
-    path: agba_mac.zip
+    path: sdl/agba_mac.zip
