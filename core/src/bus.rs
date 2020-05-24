@@ -1,4 +1,4 @@
-use crate::cartridge::{BANK_SIZE, MBC, ROM};
+use crate::cartridge::{BANK_SIZE, MBC, Cart};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
@@ -64,7 +64,7 @@ const VRAM_RANGE: RangeInclusive<u16> = VRAM_START..=RAM_END;
 pub struct Bus {
     ram: [u8; RAM_SIZE],
     ram_enabled: bool,
-    rom: ROM,
+    rom: Cart,
     io: IO,
     mbc: MBC,
     ppu: PPU
@@ -78,7 +78,7 @@ impl Bus {
         Bus {
             ram: [0; RAM_SIZE],
             ram_enabled: false,
-            rom: ROM::new(),
+            rom: Cart::new(),
             io: IO::new(),
             mbc: MBC::NONE,
             ppu: PPU::new()
@@ -94,7 +94,7 @@ impl Bus {
     ///     Path to game (&str)
     /// ```
     pub fn load_game(&mut self, rom: Vec<u8>) {
-        self.rom.load_cart(rom);
+        self.rom.load_cart(&rom);
         self.load_bank_0();
         self.mbc = self.rom.get_mbc();
         // If no MBC, then load the rest of ROM into RAM

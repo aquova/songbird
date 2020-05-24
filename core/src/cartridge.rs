@@ -1,7 +1,13 @@
 use std::str::from_utf8;
 
 pub const BANK_SIZE: usize = 0x4000;
-const HEADER_SIZE: usize = 0x50;
+
+const MAX_ROM_SIZE: usize = 32 * 1024; // 32 KiB, needs to be updated when other MBC's added
+const MAX_RAM_SIZE: usize = 32 * 1024; // 32 KiB
+
+const MBC_TYPE_ADDR: usize = 0x0147;
+const ROM_SIZE_ADDR: usize = 0x0148;
+const RAM_SIZE_ADDR: usize = 0x0149;
 
 /*
  * ROM Header Layout
@@ -68,31 +74,28 @@ pub enum MBC {
     MBC3
 }
 
-struct Bank {
-    data: [u8; BANK_SIZE]
-}
-
-impl Bank {
-    fn new() -> Bank {
-        Bank {
-            data: [0; BANK_SIZE]
-        }
-    }
-}
-
-pub struct ROM {
-    banks: Vec<Bank>,
-    header: [u8; HEADER_SIZE]
+pub struct Cart {
+    pub mbc: MBC,
+    pub rom_size: u8,
+    pub ram_size: u8,
+    pub bank: u8,
+    pub rom: [u8; MAX_ROM_SIZE],
+    pub ram: [u8; MAX_RAM_SIZE],
 }
 
 // ==================
 // = Public Methods =
 // ==================
-impl ROM {
-    pub fn new() -> ROM {
-        ROM {
-            banks: Vec::new(),
-            header: [0; HEADER_SIZE]
+impl Cart {
+    pub fn new() -> Cart {
+        Cart {
+            mbc: MBC::NONE,
+            rom_size: 0,
+            ram_size: 0,
+            bank: 0,
+            // TODO: Should these be boxes?
+            rom: [0; MAX_ROM_SIZE],
+            ram: [0; MAX_RAM_SIZE],
         }
     }
 
@@ -102,29 +105,12 @@ impl ROM {
     /// Loads the game from file into Cartridge object
     ///
     /// Input:
-    ///     Path to game
+    ///     Array of game data
     /// ```
-    pub fn load_cart(&mut self, rom: Vec<u8>) {
-        let num_banks = rom.len() / BANK_SIZE;
-
-        // Assuming that buffer length is multiple of bank size
-        for i in 0..num_banks {
-            let mut new_bank = Bank::new();
-
-            // Get next bank sized slice
-            let starting_index = i * BANK_SIZE;
-            let ending_index = (i + 1) * BANK_SIZE;
-            let data = &rom[starting_index..ending_index];
-
-            // Copy data into new bank
-            new_bank.data.copy_from_slice(data);
-
-            // Add new bank to bank array
-            self.banks.push(new_bank);
-        }
-
-        // Set game header
-        self.set_header();
+    pub fn load_cart(&mut self, rom: &[u8]) {
+        self.rom.copy_from_slice(rom);
+        self.rom_size = self.rom[ROM_SIZE_ADDR];
+        self.ram_size = self.rom[RAM_SIZE_ADDR];
     }
 
     /// ```
@@ -139,10 +125,7 @@ impl ROM {
     ///     Byte at specified address (u8)
     /// ```
     pub fn read_rom(self, address: u16) -> u8 {
-        let bank_num: usize = (address as usize) / BANK_SIZE;
-        let bank_addr = (address as usize) % BANK_SIZE;
-        let bank = &self.banks[bank_num];
-        bank.data[bank_addr]
+        self.rom[address as usize]
     }
 
     /// ```
@@ -151,7 +134,7 @@ impl ROM {
     /// Gets the Memory Bank Controller type for this game
     /// ```
     pub fn get_mbc(&self) -> MBC {
-        let val = self.header[0x47];
+        let val = self.rom[MBC_TYPE_ADDR];
         match val {
             0x00 =>        { MBC::NONE },
             0x01..=0x03 => { MBC::MBC1 },
@@ -185,8 +168,11 @@ impl ROM {
     ///     Returns array of bytes for Bank N
     /// ```
     pub fn get_bank_n(&self, bank_num: u8) -> [u8; BANK_SIZE] {
-        let bank = &self.banks[bank_num as usize];
-        bank.data
+        let mut bank = [0; BANK_SIZE];
+        let bank_offset = BANK_SIZE * bank_num as usize;
+        let bank_data = &self.rom[bank_offset..(bank_offset + BANK_SIZE)];
+        bank.copy_from_slice(bank_data);
+        bank
     }
 
     /// ```
@@ -198,24 +184,7 @@ impl ROM {
     ///     Title of the game, from ROM (&str)
     /// ```
     pub fn get_title(&self) -> &str {
-        let data = &self.header[0x34..0x43];
+        let data = &self.rom[0x0134..0x0143];
         from_utf8(data).unwrap()
-    }
-}
-
-// ===================
-// = Private Methods =
-// ===================
-impl ROM {
-    /// ```
-    /// Set Header
-    ///
-    /// Sets the header for the game
-    /// Header is the ROM data from $0100 - $014F
-    /// ```
-    fn set_header(&mut self) {
-        let bank0 = self.banks[0].data;
-        let header_slice = &bank0[0x100..=0x14F];
-        self.header.copy_from_slice(header_slice);
     }
 }

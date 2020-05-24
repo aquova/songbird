@@ -1,7 +1,0 @@
-# Cargo.toml required at root of project for RLS features
-[workspace]
-members = [
-    "core",
-    "sdl",
-    "wasm"
-]

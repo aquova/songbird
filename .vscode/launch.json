@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            // Requres "CodeLLDB" extension
-            "name": "Launch agba (OS X/Linux)",
+            "name": "Launch agba",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/agba",
+            "program": "${workspaceFolder}/sdl/target/debug/agba_sdl",
             "args": [
-                "${workspaceFolder}/games/Tetris.gb"
+                "${workspaceFolder}/games/test_roms/opus5.gb"
             ],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/sdl",
+            "sourceLanguages": ["rust"],
         },
     ]
 }
