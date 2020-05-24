@@ -92,8 +92,7 @@ impl Cart {
             mbc: MBC::NONE,
             rom_size: 0,
             ram_size: 0,
-            bank: 0,
-            // TODO: Should these be boxes?
+            bank: 1,
             rom: [0; MAX_ROM_SIZE],
             ram: [0; MAX_RAM_SIZE],
         }
@@ -111,6 +110,7 @@ impl Cart {
         self.rom.copy_from_slice(rom);
         self.rom_size = self.rom[ROM_SIZE_ADDR];
         self.ram_size = self.rom[RAM_SIZE_ADDR];
+        self.set_mbc();
     }
 
     /// ```
@@ -129,59 +129,16 @@ impl Cart {
     }
 
     pub fn write_rom(&mut self, addr: u16, val: u8) {
-        // TODO: Fix, this should be bank switching
-        self.rom[addr as usize] = val;
-    }
-
-    /// ```
-    /// Get MBC type
-    ///
-    /// Gets the Memory Bank Controller type for this game
-    /// ```
-    pub fn get_mbc(&self) -> MBC {
-        let val = self.rom[MBC_TYPE_ADDR];
-        match val {
-            0x00 =>        { MBC::NONE },
-            0x01..=0x03 => { MBC::MBC1 },
-            0x05..=0x06 => { MBC::MBC2 },
-            0x0F..=0x13 => { MBC::MBC3 },
-            _ =>           { MBC::NONE }
+        match self.mbc {
+            MBC::NONE => {
+                return;
+            },
+            _ => {
+                // TODO: More logic required here
+                self.bank_switch(val);
+            }
         }
-    }
 
-    /// ```
-    /// Get Bank 0
-    ///
-    /// Returns the data that will be mapped to RAM bank 0
-    ///
-    /// Output:
-    ///     Returns array of bytes for Bank 0
-    /// ```
-    pub fn get_bank_0(&self) -> [u8; BANK_SIZE] {
-        self.get_bank_n(0)
-    }
-
-    pub fn bank_switch(&mut self, bank_num: u8) {
-        self.bank = bank_num;
-    }
-
-    /// ```
-    /// Get Bank N
-    ///
-    /// Returns the data that will be mapped to RAM bank N
-    ///
-    /// Input:
-    ///     Bank number to return (u8)
-    ///
-    /// Output:
-    ///     Returns array of bytes for Bank N
-    /// ```
-    pub fn get_bank_n(&self, bank_num: u8) -> [u8; BANK_SIZE] {
-        let mut bank = [0; BANK_SIZE];
-        let bank_offset = BANK_SIZE * bank_num as usize;
-        let bank_data = &self.rom[bank_offset..(bank_offset + BANK_SIZE)];
-        bank.copy_from_slice(bank_data);
-        bank
     }
 
     /// ```
@@ -195,5 +152,43 @@ impl Cart {
     pub fn get_title(&self) -> &str {
         let data = &self.rom[0x0134..0x0143];
         from_utf8(data).unwrap()
+    }
+}
+
+// ===================
+// = Private Methods =
+// ===================
+impl Cart {
+    /// ```
+    /// Get MBC type
+    ///
+    /// Gets the Memory Bank Controller type for this game
+    /// ```
+    fn set_mbc(&mut self) {
+        let val = self.rom[MBC_TYPE_ADDR];
+        let mbc = match val {
+            0x00 =>        { MBC::NONE },
+            0x01..=0x03 => { MBC::MBC1 },
+            0x05..=0x06 => { MBC::MBC2 },
+            0x0F..=0x13 => { MBC::MBC3 },
+            _ =>           { MBC::NONE }
+        };
+
+        self.mbc = mbc;
+    }
+
+    /// ```
+    /// Bank Switch
+    ///
+    /// Switches which ROM bank is currently loaded into RAM
+    ///
+    /// Input:
+    ///     Bank number to switch to (u8)
+    /// ```
+    fn bank_switch(&mut self, bank_num: u8) {
+        if bank_num == 0 {
+            panic!("Can't switch to bank 0");
+        }
+        self.bank = bank_num;
     }
 }
