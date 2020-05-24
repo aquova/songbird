@@ -124,8 +124,13 @@ impl Cart {
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_rom(self, address: u16) -> u8 {
+    pub fn read_rom(&self, address: u16) -> u8 {
         self.rom[address as usize]
+    }
+
+    pub fn write_rom(&mut self, addr: u16, val: u8) {
+        // TODO: Fix, this should be bank switching
+        self.rom[addr as usize] = val;
     }
 
     /// ```
@@ -154,6 +159,10 @@ impl Cart {
     /// ```
     pub fn get_bank_0(&self) -> [u8; BANK_SIZE] {
         self.get_bank_n(0)
+    }
+
+    pub fn bank_switch(&mut self, bank_num: u8) {
+        self.bank = bank_num;
     }
 
     /// ```
