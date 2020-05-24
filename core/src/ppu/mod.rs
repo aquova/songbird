@@ -165,9 +165,9 @@ impl PPU {
     ///
     /// Input:
     ///     Array of pixels to modify (&[u8])
-    ///     Background tile data (&Vec<Tile>)
+    ///     Background tile data (&[Tile])
     /// ```
-    fn render_background(&self, pixel_array: &mut [u8], bkgd: &Vec<Tile>) {
+    fn render_background(&self, pixel_array: &mut [u8], bkgd: &[Tile]) {
         let tile_map = self.get_bkgd_tile_map();
 
         // The tile indexes in the second tile pattern table ($8800-97ff) are signed
@@ -199,9 +199,9 @@ impl PPU {
     ///
     /// Input:
     ///     Array of pixels to modify (&[u8])
-    ///     Window tile data (&Vec<Tile>)
+    ///     Window tile data (&[Tile])
     /// ```
-    fn render_window(&self, pixel_array: &mut [u8], wndw: &Vec<Tile>) {
+    fn render_window(&self, pixel_array: &mut [u8], wndw: &[Tile]) {
         let coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
 

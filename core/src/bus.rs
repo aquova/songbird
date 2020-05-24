@@ -89,9 +89,9 @@ impl Bus {
     /// Loads game into ROM
     ///
     /// Input:
-    ///     Path to game (&str)
+    ///     ROM data (&[u8])
     /// ```
-    pub fn load_game(&mut self, rom: Vec<u8>) {
+    pub fn load_game(&mut self, rom: &[u8]) {
         self.rom.load_cart(&rom);
     }
 
