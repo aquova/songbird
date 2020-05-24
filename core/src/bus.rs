@@ -179,7 +179,10 @@ impl Bus {
     ///     Game title from ROM (&str)
     /// ```
     pub fn get_title(&self) -> &str {
-        self.rom.get_title()
+        // Strip trailing null characters, if any
+        let raw_title = self.rom.get_title();
+        let title = raw_title.trim_end_matches(char::from(0));
+        title
     }
 
     /// ```

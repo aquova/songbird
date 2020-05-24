@@ -176,6 +176,18 @@ impl Cpu {
     }
 
     /// ```
+    /// Get title
+    ///
+    /// Gets the title for the currently loaded game
+    ///
+    /// Output:
+    ///     Game name (&str)
+    /// ```
+    pub fn get_title(&self) -> &str {
+        self.bus.get_title()
+    }
+
+    /// ```
     /// Fetch
     ///
     /// Fetches the byte specified by the PC, increments PC by one

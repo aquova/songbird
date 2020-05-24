@@ -54,6 +54,7 @@ pub fn main() {
     let mut gb = Cpu::new();
     let rom = load_rom(&args[1]);
     gb.load_game(rom);
+    let title = gb.get_title();
 
     // Initialize debugger
     let mut agbd = debugger::new();
@@ -61,7 +62,7 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    let mut window = video_subsystem.window(&args[1], (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
+    let mut window = video_subsystem.window(title, (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
     let window_icon = Surface::from_file("assets/icon_purple.png").unwrap();
     window.set_icon(window_icon);
     let mut canvas = window.into_canvas().build().unwrap();
