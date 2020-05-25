@@ -1,10 +1,10 @@
 # Rust ignores
 **/target
 **/*.rs.bk
-*.wasm
 
 # Hide files that aren't ours
 **/games
+*.gb
 
 # Misc
 *.sav

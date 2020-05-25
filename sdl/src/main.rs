@@ -53,7 +53,7 @@ pub fn main() {
     // Start game
     let mut gb = Cpu::new();
     let rom = load_rom(&args[1]);
-    gb.load_game(rom);
+    gb.load_game(&rom);
     let title = gb.get_title();
 
     // Initialize debugger
