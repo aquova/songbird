@@ -3,7 +3,7 @@ pub const TILESIZE: usize = 8;
 
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
-pub const DISP_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT);
+pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 pub trait ModifyBits {
     fn get_bit(&self, digit: u8) -> bool;

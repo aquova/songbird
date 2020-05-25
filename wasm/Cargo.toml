@@ -5,9 +5,20 @@ authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-wasm-bindgen = "0.2"
-js-sys = "0.3.22"
+wasm-bindgen = "0.2.62"
+js-sys = "0.3.39"
 agba_core = { path = "../core" }
+
+[dependencies.web-sys]
+version = "0.3.39"
+features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "Element",
+    "HtmlCanvasElement",
+    "ImageData",
+    "Window"
+]
 
 [lib]
 crate-type = ["cdylib"]
