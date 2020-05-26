@@ -2,6 +2,11 @@
 **/target
 **/*.rs.bk
 
+# Build files
+**/pkg
+*.wasm
+**/agba_wasm.js
+
 # Hide files that aren't ours
 **/games
 *.gb

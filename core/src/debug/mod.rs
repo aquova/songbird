@@ -113,6 +113,7 @@ impl debugger {
     pub fn print_help(&self) {
         println!("'b #' to break at that address");
         println!("'c' to continue execution");
+        println!("'del #' to delete breakpoint at that address");
         println!("'disass' to show disassembly of next 5 instructions");
         println!("'help' to print this message");
         println!("'info' to list break/watchpoints");

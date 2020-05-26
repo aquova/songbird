@@ -30,7 +30,8 @@ pub struct GB {
 impl GB {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<GB, JsValue> {
-        let cpu = Cpu::new();
+        let mut cpu = Cpu::new();
+        cpu.init();
 
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("canvas").unwrap();
@@ -54,11 +55,6 @@ impl GB {
     }
 
     #[wasm_bindgen]
-    pub fn init_cpu(&mut self) {
-        self.cpu.init();
-    }
-
-    #[wasm_bindgen]
     pub fn load_rom(&mut self, data: DataView) {
         let mut rom_data: Vec<u8> = Vec::with_capacity(data.byte_length());
 
@@ -70,11 +66,8 @@ impl GB {
     }
 
     #[wasm_bindgen]
-    pub fn run(&mut self) {
-        let draw_time = self.cpu.tick();
-        // if draw_time {
-        self.draw_screen();
-        // }
+    pub fn tick(&mut self) -> bool {
+        self.cpu.tick()
     }
 
     #[wasm_bindgen]
@@ -82,7 +75,8 @@ impl GB {
         self.cpu.get_title().to_string()
     }
 
-    fn draw_screen(&mut self) {
+    #[wasm_bindgen]
+    pub fn draw_screen(&mut self) {
         let disp_arr = self.cpu.render();
         let palette = self.cpu.get_palette();
 

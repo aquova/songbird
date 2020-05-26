@@ -1,9 +1,15 @@
 import init, * as wasm from "./agba_wasm.js"
 
+document.addEventListener("keydown", function(e) {
+    // Space bar
+    if (e.keyCode == '32') {
+        // Currently does nothing
+    }
+})
+
 async function run() {
     await init()
     let gb = new wasm.GB();
-    gb.init_cpu()
 
     await load_js(gb, "opus5.gb").then(() => {
         let title = gb.get_title()
@@ -20,12 +26,17 @@ async function load_js(gb, game) {
 }
 
 function mainloop(gb) {
-    // TODO: Need to run at 4.2 MHz
-    gb.run()
+    while (true) {
+        let draw_time = gb.tick()
+        if (draw_time) {
+            gb.draw_screen()
+            window.requestAnimationFrame(() => {
+                mainloop(gb)
+            })
 
-    window.requestAnimationFrame(() => {
-        mainloop(gb)
-    })
+            break
+        }
+    }
 }
 
 run().catch(console.error)
