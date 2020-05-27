@@ -5,13 +5,9 @@ linux_task:
   setup_script:
     - apt-get update
     - apt-get -y install libsdl2-dev libsdl2-image-dev zip
-    - cd sdl
 
-  cargo_cache:
-    folder: $CARGO_HOME/registry
-    fingerprint_script: cat Cargo.lock
-
-  build_script: cargo build
+  build_script:
+    - make sdl
 
   package_script:
     - mkdir -p agba/assets
@@ -22,8 +18,6 @@ linux_task:
   agba_artifacts:
     path: sdl/agba_linux.zip
 
-  before_cache_script: rm -rf $CARGO_HOME/registry/index
-
 osx_task:
   osx_instance:
     image: catalina-base
@@ -31,9 +25,9 @@ osx_task:
   setup_script:
     - brew update
     - brew install rust sdl2 sdl2_image
-    - cd sdl
 
-  build_script: cargo build
+  build_script:
+    - make sdl
 
   package_script:
     - mkdir -p agba/assets
