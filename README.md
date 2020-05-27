@@ -6,7 +6,9 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
 
 ## CI Builds
 
+- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=osx)
 - ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=linux)
+- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=wasm)
 
 ## TODO
 
@@ -30,9 +32,9 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
     - [ ] SGB support
 - [ ] CI
     - [x] Linux Builds
-    - [ ] MacOS Builds
+    - [x] MacOS Builds
     - [ ] Windows Builds
-    - [ ] WebAssembly support
+    - [x] WebAssembly support
 - [ ] Save support
 - [ ] UI Menu
 - [ ] Rebindable keys

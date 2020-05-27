@@ -11,12 +11,12 @@ linux_task:
 
   package_script:
     - mkdir -p agba/assets
-    - cp assets/icon_purple.png agba/assets
-    - cp target/debug/agba_sdl agba/agba
+    - cp sdl/assets/icon_purple.png agba/assets
+    - cp sdl/target/debug/agba_sdl agba/agba
     - zip -r agba_linux.zip agba
 
   agba_artifacts:
-    path: sdl/agba_linux.zip
+    path: agba_linux.zip
 
 osx_task:
   osx_instance:
@@ -31,9 +31,28 @@ osx_task:
 
   package_script:
     - mkdir -p agba/assets
-    - cp assets/icon_purple.png agba/assets
-    - cp target/debug/agba_sdl agba/agba
+    - cp sdl/assets/icon_purple.png agba/assets
+    - cp sdl/target/debug/agba_sdl agba/agba
     - zip -r agba_mac.zip agba
 
   agba_artifacts:
-    path: sdl/agba_mac.zip
+    path: agba_mac.zip
+
+wasm_task:
+  container:
+    image: rust:latest
+
+  setup_script:
+    - apt-get update
+    - apt-get -y install zip
+    # Install wasm-pack
+    - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+  build_script:
+    - make wasm
+
+  package_script:
+    - zip -r agba_wasm.zip web
+
+  agba_artifacts:
+    path: agba_wasm.zip
