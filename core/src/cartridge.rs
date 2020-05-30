@@ -1,7 +1,5 @@
 use std::str::from_utf8;
 
-pub const BANK_SIZE: usize = 0x4000;
-
 const MAX_ROM_SIZE: usize = 32 * 1024; // 32 KiB, needs to be updated when other MBC's added
 const MAX_RAM_SIZE: usize = 32 * 1024; // 32 KiB
 

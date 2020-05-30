@@ -28,7 +28,7 @@ const WY: usize                      = 0xFF4A - VRAM_OFFSET;
 const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 
 // VRAM ranges
-const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_SIZE);
+const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 const OAM_MEM_RANGE: Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
 
 const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);

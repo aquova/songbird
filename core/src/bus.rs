@@ -1,8 +1,7 @@
-use crate::cartridge::{BANK_SIZE, Cart};
+use crate::cartridge::Cart;
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
-use std::ops::{Range, RangeInclusive};
 
 /*
  * RAM Map
@@ -53,15 +52,20 @@ use std::ops::{Range, RangeInclusive};
 // =============
 // = Constants =
 // =============
-const RAM_ROM_SIZE: usize = 0x8000;
-const VRAM_START: u16 = RAM_ROM_SIZE as u16;
-const RAM_END: u16 = 0xFFFF;
-
 const JOYPAD_REG: u16 = 0xFF00;
 
 // RAM ranges
-const CART_ROM_RANGE: Range<u16> = 0x0000..VRAM_START;
-const VRAM_RANGE: RangeInclusive<u16> = VRAM_START..=RAM_END;
+// NOTE: Rust *still* doesn't allow exclusive ranges in match statements
+// So we have to define both start and end values
+const ROM: u16          = 0x0000;
+const ROM_END: u16      = 0x7FFF;
+const VRAM: u16         = ROM_END + 1;
+const VRAM_END: u16     = 0x9FFF;
+const CART_RAM: u16     = VRAM_END + 1;
+const CART_RAM_END: u16 = 0xBFFF;
+const WORK_RAM: u16     = CART_RAM_END + 1;
+const WORK_RAM_END: u16 = 0xDFFF;
+const RAM_END: u16      = 0xFFFF;
 
 pub struct Bus {
     ram_enabled: bool,
@@ -131,17 +135,20 @@ impl Bus {
     ///     Value at address (u8)
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
-        if CART_ROM_RANGE.contains(&addr) {
-            self.rom.read_rom(addr)
-        } else if VRAM_RANGE.contains(&addr) {
-            if addr == JOYPAD_REG {
-                self.io.read_btns()
-            } else {
-                self.ppu.read_vram(addr)
+        let val = match addr {
+            ROM..=ROM_END => {
+                self.rom.read_rom(addr)
+            },
+            VRAM..=RAM_END => {
+                if addr == JOYPAD_REG {
+                    self.io.read_btns()
+                } else {
+                    self.ppu.read_vram(addr)
+                }
             }
-        } else {
-            panic!("Unimplemented!");
-        }
+        };
+
+        val
     }
 
     /// ```
@@ -154,15 +161,16 @@ impl Bus {
     ///     Value to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        if CART_ROM_RANGE.contains(&addr) {
-            self.rom.write_rom(addr, val);
-        } else if VRAM_RANGE.contains(&addr) {
-            self.ppu.write_vram(addr, val);
-            if addr == JOYPAD_REG {
-                self.io.set_btns(val);
+        match addr {
+            ROM..=ROM_END => {
+                self.rom.write_rom(addr, val);
+            },
+            VRAM..=RAM_END => {
+                self.ppu.write_vram(addr, val);
+                if addr == JOYPAD_REG {
+                    self.io.set_btns(val);
+                }
             }
-        } else {
-            panic!("Unimplemented!");
         }
     }
 

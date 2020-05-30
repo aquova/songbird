@@ -26,7 +26,7 @@ impl Timer {
         let con = bus.read_ram(CON_REG);
         if con.get_bit(2) {
             let cnt_spd = COUNT_SPEED_IN_CYCLES[con & 0b0000_0011];
-            self.div_cycles += 1
+            self.div_cycles += 1;
             self.cnt_cycles += 1;
 
         }
