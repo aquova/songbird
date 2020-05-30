@@ -1,5 +1,18 @@
 import init, * as wasm from "./agba_wasm.js"
 
+const WIDTH = 160
+const HEIGHT = 144
+
+let scale = 1
+let scale_elem = document.getElementById("scale")
+
+let canvas = document.getElementById("canvas")
+update_canvas()
+
+document.addEventListener("change", e => {
+    update_canvas()
+})
+
 document.addEventListener("keydown", function(e) {
     // Space bar
     if (e.keyCode == '32') {
@@ -30,6 +43,13 @@ function mainloop(gb) {
         let draw_time = gb.tick()
         if (draw_time) {
             gb.draw_screen()
+            // Rescale image if needed
+            if (scale > 1) {
+                let ctx = canvas.getContext('2d')
+                ctx.imageSmoothingEnabled = false
+                ctx.drawImage(canvas, 0, 0, WIDTH, HEIGHT, 0, 0, canvas.width, canvas.height)
+            }
+
             window.requestAnimationFrame(() => {
                 mainloop(gb)
             })
@@ -37,6 +57,12 @@ function mainloop(gb) {
             break
         }
     }
+}
+
+function update_canvas() {
+    scale = Math.floor(parseInt(scale_elem.value))
+    canvas.width = WIDTH * scale
+    canvas.height = HEIGHT * scale
 }
 
 run().catch(console.error)
