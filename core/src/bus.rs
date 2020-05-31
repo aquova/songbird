@@ -166,9 +166,10 @@ impl Bus {
                 self.rom.write_rom(addr, val);
             },
             VRAM..=RAM_END => {
-                self.ppu.write_vram(addr, val);
                 if addr == JOYPAD_REG {
                     self.io.set_btns(val);
+                } else {
+                    self.ppu.write_vram(addr, val);
                 }
             }
         }

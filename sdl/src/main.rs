@@ -99,29 +99,54 @@ pub fn main() {
                     }
                 },
                 // Game controls
+                // TODO: Put this into other function or something
                 Event::KeyDown{keycode: Some(Keycode::Return), ..} => {
                     gb.toggle_button(Buttons::Start, true);
-                    println!("Start down");
+                },
+                Event::KeyDown{keycode: Some(Keycode::Backspace), ..} => {
+                    gb.toggle_button(Buttons::Selectj, true);
                 },
                 Event::KeyDown{keycode: Some(Keycode::X), ..} => {
                     gb.toggle_button(Buttons::A, true);
-                    println!("A down");
                 },
                 Event::KeyDown{keycode: Some(Keycode::Z), ..} => {
                     gb.toggle_button(Buttons::B, true);
-                    println!("B down");
+                },
+                Event::KeyDown{keycode: Some(Keycode::Up), ..} => {
+                    gb.toggle_button(Buttons::Up, true);
+                },
+                Event::KeyDown{keycode: Some(Keycode::Left), ..} => {
+                    gb.toggle_button(Buttons::Left, true);
+                },
+                Event::KeyDown{keycode: Some(Keycode::Down), ..} => {
+                    gb.toggle_button(Buttons::Down, true);
+                },
+                Event::KeyDown{keycode: Some(Keycode::Right), ..} => {
+                    gb.toggle_button(Buttons::Right, true);
                 },
                 Event::KeyUp{keycode: Some(Keycode::Return), ..} => {
                     gb.toggle_button(Buttons::Start, false);
-                    println!("Start up");
+                },
+                Event::KeyUp{keycode: Some(Keycode::Backspace), ..} => {
+                    gb.toggle_button(Buttons::Select, false);
                 },
                 Event::KeyUp{keycode: Some(Keycode::X), ..} => {
                     gb.toggle_button(Buttons::A, false);
-                    println!("A up");
                 },
                 Event::KeyUp{keycode: Some(Keycode::Z), ..} => {
                     gb.toggle_button(Buttons::B, false);
-                    println!("B up");
+                },
+                Event::KeyUp{keycode: Some(Keycode::Up), ..} => {
+                    gb.toggle_button(Buttons::Up, false);
+                },
+                Event::KeyUp{keycode: Some(Keycode::Left), ..} => {
+                    gb.toggle_button(Buttons::Left, false);
+                },
+                Event::KeyUp{keycode: Some(Keycode::Down), ..} => {
+                    gb.toggle_button(Buttons::Down, false);
+                },
+                Event::KeyUp{keycode: Some(Keycode::Right), ..} => {
+                    gb.toggle_button(Buttons::Right, false);
                 },
                 _ => {}
             }

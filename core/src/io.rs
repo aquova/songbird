@@ -1,27 +1,47 @@
 // Input/Output functions
 
+/*
+ * Game Boy joypad layout
+ * Address $FF00
+ *
+ * Bit | Function
+ * ----+---------
+ * 7   | Unused
+ * 6   | Unused
+ * 5   | High if polling for D-pad
+ * 4   | High if polling for other btns
+ * 3   | Down / Start
+ * 2   | Up / Select
+ * 1   | Left / B
+ * 0   | Right / A
+ *
+ * CPU can only poll for D-pad or other buttons, not both.
+ * Buttons will be LOW if pressed
+ */
+
 pub enum Buttons {
-    Start,
-    Select,
-    B,
     A,
-    Down,
-    Up,
+    B,
+    Select,
+    Start,
+    Right,
     Left,
-    Right
+    Up,
+    Down,
 }
 
 impl Buttons {
     fn get_index(&self) -> usize {
+        // Buttons are expected to be in this order
         match self {
-            Buttons::Start =>  { 0 },
-            Buttons::Select => { 1 },
-            Buttons::B =>      { 2 },
-            Buttons::A =>      { 3 },
-            Buttons::Down =>   { 4 },
-            Buttons::Up =>     { 5 },
-            Buttons::Left =>   { 6 },
-            Buttons::Right =>  { 7 },
+            Buttons::A =>       { 0 },
+            Buttons::B =>       { 1 },
+            Buttons::Select =>  { 2 },
+            Buttons::Start =>   { 3 },
+            Buttons::Right =>   { 4 },
+            Buttons::Left =>    { 5 },
+            Buttons::Up =>      { 6 },
+            Buttons::Down =>    { 7 },
         }
     }
 }
@@ -42,6 +62,7 @@ impl IO {
     }
 
     pub fn btn_toggle(&mut self, btn: Buttons, pressed: bool) {
+        // Rust hashmaps leave much to be desired, so do it this way
         let i = btn.get_index();
         self.btns[i] = pressed;
     }
@@ -62,24 +83,23 @@ impl IO {
         }
     }
 
-    // TODO: See if these functions can be merged
     fn pack_btn_keys(&self) -> u8 {
-        let mut output = 0b1110_0000;
+        let mut output = 0;
         for i in 0..4 {
             // 0 if pressed, 1 if unpressed
             let pressed = if self.btns[i] { 0 } else { 1 };
-            output |= pressed << (3 - i);
+            output |= pressed << i;
         }
 
         output
     }
 
     fn pack_dir_keys(&self) -> u8 {
-        let mut output = 0b1101_0000;
-        for i in 4..8 {
+        let mut output = 0;
+        for i in 0..4 {
             // 0 if pressed, 1 if unpressed
-            let pressed = if self.btns[i] { 0 } else { 1 };
-            output |= pressed << (7 - i);
+            let pressed = if self.btns[i + 4] { 0 } else { 1 };
+            output |= pressed << i;
         }
 
         output

@@ -150,8 +150,7 @@ impl debugger {
     /// ```
     pub fn list_points(&self) {
         if self.breakpoints.len() > 0 {
-            let mut breakstring = String::new();
-            breakstring = format!("Breakpoints:");
+            let mut breakstring = format!("Breakpoints:");
             for bp in &self.breakpoints {
                 breakstring = format!("{} ${:04x}", breakstring, bp);
             }
@@ -161,8 +160,7 @@ impl debugger {
         }
 
         if self.watchpoints.len() > 0 {
-            let mut watchstring = String::new();
-            watchstring = format!("Watchpoints:");
+            let mut watchstring = format!("Watchpoints:");
             for wp in &self.watchpoints {
                 watchstring = format!("{} ${:04x}", watchstring, wp);
             }
