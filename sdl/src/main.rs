@@ -104,7 +104,7 @@ pub fn main() {
                     gb.toggle_button(Buttons::Start, true);
                 },
                 Event::KeyDown{keycode: Some(Keycode::Backspace), ..} => {
-                    gb.toggle_button(Buttons::Selectj, true);
+                    gb.toggle_button(Buttons::Select, true);
                 },
                 Event::KeyDown{keycode: Some(Keycode::X), ..} => {
                     gb.toggle_button(Buttons::A, true);
