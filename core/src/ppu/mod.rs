@@ -1,5 +1,7 @@
+mod sprite;
 mod tile;
 
+use sprite::Sprite;
 use tile::Tile;
 use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
@@ -12,6 +14,7 @@ const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
 const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
+const OAM_SPR_NUM: usize = 40;
 
 // VRAM registers
 const LCD_DISP_REG: usize            = 0xFF40 - VRAM_OFFSET;
@@ -29,7 +32,8 @@ const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 
 // VRAM ranges
 const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
-const OAM_MEM_RANGE: Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
+const OAM_MEM: u16 = 0xFE00 - (VRAM_OFFSET as u16);
+const OAM_MEM_END: u16 = 0xFE9F - (VRAM_OFFSET as u16); // Inclusive
 
 const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
 const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OFFSET);
@@ -39,6 +43,7 @@ const SAM:              Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OF
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
+    oam: [Sprite; OAM_SPR_NUM],
 }
 
 impl PPU {
@@ -48,6 +53,7 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
+            oam: [Sprite::new(); OAM_SPR_NUM],
         }
     }
 
@@ -68,7 +74,17 @@ impl PPU {
         let lcdc_mode = self.get_LCDC_status();
 
         if self.is_valid_status(addr) {
-            self.vram[adjusted_addr as usize] = val;
+            match addr {
+                OAM_MEM..=OAM_MEM_END => {
+                    let relative_addr = addr - OAM_MEM;
+                    let spr_num = relative_addr / 4;
+                    let byte_num = relative_addr % 4;
+                    self.oam[spr_num as usize].update_byte(byte_num, val);
+                },
+                _ => {
+                    self.vram[adjusted_addr as usize] = val;
+                }
+            }
         }
     }
 
@@ -114,15 +130,36 @@ impl PPU {
     }
 
     /// ```
-    /// Get palette
+    /// Get background palette
     ///
     /// Gets the palette indices from the BGP register ($FF47)
     ///
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    pub fn get_palette(&self) -> [u8; 4] {
+    pub fn get_bkgd_palette(&self) -> [u8; 4] {
         unpack_u8(self.vram[BGP])
+    }
+
+    /// ```
+    /// Get sprite palette
+    ///
+    /// Gets the palette indices for the sprites
+    ///
+    /// Input:
+    ///     Whether to use palette 0 or 1 (bool)
+    ///
+    /// Output:
+    ///     Palette indices ([u8])
+    /// ```
+    pub fn get_spr_palette(&self, pal_0: bool) -> [u8; 4] {
+        let pal = if pal_0 {
+            unpack_u8(self.vram[OBP0])
+        } else {
+            unpack_u8(self.vram[OBP1])
+        };
+
+        pal
     }
 
     /// ```
@@ -214,8 +251,8 @@ impl PPU {
 
                 // If window is allowed to wrap, this needs to be changed
                 for row in 0..TILESIZE {
-                    let map_x = x + coords.0;
-                    let map_y = y + coords.1 + row;
+                    let map_x = x + coords.x as usize;
+                    let map_y = y + (coords.y as usize) + row;
                     let map_index = map_y * MAP_SIZE + map_x;
                     pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
                 }
@@ -252,12 +289,14 @@ impl PPU {
 
         // Iterate through every visible pixel
         // TODO: This needs to allow for screen wrapping
-        for y in (scroll.1)..(scroll.1 + SCREEN_HEIGHT) {
-            for x in (scroll.0)..(scroll.0 + SCREEN_WIDTH) {
+        let start_x = scroll.x as usize;
+        let start_y = scroll.y as usize;
+        for y in start_y..(start_y + SCREEN_HEIGHT) {
+            for x in start_x..(start_x + SCREEN_WIDTH) {
                 let index = y * MAP_PIXELS + x;
                 let pixel = pixel_array[index];
 
-                let view_index = (y - scroll.1) * SCREEN_WIDTH + (x - scroll.0);
+                let view_index = (y - start_y) * SCREEN_WIDTH + (x - start_x);
                 viewport[view_index] = pixel;
             }
         }
@@ -434,13 +473,13 @@ impl PPU {
     /// Returns the values of the SCX and SCY registers
     ///
     /// Output:
-    ///     Tuple of SCX, SCY ((usize, usize))
+    ///     SCX, SCY point (Point)
     /// ```
-    fn get_scroll_coords(&self) -> (usize, usize) {
-        let scroll_x = self.vram[SCX] as usize;
-        let scroll_y = self.vram[SCY] as usize;
+    fn get_scroll_coords(&self) -> Point {
+        let scroll_x = self.vram[SCX];
+        let scroll_y = self.vram[SCY];
 
-        (scroll_x, scroll_y)
+        Point::new(scroll_x, scroll_y)
     }
 
     /// ```
@@ -449,12 +488,12 @@ impl PPU {
     /// Returns the window position from the WX and WY registers
     ///
     /// Output:
-    ///     Location of the window ((usize, usize))
-    fn get_wndw_coords(&self) -> (usize, usize) {
-        let wndw_x = (self.vram[WX] - 7) as usize;
-        let wndw_y = self.vram[WY] as usize;
+    ///     Location of the window (Point)
+    fn get_wndw_coords(&self) -> Point {
+        let wndw_x = self.vram[WX] - 7;
+        let wndw_y = self.vram[WY];
 
-        (wndw_x, wndw_y)
+        Point::new(wndw_x, wndw_y)
     }
 
     fn get_LCDC_status(&self) -> ModeTypes {

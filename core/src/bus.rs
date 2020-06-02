@@ -120,7 +120,7 @@ impl Bus {
     ///     Palette indices ([u8])
     /// ```
     pub fn get_palette(&self) -> [u8; 4] {
-        self.ppu.get_palette()
+        self.ppu.get_bkgd_palette()
     }
 
     /// ```

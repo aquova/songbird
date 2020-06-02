@@ -42,7 +42,7 @@ impl Clock {
     ///     Whether or not to render the screen (bool)
     /// ```
     pub fn clock_step(&mut self, cycles: u8) -> bool {
-        self.cycles += cycles as usize; // cycles / 4?
+        self.cycles += cycles as usize;
         let mut draw_screen = false;
 
         match self.mode {

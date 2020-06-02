@@ -5,6 +5,20 @@ pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
 pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
+pub struct Point {
+    pub x: u8,
+    pub y: u8
+}
+
+impl Point {
+    pub fn new(x: u8, y: u8) -> Point {
+        Point {
+            x: x,
+            y: y
+        }
+    }
+}
+
 pub trait ModifyBits {
     fn get_bit(&self, digit: u8) -> bool;
     fn set_bit(&mut self, digit: u8);
