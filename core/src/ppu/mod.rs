@@ -172,20 +172,24 @@ impl PPU {
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; MAP_PIXELS * MAP_PIXELS];
-        let tiles = self.get_background_tiles();
+        let bkgd_wndw_tile_set = self.get_bkgd_wndw_tile_set();
+        let bkgd_wndw_tiles = self.get_tiles(bkgd_wndw_tile_set);
 
         if self.is_bkgd_dspl() {
-            self.render_background(&mut map_array, &tiles);
+            self.render_background(&mut map_array, &bkgd_wndw_tiles);
         }
 
         if self.is_wndw_dspl() {
-            self.render_window(&mut map_array, &tiles);
+            self.render_window(&mut map_array, &bkgd_wndw_tiles);
         }
 
         if self.is_sprt_dspl() {
-            self.render_sprites(&mut map_array);
+            let spr_tile_set = self.get_spr_tile_set();
+            let spr_tiles = self.get_tiles(spr_tile_set);
+            self.render_sprites(&mut map_array, &spr_tiles);
         }
 
+        // TODO: Someday this all should be rewritten so that this function isn't needed
         let screen = self.get_view(&map_array);
 
         screen
@@ -268,8 +272,30 @@ impl PPU {
     /// Input:
     ///     [u8] - Graphics array to render upon
     /// ```
-    fn render_sprites(&self, pixel_array: &mut [u8]) {
+    fn render_sprites(&self, pixel_array: &mut [u8], sprites: &[Tile]) {
+        // TODO: This does not take the sprite palette into account
+        // TODO: This does not check if sprite should be drawn above/below background
+        // TODO: This does not support 8x16 sprites
+        let screen_coords = self.get_scroll_coords();
 
+        // Iterate through every sprite
+        for i in 0..OAM_SPR_NUM {
+            let spr = self.oam[i];
+            if !spr.is_onscreen() {
+                continue;
+            }
+
+            let spr_num = spr.get_tile_num();
+            let tile = &sprites[spr_num as usize];
+            let spr_coords = spr.get_coords();
+
+            for row in 0..TILESIZE {
+                let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize) + row;
+                let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize);
+                let arr_index = spr_y + spr_x * MAP_SIZE;
+                pixel_array[arr_index..(arr_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+            }
+        }
     }
 
     /// ```
@@ -307,26 +333,25 @@ impl PPU {
     /// ```
     /// Get background tiles
     ///
-    /// Fetches the indices of background tiles from VRAM
+    /// Fetches the graphical data of background tiles from VRAM
     ///
     /// Output:
     ///     A vector of tile objects (Vec<Tile>)
     /// ```
-    fn get_background_tiles(&self) -> Vec<Tile> {
+    fn get_tiles(&self, tile_set: &[u8]) -> Vec<Tile> {
         // Tile set is the tile pixel data
         // Tile map are the tile indices that make up the current background image
         // TODO: This 100% can and should be cached
-        let mut map = Vec::new();
-        let tile_set = self.get_tile_set();
+        let mut tiles = Vec::new();
         let num_tiles = tile_set.len() / (2 * TILESIZE);
 
         for i in 0..num_tiles {
             let tile_data = &tile_set[(2 * TILESIZE * i)..(2 * TILESIZE * (i + 1))];
             let tile = Tile::new(tile_data);
-            map.push(tile);
+            tiles.push(tile);
         }
 
-        map
+        tiles
     }
 
     /// ```
@@ -337,7 +362,7 @@ impl PPU {
     /// Output:
     ///     Slice of tileset indices (&[u8])
     /// ```
-    fn get_tile_set(&self) -> &[u8] {
+    fn get_bkgd_wndw_tile_set(&self) -> &[u8] {
         // $01 for $8000-$8FFF
         // $00 for $8800-$97FF
         let tile_set = if self.get_bkgd_tile_set_index() == 1 {
@@ -347,6 +372,19 @@ impl PPU {
         };
 
         tile_set
+    }
+
+    /// ```
+    /// Get sprite tile set
+    ///
+    /// Gets the pixel data for sprite tiles
+    ///
+    /// Output:
+    ///     Slice of tilemap values (&[u8])
+    /// ```
+    fn get_spr_tile_set(&self) -> &[u8] {
+        // Sprites are always in $8000-$8FFF
+        &self.vram[TILE_MAP_0_RANGE]
     }
 
     /// ```

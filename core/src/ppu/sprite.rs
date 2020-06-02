@@ -23,6 +23,9 @@ use crate::utils::{ModifyBits, Point};
 const X_OFFSET: u8 = 8;
 const Y_OFFSET: u8 = 16;
 
+const X_OFFSCREEN: u8 = 168;
+const Y_OFFSCREEN: u8 = 160;
+
 #[derive(Copy, Clone)]
 pub struct Sprite {
     tile_num: u8,
@@ -47,15 +50,6 @@ impl Sprite {
         }
     }
 
-    // NOTE: I'm not sure if this will ever be used
-    pub fn init(&mut self, metadata: [u8; 4]) {
-        self.update_spr(metadata);
-    }
-
-    pub fn update_spr(&mut self, data: [u8; 4]) {
-        self.parse_oam_bytes(data);
-    }
-
     pub fn update_byte(&mut self, index: u16, byte: u8) {
         match index {
             0 => { self.parse_oam_byte1(byte); },
@@ -64,6 +58,13 @@ impl Sprite {
             3 => { self.parse_oam_byte4(byte); },
             _ => { panic!("Byte offset can only be from 0-3"); }
         }
+    }
+
+    pub fn is_onscreen(&self) -> bool {
+        let x_visible = self.x > 0 && self.x < X_OFFSCREEN;
+        let y_visible = self.y > 0 && self.y < Y_OFFSCREEN;
+
+        x_visible && y_visible
     }
 
     pub fn get_tile_num(&self) -> u8 {
@@ -78,13 +79,6 @@ impl Sprite {
 }
 
 impl Sprite {
-    fn parse_oam_bytes(&mut self, data: [u8; 4]) {
-        self.parse_oam_byte1(data[0]);
-        self.parse_oam_byte2(data[1]);
-        self.parse_oam_byte3(data[2]);
-        self.parse_oam_byte4(data[3]);
-    }
-
     fn parse_oam_byte1(&mut self, val: u8) {
         self.y = val - Y_OFFSET;
     }
