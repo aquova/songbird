@@ -513,10 +513,11 @@ impl PPU {
 
         match lcdc_status {
             ModeTypes::OAMReadMode => {
-                !OAM_MEM_RANGE.contains(&(addr as usize))
+                addr < OAM_MEM || addr > OAM_MEM_END
             },
             ModeTypes::VRAMReadMode => {
-                !OAM_MEM_RANGE.contains(&(addr as usize)) && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
+                let in_oam = addr >= OAM_MEM && addr <= OAM_MEM_END;
+                !in_oam && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
             },
             _ => {
                 true

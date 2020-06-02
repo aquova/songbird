@@ -23,6 +23,7 @@ use crate::utils::{ModifyBits, Point};
 const X_OFFSET: u8 = 8;
 const Y_OFFSET: u8 = 16;
 
+#[derive(Copy, Clone)]
 pub struct Sprite {
     tile_num: u8,
     x: u8,
