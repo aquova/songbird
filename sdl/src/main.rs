@@ -26,7 +26,7 @@ use std::io::prelude::*;
 
 // Constants
 const SCALE: usize = 5;
-const CLOCK_SPEED_IN_NS: u64 = 238; // 4.2 MHz
+const CLOCK_SPEED_IN_NS: u64 = 954; // 1 MiHz
 
 // Colors
 const BLACK: (u8, u8, u8)            = (0,   0,   0);

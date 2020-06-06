@@ -1146,6 +1146,6 @@ const NINTENDO_LOGO: [u8; 48] = [
         }
 
         self.write_ram(IF, if_reg);
-        self.clock.clock_step(12);
+        self.clock.clock_step(3);
     }
 }
