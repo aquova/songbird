@@ -137,7 +137,7 @@ impl PPU {
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    pub fn get_bkgd_palette(&self) -> [u8; 4] {
+    fn get_bkgd_palette(&self) -> [u8; 4] {
         unpack_u8(self.vram[BGP])
     }
 
@@ -210,6 +210,7 @@ impl PPU {
     /// ```
     fn render_background(&self, pixel_array: &mut [u8], bkgd: &[Tile]) {
         let tile_map = self.get_bkgd_tile_map();
+        let palette = self.get_bkgd_palette();
 
         // The tile indexes in the second tile pattern table ($8800-97ff) are signed
         let signed_offset = if self.get_bkgd_tile_set_index() == 0 { 128 } else { 0 };
@@ -226,8 +227,12 @@ impl PPU {
                     let map_x = TILESIZE * x;
                     let map_y = (TILESIZE * y) + row;
                     let map_index = (map_y * MAP_SIZE * TILESIZE) + map_x;
-                    // Copy row into pixel map
-                    pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+                    let pixels = tile.get_row(row);
+                    // Iterate through each pixel in row, applying the palette
+                    for i in 0..TILESIZE {
+                        let corrected_pixel = palette[pixels[i as usize] as usize];
+                        pixel_array[map_index + i] = corrected_pixel;
+                    }
                 }
             }
         }
@@ -245,6 +250,7 @@ impl PPU {
     fn render_window(&self, pixel_array: &mut [u8], wndw: &[Tile]) {
         let coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
+        let palette = self.get_bkgd_palette();
 
         // Iterate through all tiles in window
         for y in (0..SCREEN_HEIGHT).step_by(TILESIZE) {
@@ -258,7 +264,12 @@ impl PPU {
                     let map_x = x + coords.x as usize;
                     let map_y = y + (coords.y as usize) + row;
                     let map_index = map_y * MAP_SIZE + map_x;
-                    pixel_array[map_index..(map_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+                    let pixels = tile.get_row(row);
+                    // Iterate through each pixel in row, applying the palette
+                    for i in 0..TILESIZE {
+                        let corrected_pixel = palette[pixels[i as usize] as usize];
+                        pixel_array[map_index + i] = corrected_pixel;
+                    }
                 }
             }
         }
@@ -384,7 +395,7 @@ impl PPU {
     /// ```
     fn get_spr_tile_set(&self) -> &[u8] {
         // Sprites are always in $8000-$8FFF
-        &self.vram[TILE_MAP_0_RANGE]
+        &self.vram[TILE_SET_0_RANGE]
     }
 
     /// ```

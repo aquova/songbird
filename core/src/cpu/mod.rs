@@ -172,18 +172,6 @@ impl Cpu {
     }
 
     /// ```
-    /// Get palette
-    ///
-    /// Gets the indices for the currently set palette
-    ///
-    /// Output:
-    ///     Palette color indices ([u8])
-    /// ```
-    pub fn get_palette(&self) -> [u8; 4] {
-        self.bus.get_palette()
-    }
-
-    /// ```
     /// Get title
     ///
     /// Gets the title for the currently loaded game

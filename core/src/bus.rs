@@ -112,18 +112,6 @@ impl Bus {
     }
 
     /// ```
-    /// Get palette
-    ///
-    /// Gets the currently used palette
-    ///
-    /// Output:
-    ///     Palette indices ([u8])
-    /// ```
-    pub fn get_palette(&self) -> [u8; 4] {
-        self.ppu.get_bkgd_palette()
-    }
-
-    /// ```
     /// Read RAM
     ///
     /// Reads value from RAM

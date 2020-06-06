@@ -78,15 +78,13 @@ impl GB {
     #[wasm_bindgen]
     pub fn draw_screen(&mut self) {
         let disp_arr = self.cpu.render();
-        let palette = self.cpu.get_palette();
 
         let mut data = Vec::new();
         for y in 0..SCREEN_HEIGHT {
             for x in 0..SCREEN_WIDTH {
                 let index = y * SCREEN_WIDTH + x;
                 let pixel = disp_arr[index];
-                let palette_val = palette[pixel as usize];
-                let color_arr = COLORS[palette_val as usize];
+                let color_arr = COLORS[pixel as usize];
                 for i in 0..color_arr.len() {
                     data.push(color_arr[i]);
                 }

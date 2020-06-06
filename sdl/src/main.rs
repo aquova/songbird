@@ -262,8 +262,7 @@ pub fn main() {
             let draw_time = gb.tick();
             if draw_time {
                 let disp_arr = gb.render();
-                let palette = gb.get_palette();
-                draw_screen(palette, disp_arr, &mut canvas);
+                draw_screen(disp_arr, &mut canvas);
             }
 
             // Break if we hit a break/watchpoint
@@ -300,7 +299,7 @@ fn get_color(color: (u8, u8, u8)) -> Color {
     Color::RGB(color.0, color.1, color.2)
 }
 
-fn draw_screen(palette: [u8; 4], data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
+fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     canvas.set_draw_color(get_color(WHITE));
     canvas.clear();
 
@@ -308,7 +307,7 @@ fn draw_screen(palette: [u8; 4], data: [u8; DISP_SIZE], canvas: &mut Canvas<Wind
         for x in 0..SCREEN_WIDTH {
             let index = y * SCREEN_WIDTH + x;
             let pixel = data[index];
-            let color_val = COLORS[palette[pixel as usize] as usize];
+            let color_val = COLORS[pixel as usize];
             let color = get_color(color_val);
             canvas.set_draw_color(color);
 
