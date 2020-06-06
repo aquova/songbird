@@ -1,49 +1,21 @@
 use crate::utils::*;
 
-// =============
-// = Constants =
-// =============
-pub struct Row {
-    pixels: [u8; TILESIZE]
-}
-
-impl Row {
-    /// ```
-    /// Get pixel
-    ///
-    /// Gets given pixel from row
-    ///
-    /// Input:
-    ///     Pixel offset (usize)
-    ///
-    /// Output:
-    ///     Pixel value (u8)
-    /// ```
-    pub fn get_pixel(&self, index: usize) -> u8 {
-        return self.pixels[index];
-    }
-}
-
 pub struct Tile {
-    pub rows: Vec<Row>
+    pixels: [[u8; TILESIZE]; TILESIZE]
 }
 
 impl Tile {
     pub fn new(data: &[u8]) -> Tile {
         let mut new_tile = Tile {
-            rows: Vec::new()
+            pixels: [[0; TILESIZE]; TILESIZE]
         };
 
         for i in 0..TILESIZE {
-            let mut row = Row {
-                pixels: [0; TILESIZE]
-            };
-
             let low = data[2 * i];
             let high = data[2 * i + 1];
-            row.pixels = get_pixel_row(low, high);
+            let row = get_pixel_row(low, high);
 
-            new_tile.rows.push(row);
+            new_tile.pixels[i].copy_from_slice(&row);
         }
 
         new_tile
@@ -61,7 +33,7 @@ impl Tile {
     ///     Row of pixel values (&[u8])
     /// ```
     pub fn get_row(&self, index: usize) -> &[u8] {
-        &self.rows[index].pixels
+        &self.pixels[index]
     }
 }
 
