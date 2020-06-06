@@ -32,14 +32,13 @@ const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 
 // VRAM ranges
 const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
-const OAM_MEM: u16 = 0xFE00 - (VRAM_OFFSET as u16);
-const OAM_MEM_END: u16 = 0xFE9F - (VRAM_OFFSET as u16); // Inclusive
+const OAM_MEM: u16                    = 0xFE00 - (VRAM_OFFSET as u16);
+const OAM_MEM_END: u16                = 0xFE9F - (VRAM_OFFSET as u16); // Inclusive
 
 const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
 const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OFFSET);
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
 const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
-const SAM:              Range<usize> = (0xFE00 - VRAM_OFFSET)..(0xFEA0 - VRAM_OFFSET);
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
@@ -69,23 +68,22 @@ impl PPU {
     ///     Address to write to (u16)
     ///     Value to write (u8)
     /// ```
-    pub fn write_vram(&mut self, addr: u16, val: u8) {
-        let adjusted_addr = addr - VRAM_OFFSET as u16;
-        let lcdc_mode = self.get_LCDC_status();
+    pub fn write_vram(&mut self, raw_addr: u16, val: u8) {
+        let addr = raw_addr - VRAM_OFFSET as u16;
 
-        if self.is_valid_status(addr) {
-            match addr {
-                OAM_MEM..=OAM_MEM_END => {
-                    let relative_addr = addr - OAM_MEM;
-                    let spr_num = relative_addr / 4;
-                    let byte_num = relative_addr % 4;
-                    self.oam[spr_num as usize].update_byte(byte_num, val);
-                },
-                _ => {
-                    self.vram[adjusted_addr as usize] = val;
-                }
-            }
+        // TODO: This needs to be here, but isn't working
+        // if self.is_valid_status(raw_addr) {
+        // Update OAM objects if needed
+        if is_in_oam(addr) {
+            println!("Writing {:#02x} to {:#04x}", val, raw_addr);
+            let relative_addr = addr - OAM_MEM;
+            let spr_num = relative_addr / 4;
+            let byte_num = relative_addr % 4;
+            self.oam[spr_num as usize].update_byte(byte_num, val);
         }
+
+        self.vram[addr as usize] = val;
+        // }
     }
 
     /// ```
@@ -99,9 +97,9 @@ impl PPU {
     /// Output:
     ///     Value at given address (u8)
     /// ```
-    pub fn read_vram(&self, addr: u16) -> u8 {
-        let adjusted_addr = addr - VRAM_OFFSET as u16;
-        self.vram[adjusted_addr as usize]
+    pub fn read_vram(&self, raw_addr: u16) -> u8 {
+        let addr = raw_addr - VRAM_OFFSET as u16;
+        self.vram[addr as usize]
     }
 
     /// ```
@@ -127,39 +125,6 @@ impl PPU {
     pub fn set_status(&mut self, mode: u8) {
         self.vram[LCD_STAT_REG] &= 0b1111_1100;
         self.vram[LCD_STAT_REG] |= mode;
-    }
-
-    /// ```
-    /// Get background palette
-    ///
-    /// Gets the palette indices from the BGP register ($FF47)
-    ///
-    /// Output:
-    ///     Palette indices ([u8])
-    /// ```
-    fn get_bkgd_palette(&self) -> [u8; 4] {
-        unpack_u8(self.vram[BGP])
-    }
-
-    /// ```
-    /// Get sprite palette
-    ///
-    /// Gets the palette indices for the sprites
-    ///
-    /// Input:
-    ///     Whether to use palette 0 or 1 (bool)
-    ///
-    /// Output:
-    ///     Palette indices ([u8])
-    /// ```
-    pub fn get_spr_palette(&self, pal_0: bool) -> [u8; 4] {
-        let pal = if pal_0 {
-            unpack_u8(self.vram[OBP0])
-        } else {
-            unpack_u8(self.vram[OBP1])
-        };
-
-        pal
     }
 
     /// ```
@@ -284,7 +249,6 @@ impl PPU {
     ///     [u8] - Graphics array to render upon
     /// ```
     fn render_sprites(&self, pixel_array: &mut [u8], sprites: &[Tile]) {
-        // TODO: This does not take the sprite palette into account
         // TODO: This does not check if sprite should be drawn above/below background
         // TODO: This does not support 8x16 sprites
         let screen_coords = self.get_scroll_coords();
@@ -299,12 +263,21 @@ impl PPU {
             let spr_num = spr.get_tile_num();
             let tile = &sprites[spr_num as usize];
             let spr_coords = spr.get_coords();
+            let palette = self.get_spr_palette(spr.is_pal_0());
 
             for row in 0..TILESIZE {
                 let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize) + row;
                 let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize);
                 let arr_index = spr_y + spr_x * MAP_SIZE;
-                pixel_array[arr_index..(arr_index + TILESIZE)].copy_from_slice(tile.get_row(row));
+                let pixels = tile.get_row(row);
+                // Iterate through each pixel in row, applying the palette
+                for j in 0..TILESIZE {
+                    let corrected_pixel = palette[pixels[j as usize] as usize];
+                    // Pixel value 0 is transparent
+                    if corrected_pixel != 0 {
+                        pixel_array[arr_index + j] = corrected_pixel;
+                    }
+                }
             }
         }
     }
@@ -439,6 +412,39 @@ impl PPU {
     }
 
     /// ```
+    /// Get background palette
+    ///
+    /// Gets the palette indices from the BGP register ($FF47)
+    ///
+    /// Output:
+    ///     Palette indices ([u8])
+    /// ```
+    fn get_bkgd_palette(&self) -> [u8; 4] {
+        unpack_u8(self.vram[BGP])
+    }
+
+    /// ```
+    /// Get sprite palette
+    ///
+    /// Gets the palette indices for the sprites
+    ///
+    /// Input:
+    ///     Whether to use palette 0 or 1 (bool)
+    ///
+    /// Output:
+    ///     Palette indices ([u8])
+    /// ```
+    fn get_spr_palette(&self, pal_0: bool) -> [u8; 4] {
+        let pal = if pal_0 {
+            unpack_u8(self.vram[OBP0])
+        } else {
+            unpack_u8(self.vram[OBP1])
+        };
+
+        pal
+    }
+
+    /// ```
     /// Is background displayed
     ///
     /// Is background layer currently visible
@@ -545,7 +551,7 @@ impl PPU {
         Point::new(wndw_x, wndw_y)
     }
 
-    fn get_LCDC_status(&self) -> ModeTypes {
+    fn get_lcdc_status(&self) -> ModeTypes {
         let lcd_stat = self.vram[LCD_STAT_REG];
         let mode = lcd_stat & 0b0000_0011;
         match mode {
@@ -558,19 +564,23 @@ impl PPU {
     }
 
     fn is_valid_status(&self, addr: u16) -> bool {
-        let lcdc_status = self.get_LCDC_status();
+        let lcdc_status = self.get_lcdc_status();
 
         match lcdc_status {
             ModeTypes::OAMReadMode => {
-                addr < OAM_MEM || addr > OAM_MEM_END
+                !is_in_oam(addr)
             },
             ModeTypes::VRAMReadMode => {
-                let in_oam = addr >= OAM_MEM && addr <= OAM_MEM_END;
-                !in_oam && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
+                !is_in_oam(addr) && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
             },
             _ => {
                 true
             }
         }
     }
+
+}
+
+fn is_in_oam(addr: u16) -> bool {
+    return addr >= OAM_MEM && addr <= OAM_MEM_END
 }

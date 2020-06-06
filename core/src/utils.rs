@@ -17,6 +17,10 @@ impl Point {
             y: y
         }
     }
+
+    pub fn to_str(&self) -> String {
+        format!("X: {}, Y: {}", self.x, self.y)
+    }
 }
 
 pub trait ModifyBits {

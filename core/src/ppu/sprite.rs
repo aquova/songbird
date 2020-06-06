@@ -72,19 +72,23 @@ impl Sprite {
     }
 
     pub fn get_coords(&self) -> Point {
-        let x = self.x - X_OFFSET;
-        let y = self.y - Y_OFFSET;
+        let x = self.x;
+        let y = self.y;
         Point::new(x, y)
+    }
+
+    pub fn is_pal_0(&self) -> bool {
+        self.palette_0
     }
 }
 
 impl Sprite {
     fn parse_oam_byte1(&mut self, val: u8) {
-        self.y = val - Y_OFFSET;
+        self.y = val.wrapping_sub(Y_OFFSET);
     }
 
     fn parse_oam_byte2(&mut self, val: u8) {
-        self.x = val - X_OFFSET;
+        self.x = val.wrapping_sub(X_OFFSET);
     }
 
     fn parse_oam_byte3(&mut self, val: u8) {
