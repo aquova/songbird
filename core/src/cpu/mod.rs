@@ -10,6 +10,14 @@ use crate::utils::*;
 // = Constants =
 // =============
 const IF: u16 = 0xFF0F; // Interrupt Flag
+const INTER_PRIORITIES: [Interrupts; 5] = [
+    Interrupts::VBLANK,
+    Interrupts::LCD_STAT,
+    Interrupts::TIMER,
+    Interrupts::SERIAL,
+    Interrupts::JOYPAD
+];
+
 
 pub enum Flags {
     Z,
@@ -1097,16 +1105,18 @@ const NINTENDO_LOGO: [u8; 48] = [
         // Interrupt must be requesting to occur
         let if_reg = self.read_ram(IF);
         let valid_interrupt = if_reg & 0x1F;
+        let mut mask = 0b1;
 
-        match valid_interrupt {
-            0x00 => { None },
-            0x01 => { Some(Interrupts::VBLANK) },
-            0x02 => { Some(Interrupts::LCD_STAT) },
-            0x04 => { Some(Interrupts::TIMER) },
-            0x08 => { Some(Interrupts::SERIAL) },
-            0x10 => { Some(Interrupts::JOYPAD) },
-            _ => { panic!("Need to implement interrupt priorities"); }
+        // If more than one interrupt is waiting, then the lower bit has higher priority
+        // aka VBLANK is highest priority, and JOYPAD is the lowest
+        for i in 0..INTER_PRIORITIES.len() {
+            if valid_interrupt & mask != 0 {
+                return Some(INTER_PRIORITIES[i])
+            }
+            mask <<= 1
         }
+
+        None
     }
 
     /// ```
