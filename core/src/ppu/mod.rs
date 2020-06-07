@@ -23,7 +23,7 @@ const SCY: usize                     = 0xFF42 - VRAM_OFFSET;
 const SCX: usize                     = 0xFF43 - VRAM_OFFSET;
 const LY: usize                      = 0xFF44 - VRAM_OFFSET;
 const LYC: usize                     = 0xFF45 - VRAM_OFFSET;
-const DMA: usize                     = 0xFF46 - VRAM_OFFSET;
+// 0xFF46 is DMA transfer, handled by Bus
 const BGP: usize                     = 0xFF47 - VRAM_OFFSET;
 const OBP0: usize                    = 0xFF48 - VRAM_OFFSET;
 const OBP1: usize                    = 0xFF49 - VRAM_OFFSET;
@@ -75,7 +75,6 @@ impl PPU {
         // if self.is_valid_status(raw_addr) {
         // Update OAM objects if needed
         if is_in_oam(addr) {
-            println!("Writing {:#02x} to {:#04x}", val, raw_addr);
             let relative_addr = addr - OAM_MEM;
             let spr_num = relative_addr / 4;
             let byte_num = relative_addr % 4;
@@ -266,9 +265,9 @@ impl PPU {
             let palette = self.get_spr_palette(spr.is_pal_0());
 
             for row in 0..TILESIZE {
-                let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize) + row;
-                let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize);
-                let arr_index = spr_y + spr_x * MAP_SIZE;
+                let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
+                let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize) + row;
+                let arr_index = spr_x + spr_y * MAP_SIZE;
                 let pixels = tile.get_row(row);
                 // Iterate through each pixel in row, applying the palette
                 for j in 0..TILESIZE {
@@ -551,6 +550,14 @@ impl PPU {
         Point::new(wndw_x, wndw_y)
     }
 
+    /// ```
+    /// Get LCDC Status
+    ///
+    /// Get the current clock mode from the LCD status register
+    ///
+    /// Output:
+    ///     Current clock mode (ModeTypes)
+    /// ```
     fn get_lcdc_status(&self) -> ModeTypes {
         let lcd_stat = self.vram[LCD_STAT_REG];
         let mode = lcd_stat & 0b0000_0011;
@@ -563,6 +570,17 @@ impl PPU {
         }
     }
 
+    /// ```
+    /// Is valid status
+    ///
+    /// Can we write to the given address, given the clock mode?
+    ///
+    /// Input:
+    ///     Address to write to (u16)
+    ///
+    /// Output:
+    ///     Write status (bool)
+    /// ```
     fn is_valid_status(&self, addr: u16) -> bool {
         let lcdc_status = self.get_lcdc_status();
 

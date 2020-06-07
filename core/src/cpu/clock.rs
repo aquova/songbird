@@ -55,6 +55,7 @@ impl Clock {
                     if self.line == VBLANK_LINE_START {
                         self.mode = ModeTypes::VBLANK;
                         // VBLANK is starting, time to draw screen
+                        // The VBLANK interrupt is triggered here
                         draw_screen = true;
                     } else {
                         self.mode = ModeTypes::OAMReadMode;

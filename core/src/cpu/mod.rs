@@ -10,7 +10,6 @@ use crate::utils::*;
 // = Constants =
 // =============
 const IF: u16 = 0xFF0F; // Interrupt Flag
-const IE: u16 = 0xFFFF; // Interrupt Enable
 
 pub enum Flags {
     Z,
@@ -153,6 +152,13 @@ impl Cpu {
         } else {
             let cycles = opcodes::execute(self);
             let draw_time = self.clock.clock_step(cycles);
+            // If draw_time true, then VBLANK interrupt is toggled
+            // NOTE: I don't really care for how this is done
+            // But I had trouble finding a better place to detect VBLANK interrupt
+            // Someday, may want to rethink this
+            if draw_time {
+                self.toggle_interrupt(Interrupts::VBLANK);
+            }
             self.bus.set_scanline(self.clock.get_scanline());
             self.bus.set_status_reg(self.clock.get_mode());
             draw_time
@@ -1087,11 +1093,9 @@ const NINTENDO_LOGO: [u8; 48] = [
             return None;
         }
 
-        // Interrupt must be requesting and enabled to occur
-        let ie_reg = self.read_ram(IE);
+        // Interrupt must be requesting to occur
         let if_reg = self.read_ram(IF);
-
-        let valid_interrupt = (ie_reg & if_reg) & 0x1F;
+        let valid_interrupt = if_reg & 0x1F;
 
         match valid_interrupt {
             0x00 => { None },
@@ -1147,5 +1151,19 @@ const NINTENDO_LOGO: [u8; 48] = [
 
         self.write_ram(IF, if_reg);
         self.clock.clock_step(3);
+    }
+
+    fn toggle_interrupt(&mut self, inter: Interrupts) {
+        let mut if_reg = self.read_ram(IF);
+
+        match inter {
+            Interrupts::VBLANK =>   { if_reg.set_bit(0) },
+            Interrupts::LCD_STAT => { if_reg.set_bit(1) },
+            Interrupts::TIMER =>    { if_reg.set_bit(2) },
+            Interrupts::SERIAL =>   { if_reg.set_bit(3) },
+            Interrupts::JOYPAD =>   { if_reg.set_bit(4) },
+        }
+
+        self.write_ram(IF, if_reg);
     }
 }

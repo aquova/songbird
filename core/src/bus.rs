@@ -53,6 +53,8 @@ use crate::utils::DISP_SIZE;
 // = Constants =
 // =============
 const JOYPAD_REG: u16 = 0xFF00;
+const DMA_REG: u16 = 0xFF46;
+const OAM: u16 = 0xFE00;
 
 // RAM ranges
 // NOTE: Rust *still* doesn't allow exclusive ranges in match statements
@@ -156,6 +158,8 @@ impl Bus {
             VRAM..=RAM_END => {
                 if addr == JOYPAD_REG {
                     self.io.set_btns(val);
+                } else if addr == DMA_REG {
+                    self.oam_dma(val);
                 } else {
                     self.ppu.write_vram(addr, val);
                 }
@@ -205,5 +209,19 @@ impl Bus {
     pub fn set_status_reg(&mut self, mode: u8) {
         let mode = mode & 0b0000_0011;
         self.ppu.set_status(mode);
+    }
+}
+
+// Private functions
+impl Bus {
+    fn oam_dma(&mut self, val: u8) {
+        // If value is $XX, then copy $XX00-$XX9F into OAM RAM
+        let source_addr = (val as u16).wrapping_shl(8);
+        let dest_addr = OAM;
+
+        for i in 0..0xA0 {
+            let byte = self.read_ram(source_addr + i);
+            self.write_ram(dest_addr + i, byte);
+        }
     }
 }

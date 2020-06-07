@@ -271,6 +271,7 @@ pub fn main() {
             }
         }
 
+        // TODO: Need to find better way to keep accurate clock cycles
         thread::sleep(clock_sleep);
     }
 }
