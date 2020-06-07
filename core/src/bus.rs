@@ -167,6 +167,15 @@ impl Bus {
         }
     }
 
+    /// ```
+    /// Toggle button
+    ///
+    /// Sends a message to I/O class that button has been pressed/released
+    ///
+    /// Inputs:
+    ///     Button that was toggled (Buttons)
+    ///     If the button was pressed (versus released) (bool)
+    /// ```
     pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
         self.io.btn_toggle(btn, pressed);
     }
@@ -214,6 +223,14 @@ impl Bus {
 
 // Private functions
 impl Bus {
+    /// ```
+    /// OAM DMA transfer
+    ///
+    /// Copies array of memory from specified area to OAM memory
+    ///
+    /// Input:
+    ///     Upper byte of source memory location (u8)
+    /// ```
     fn oam_dma(&mut self, val: u8) {
         // If value is $XX, then copy $XX00-$XX9F into OAM RAM
         let source_addr = (val as u16).wrapping_shl(8);

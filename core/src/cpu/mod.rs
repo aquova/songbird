@@ -227,6 +227,7 @@ impl Cpu {
     /// ```
     pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
         self.bus.toggle_button(btn, pressed);
+        self.toggle_interrupt(Interrupts::JOYPAD);
     }
 
     /// ```
@@ -1153,6 +1154,14 @@ const NINTENDO_LOGO: [u8; 48] = [
         self.clock.clock_step(3);
     }
 
+    /// ```
+    /// Toggle interrupt
+    ///
+    /// Engages the specific interrupt type
+    ///
+    /// Input:
+    ///     Interrupt type (Interrupts)
+    /// ```
     fn toggle_interrupt(&mut self, inter: Interrupts) {
         let mut if_reg = self.read_ram(IF);
 

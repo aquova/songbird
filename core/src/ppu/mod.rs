@@ -148,9 +148,7 @@ impl PPU {
         }
 
         if self.is_sprt_dspl() {
-            let spr_tile_set = self.get_spr_tile_set();
-            let spr_tiles = self.get_tiles(spr_tile_set);
-            self.render_sprites(&mut map_array, &spr_tiles);
+            self.render_sprites(&mut map_array);
         }
 
         // TODO: Someday this all should be rewritten so that this function isn't needed
@@ -247,9 +245,11 @@ impl PPU {
     /// Input:
     ///     [u8] - Graphics array to render upon
     /// ```
-    fn render_sprites(&self, pixel_array: &mut [u8], sprites: &[Tile]) {
+    fn render_sprites(&self, pixel_array: &mut [u8]) {
         // TODO: This does not check if sprite should be drawn above/below background
         // TODO: This does not support 8x16 sprites
+        let spr_tile_set = self.get_spr_tile_set();
+        let sprites = self.get_tiles(spr_tile_set);
         let screen_coords = self.get_scroll_coords();
 
         // Iterate through every sprite
@@ -267,13 +267,14 @@ impl PPU {
             for row in 0..TILESIZE {
                 let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
                 let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize) + row;
-                let arr_index = spr_x + spr_y * MAP_SIZE;
+                let arr_index = spr_x + spr_y * MAP_PIXELS;
                 let pixels = tile.get_row(row);
                 // Iterate through each pixel in row, applying the palette
                 for j in 0..TILESIZE {
-                    let corrected_pixel = palette[pixels[j as usize] as usize];
+                    let pixel = pixels[j as usize];
                     // Pixel value 0 is transparent
-                    if corrected_pixel != 0 {
+                    if pixel != 0 {
+                        let corrected_pixel = palette[pixel as usize];
                         pixel_array[arr_index + j] = corrected_pixel;
                     }
                 }
@@ -599,6 +600,17 @@ impl PPU {
 
 }
 
+/// ```
+/// Is in OAM?
+///
+/// Helper function to determine if address being written to is in OAM memory
+///
+/// Inputs:
+///     Address to write to (u16)
+///
+/// Outputs:
+///     Whether the address is in OAM memory (bool)
+/// ```
 fn is_in_oam(addr: u16) -> bool {
     return addr >= OAM_MEM && addr <= OAM_MEM_END
 }
