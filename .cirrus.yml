@@ -4,7 +4,7 @@ linux_task:
 
   setup_script:
     - apt-get update
-    - apt-get -y install libsdl2-dev libsdl2-image-dev zip
+    - apt-get -y install libsdl2-dev zip
 
   build_script:
     - make sdl
@@ -24,7 +24,7 @@ osx_task:
 
   setup_script:
     - brew update
-    - brew install rust sdl2 sdl2_image
+    - brew install rust sdl2
 
   build_script:
     - make sdl
@@ -44,7 +44,7 @@ win_task:
 
   setup_script:
     - apt-get update
-    - apt-get -y install libsdl2-dev libsdl2-image-dev zip gcc-mingw-w64-x86-64
+    - apt-get -y install libsdl2-dev zip gcc-mingw-w64-x86-64
     # This is from sdl/setup_win.sh
     - rustup target add x86_64-pc-windows-gnu
     - cp -r sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.44.0-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
