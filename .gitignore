@@ -14,7 +14,7 @@
 *.dll
 
 # Include all files from SDL2
-!**/sdl/lib
+!**/bin/*.dll
 
 # Misc
 *.sav
