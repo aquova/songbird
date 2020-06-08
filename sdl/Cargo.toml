@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 agba_core = { path = "../core" }
-sdl2 = { version = "^0.32.2", features = [ "image" ] }
+sdl2 = "^0.32.2"
 
 # Requires the cargo-bundle crate to generate .app
 [package.metadata.bundle]

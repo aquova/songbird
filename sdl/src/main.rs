@@ -1,7 +1,6 @@
 // agba Game Boy Emulator
 // Austin Bricker, 2019-2020
 
-// TODO: Need to provide portable SDL2 libraries
 extern crate sdl2;
 
 // Includes
@@ -11,12 +10,10 @@ use agba_core::io::Buttons;
 use agba_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::event::Event;
-use sdl2::image::LoadSurface;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
-use sdl2::surface::Surface;
 use sdl2::video::Window;
 
 use std::fs::File;
@@ -62,9 +59,7 @@ pub fn main() {
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    let mut window = video_subsystem.window(title, (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
-    let window_icon = Surface::from_file("assets/icon_purple.png").unwrap();
-    window.set_icon(window_icon);
+    let window = video_subsystem.window(title, (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
 
     canvas.clear();
