@@ -38,6 +38,28 @@ osx_task:
   agba_artifacts:
     path: agba_mac.zip
 
+win_task:
+  container:
+    image: rust:latest
+
+  setup_script:
+    - apt-get update
+    - apt-get -y install libsdl2-dev libsdl2-image-dev zip
+    - ./sdl/setup_win.sh
+
+  build_script:
+    - make windows
+
+  package_script:
+    - mkdir -p agba/assets
+    - cp sdl/assets/icon_purple.png agba/assets
+    - cp sdl/*.dll agba
+    - cp sdl/agba_sdl.exe agba/agba.exe
+    - zip -r agba_win.zip agba
+
+  agba_artifacts:
+    path: agba_win.zip
+
 wasm_task:
   container:
     image: rust:latest
