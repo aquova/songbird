@@ -40,15 +40,15 @@ osx_task:
 
 win_task:
   container:
-    image: rust:1.42.0
+    image: rust:1.44.0
 
   setup_script:
     - apt-get update
     - apt-get -y install libsdl2-dev libsdl2-image-dev zip gcc-mingw-w64-x86-64
     # This is from sdl/setup_win.sh
     - rustup target add x86_64-pc-windows-gnu
-    - cp -r sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.42.0-x86_64-unkown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
-    - cp -r sdl/lib/SDL2_image-2.0.5/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.42.0-x86_64-unkown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
+    - cp -r sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.44.0-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
+    - cp -r sdl/lib/SDL2_image-2.0.5/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.44.0-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
     - cp sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/bin/SDL2.dll sdl
     - cp sdl/lib/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/SDL2_image.dll sdl
 
