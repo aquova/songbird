@@ -6,10 +6,15 @@
 **/pkg
 *.wasm
 **/agba_wasm.js
+*.exe
 
 # Hide files that aren't ours
 **/games
 *.gb
+*.dll
+
+# Include all files from SDL2
+!**/sdl/lib
 
 # Misc
 *.sav
