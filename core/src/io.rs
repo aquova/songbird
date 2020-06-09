@@ -8,8 +8,8 @@
  * ----+---------
  * 7   | Unused
  * 6   | Unused
- * 5   | High if polling for D-pad
- * 4   | High if polling for other btns
+ * 5   | Low if polling for D-pad
+ * 4   | Low if polling for other btns
  * 3   | Down / Start
  * 2   | Up / Select
  * 1   | Left / B
@@ -68,8 +68,8 @@ impl IO {
     }
 
     pub fn set_btns(&mut self, val: u8) {
-        self.get_btn_keys = (val & 0b0010_0000) != 0;
-        self.get_dir_keys = (val & 0b0001_0000) != 0;
+        self.get_btn_keys = (val & 0b0010_0000) == 0;
+        self.get_dir_keys = (val & 0b0001_0000) == 0;
     }
 
     pub fn read_btns(&self) -> u8 {
@@ -91,6 +91,7 @@ impl IO {
             output |= pressed << i;
         }
 
+        println!("Buttons: {:#04x}", output);
         output
     }
 
@@ -102,6 +103,7 @@ impl IO {
             output |= pressed << i;
         }
 
+        println!("D-Pad: {:#04x}", output);
         output
     }
 }
