@@ -3,6 +3,8 @@ import init, * as wasm from "./agba_wasm.js"
 const WIDTH = 160
 const HEIGHT = 144
 
+const MAX_ROM = 32 * 1024 // Currently only support up to 32 KiB ROMs
+
 let scale = 1
 let scale_elem = document.getElementById("scale")
 
@@ -25,22 +27,30 @@ async function run() {
         gb.handle_key(e, false)
     })
 
-    document.getElementById('fileinput').addEventListener("change", async function (e) {
-        let filename = e.target.files[0].name
-        // Note: Doesn't work if ROM not in same directory
-        await load_js(gb, filename).then(() => {
+    document.getElementById('fileinput').addEventListener("change", function (e) {
+        let file = e.target.files[0]
+        if (!file) {
+            alert("Failed to read file")
+            return
+        } else if (file.size > MAX_ROM) {
+            alert("The emulator does not currently support ROMs of that size. Sorry!")
+            return
+        }
+
+        let fr = new FileReader()
+        fr.onload = function (e) {
+            let buffer = fr.result
+            const rom = new Uint8Array(buffer)
+
+            gb.load_rom(rom)
             let title = gb.get_title()
             document.title = title
-            mainloop(gb)
-        })
-    }, false)
-}
 
-async function load_js(gb, game) {
-    let res = await fetch(game)
-    let buffer = await res.arrayBuffer()
-    const rom = new DataView(buffer, 0, buffer.byteLength)
-    gb.load_rom(rom)
+            mainloop(gb)
+        }
+
+        fr.readAsArrayBuffer(file)
+    }, false)
 }
 
 function mainloop(gb) {

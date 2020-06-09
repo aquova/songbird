@@ -1,5 +1,5 @@
 // Functions to be exported out of .wasm for JS usage
-use js_sys::DataView;
+use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{Clamped, JsCast};
 use web_sys::{ImageData, KeyboardEvent};
@@ -61,14 +61,14 @@ impl GB {
     /// Loads game data into memory
     ///
     /// Input:
-    ///     JS data object (DataView)
+    ///     JS data object (Uint8Array)
     /// ```
     #[wasm_bindgen]
-    pub fn load_rom(&mut self, data: DataView) {
-        let mut rom_data: Vec<u8> = Vec::with_capacity(data.byte_length());
+    pub fn load_rom(&mut self, data: Uint8Array) {
+        let mut rom_data: Vec<u8> = Vec::new();
 
         for i in 0..data.byte_length() {
-            rom_data.push(data.get_uint8(i));
+            rom_data.push(data.get_index(i));
         }
 
         self.cpu.load_game(&rom_data)
