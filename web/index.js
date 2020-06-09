@@ -17,12 +17,6 @@ async function run() {
     await init()
     let gb = new wasm.GB();
 
-    await load_js(gb, "opus5.gb").then(() => {
-        let title = gb.get_title()
-        document.title = title
-        mainloop(gb)
-    })
-
     document.addEventListener("keydown", function(e) {
         gb.handle_key(e, true)
     })
@@ -30,6 +24,16 @@ async function run() {
     document.addEventListener("keyup", function(e) {
         gb.handle_key(e, false)
     })
+
+    document.getElementById('fileinput').addEventListener("change", async function (e) {
+        let filename = e.target.files[0].name
+        // Note: Doesn't work if ROM not in same directory
+        await load_js(gb, filename).then(() => {
+            let title = gb.get_title()
+            document.title = title
+            mainloop(gb)
+        })
+    }, false)
 }
 
 async function load_js(gb, game) {
