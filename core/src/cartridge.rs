@@ -126,6 +126,15 @@ impl Cart {
         self.rom[address as usize]
     }
 
+    /// ```
+    /// Write ROM
+    ///
+    /// Writes value to ROM ($0000-$7FFF) area of memory
+    ///
+    /// Inputs:
+    ///     Address to write to (u16)
+    ///     Value to write (u8)
+    /// ```
     pub fn write_rom(&mut self, addr: u16, val: u8) {
         match self.mbc {
             MBC::NONE => {

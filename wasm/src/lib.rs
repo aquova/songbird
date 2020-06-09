@@ -54,6 +54,14 @@ impl GB {
         Ok(gb)
     }
 
+    /// ```
+    /// Load ROM
+    ///
+    /// Loads game data into memory
+    ///
+    /// Input:
+    ///     JS data object (DataView)
+    /// ```
     #[wasm_bindgen]
     pub fn load_rom(&mut self, data: DataView) {
         let mut rom_data: Vec<u8> = Vec::with_capacity(data.byte_length());
@@ -65,16 +73,37 @@ impl GB {
         self.cpu.load_game(&rom_data)
     }
 
+    /// ```
+    /// Tick
+    ///
+    /// Performs one tick of emulation
+    ///
+    /// Output:
+    ///     Whether it is time to render a frame (bool)
+    /// ```
     #[wasm_bindgen]
     pub fn tick(&mut self) -> bool {
         self.cpu.tick()
     }
 
+    /// ```
+    /// Get title
+    ///
+    /// Get title of game, as stored in ROM header
+    ///
+    /// Output:
+    ///     Internal game title (String)
+    /// ```
     #[wasm_bindgen]
     pub fn get_title(&self) -> String {
         self.cpu.get_title().to_string()
     }
 
+    /// ```
+    /// Draw screen
+    ///
+    /// Renders a frame to HTML5 canvas
+    /// ```
     #[wasm_bindgen]
     pub fn draw_screen(&mut self) {
         let disp_arr = self.cpu.render();

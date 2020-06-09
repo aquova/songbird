@@ -50,6 +50,15 @@ impl Sprite {
         }
     }
 
+    /// ```
+    /// Update byte
+    ///
+    /// Updates metadata for this sprite
+    ///
+    /// Inputs:
+    ///     Which metadata byte to edit (u16)
+    ///     New byte value (u8)
+    /// ```
     pub fn update_byte(&mut self, index: u16, byte: u8) {
         match index {
             0 => { self.parse_oam_byte1(byte); },
@@ -60,6 +69,14 @@ impl Sprite {
         }
     }
 
+    /// ```
+    /// Is onscreen
+    ///
+    /// Is sprite onscreen?
+    ///
+    /// Output:
+    ///     Is sprite onscreen (bool)
+    /// ```
     pub fn is_onscreen(&self) -> bool {
         let x_visible = self.x > 0 && self.x < X_OFFSCREEN;
         let y_visible = self.y > 0 && self.y < Y_OFFSCREEN;
@@ -67,34 +84,90 @@ impl Sprite {
         x_visible && y_visible
     }
 
+    /// ```
+    /// Get tile num
+    ///
+    /// Gets associated tile number for this sprite
+    ///
+    /// Output:
+    ///     Tile num (u8)
+    /// ```
     pub fn get_tile_num(&self) -> u8 {
         self.tile_num
     }
 
+    /// ```
+    /// Get coords
+    ///
+    /// Get screen coordinates for this sprite
+    ///
+    /// Output:
+    ///     Sprite coordinates (Point)
+    /// ```
     pub fn get_coords(&self) -> Point {
         let x = self.x;
         let y = self.y;
         Point::new(x, y)
     }
 
+    /// ```
+    /// Is palette 0?
+    ///
+    /// Whether this sprite uses palette 0 or 1
+    ///
+    /// Output:
+    ///     Whether sprite uses sprite palette 0 (bool)
+    /// ```
     pub fn is_pal_0(&self) -> bool {
         self.palette_0
     }
 }
 
 impl Sprite {
+    /// ```
+    /// Parse OAM byte 1
+    ///
+    /// Parses byte corresponding to sprite Y-coordinate
+    ///
+    /// Input:
+    ///     Value to parse (u8)
+    /// ```
     fn parse_oam_byte1(&mut self, val: u8) {
         self.y = val.wrapping_sub(Y_OFFSET);
     }
 
+    /// ```
+    /// Parse OAM byte 2
+    ///
+    /// Parses byte corresponding to sprite X-coordinate
+    ///
+    /// Input:
+    ///     Value to parse (u8)
+    /// ```
     fn parse_oam_byte2(&mut self, val: u8) {
         self.x = val.wrapping_sub(X_OFFSET);
     }
 
+    /// ```
+    /// Parse OAM byte 3
+    ///
+    /// Parses byte corresponding to sprite tile number
+    ///
+    /// Input:
+    ///     Value to parse (u8)
+    /// ```
     fn parse_oam_byte3(&mut self, val: u8) {
         self.tile_num = val;
     }
 
+    /// ```
+    /// Parse OAM byte 4
+    ///
+    /// Parses byte corresponding to X/Y flip, palette choice, and draw priority
+    ///
+    /// Input:
+    ///     Value to parse (u8)
+    /// ```
     fn parse_oam_byte4(&mut self, val: u8) {
         self.above_bkgd = !val.get_bit(7);
         self.x_flip = !val.get_bit(6);

@@ -254,10 +254,30 @@ fn trim_newline(s: &mut String) {
     }
 }
 
+/// ```
+/// Get color
+///
+/// Covert RGB tuple into Color object
+///
+/// Input:
+///     RGB tuple ((u8, u8, u8))
+///
+/// Output:
+///     Corresponding Color object (Color)
+/// ```
 fn get_color(color: (u8, u8, u8)) -> Color {
     Color::RGB(color.0, color.1, color.2)
 }
 
+/// ```
+/// Draw screen
+///
+/// Renders pixel data onto SDL2 canvas
+///
+/// Inputs:
+///     Pixel data ([u8])
+///     SDL2 Canvas (Canvas<Window>)
+/// ```
 fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     canvas.set_draw_color(get_color(WHITE));
     canvas.clear();
@@ -283,6 +303,17 @@ fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     canvas.present();
 }
 
+/// ```
+/// Key to Button
+///
+/// Converts keycode into GameBoy button
+///
+/// Input:
+///     SDL keybode keycode (Keycode)
+///
+/// Output:
+///     Gameboy button (Option<Buttons>)
+/// ```
 fn key2btn(key: Keycode) -> Option<Buttons> {
     match key {
         Keycode::Down =>    { Some(Buttons::Down)   },
@@ -297,6 +328,16 @@ fn key2btn(key: Keycode) -> Option<Buttons> {
     }
 }
 
+/// ```
+/// Handle buttons
+///
+/// Sets keypresses in emulator
+///
+/// Inputs:
+///     Set of key changes (HashSet<Keycode>)
+///     Gameboy object (Cpu)
+///     Whether keyset is pressed or released (bool)
+/// ```
 fn handle_buttons(keys: HashSet<Keycode>, gb: &mut Cpu, pressed: bool) {
     for key in &keys {
         let btn = key2btn(*key);
@@ -306,6 +347,17 @@ fn handle_buttons(keys: HashSet<Keycode>, gb: &mut Cpu, pressed: bool) {
     }
 }
 
+/// ```
+/// Load ROM
+///
+/// Loads game ROM into memory
+///
+/// Input:
+///     Path to game (&str)
+///
+/// Output:
+///     Game data (Vec<u8>)
+/// ```
 fn load_rom(path: &str) -> Vec<u8> {
     let mut buffer: Vec<u8> = Vec::new();
 

@@ -157,7 +157,7 @@ impl Bus {
             },
             VRAM..=RAM_END => {
                 if addr == JOYPAD_REG {
-                    self.io.set_btns(val);
+                    self.io.poll_btns(val);
                 } else if addr == DMA_REG {
                     self.oam_dma(val);
                 } else {

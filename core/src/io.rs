@@ -61,17 +61,42 @@ impl IO {
         }
     }
 
+    /// ```
+    /// Button toggle
+    ///
+    /// Sets the specified button to the specifed pressed state
+    ///
+    /// Inputs:
+    ///     Button being pressed (Buttons)
+    ///     Whether button is pressed or not (bool)
+    /// ```
     pub fn btn_toggle(&mut self, btn: Buttons, pressed: bool) {
         // Rust hashmaps leave much to be desired, so do it this way
         let i = btn.get_index();
         self.btns[i] = pressed;
     }
 
-    pub fn set_btns(&mut self, val: u8) {
+    /// ```
+    /// Poll buttons
+    ///
+    /// Sets which group of the buttons the system is polling for
+    ///
+    /// Input:
+    ///     Bitfield corresponding to button group (u8)
+    /// ```
+    pub fn poll_btns(&mut self, val: u8) {
         self.get_btn_keys = (val & 0b0010_0000) == 0;
         self.get_dir_keys = (val & 0b0001_0000) == 0;
     }
 
+    /// ```
+    /// Read buttons
+    ///
+    /// Read which buttons are currently pressed
+    ///
+    /// Output:
+    ///     Encoding of currently pressed buttons (u8)
+    /// ```
     pub fn read_btns(&self) -> u8 {
         // AFAIK, the system can't ask for both values
         if self.get_btn_keys {
@@ -83,6 +108,14 @@ impl IO {
         }
     }
 
+    /// ```
+    /// Pack buttons
+    ///
+    /// Packs A/B/Start/Select buttons into u8
+    ///
+    /// Output:
+    ///     Currently pressed buttons (u8)
+    /// ```
     fn pack_btn_keys(&self) -> u8 {
         let mut output = 0;
         for i in 0..4 {
@@ -91,10 +124,17 @@ impl IO {
             output |= pressed << i;
         }
 
-        println!("Buttons: {:#04x}", output);
         output
     }
 
+    /// ```
+    /// Pack D-Pad
+    ///
+    /// Packs D-Pad buttons into u8
+    ///
+    /// Output:
+    ///     Currently pressed D-Pad (u8)
+    /// ```
     fn pack_dir_keys(&self) -> u8 {
         let mut output = 0;
         for i in 0..4 {
@@ -103,7 +143,6 @@ impl IO {
             output |= pressed << i;
         }
 
-        println!("D-Pad: {:#04x}", output);
         output
     }
 }
