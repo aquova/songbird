@@ -10,12 +10,13 @@ use agba_core::io::Buttons;
 use agba_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
+use sdl2::keyboard::{Keycode, Mod};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::{env, io, process, thread, time};
@@ -61,17 +62,19 @@ pub fn main() {
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window(title, (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
-
     canvas.clear();
     canvas.present();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+
+    // Setup I/O
+    let mut events = sdl_context.event_pump().unwrap();
+    let mut prev_keys = HashSet::new();
 
     let clock_sleep = time::Duration::from_nanos(CLOCK_SPEED_IN_NS);
 
     // Main loop
     'gameloop: loop {
-        // Check for key presses
-        for event in event_pump.poll_iter() {
+        // Check for UI key presses
+        for event in events.poll_iter() {
             match event {
                 // Quit game
                 Event::Quit{..} |
@@ -81,8 +84,8 @@ pub fn main() {
                 },
                 // Trigger debugger with ctrl + c
                 Event::KeyDown{keycode: Some(Keycode::C), keymod, ..} if
-                (keymod.contains(sdl2::keyboard::Mod::LCTRLMOD) ||
-                 keymod.contains(sdl2::keyboard::Mod::RCTRLMOD)) => {
+                (keymod.contains(Mod::LCTRLMOD) ||
+                    keymod.contains(Mod::RCTRLMOD)) => {
                     debugging = true;
                     agbd.print_info(gb.get_pc());
                 },
@@ -93,59 +96,19 @@ pub fn main() {
                         println!("Paused");
                     }
                 },
-                // Game controls
-                // TODO: Put this into other function or something
-                Event::KeyDown{keycode: Some(Keycode::Return), ..} => {
-                    gb.toggle_button(Buttons::Start, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Backspace), ..} => {
-                    gb.toggle_button(Buttons::Select, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::X), ..} => {
-                    gb.toggle_button(Buttons::A, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Z), ..} => {
-                    gb.toggle_button(Buttons::B, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Up), ..} => {
-                    gb.toggle_button(Buttons::Up, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Left), ..} => {
-                    gb.toggle_button(Buttons::Left, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Down), ..} => {
-                    gb.toggle_button(Buttons::Down, true);
-                },
-                Event::KeyDown{keycode: Some(Keycode::Right), ..} => {
-                    gb.toggle_button(Buttons::Right, true);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Return), ..} => {
-                    gb.toggle_button(Buttons::Start, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Backspace), ..} => {
-                    gb.toggle_button(Buttons::Select, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::X), ..} => {
-                    gb.toggle_button(Buttons::A, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Z), ..} => {
-                    gb.toggle_button(Buttons::B, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Up), ..} => {
-                    gb.toggle_button(Buttons::Up, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Left), ..} => {
-                    gb.toggle_button(Buttons::Left, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Down), ..} => {
-                    gb.toggle_button(Buttons::Down, false);
-                },
-                Event::KeyUp{keycode: Some(Keycode::Right), ..} => {
-                    gb.toggle_button(Buttons::Right, false);
-                },
                 _ => {}
             }
         }
+
+        // Get list of pressed keys
+        let keys = events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
+        // Engage newly pressed buttons
+        let pressed_keys = &keys - &prev_keys;
+        handle_buttons(pressed_keys, &mut gb, true);
+        // Disable released buttons
+        let released_keys = &prev_keys - &keys;
+        handle_buttons(released_keys, &mut gb, false);
+        prev_keys = keys;
 
         // Debugging menu
         if debugging {
@@ -267,7 +230,7 @@ pub fn main() {
         }
 
         // TODO: Need to find better way to keep accurate clock cycles
-        thread::sleep(clock_sleep);
+        // thread::sleep(clock_sleep);
     }
 }
 
@@ -318,6 +281,29 @@ fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     }
 
     canvas.present();
+}
+
+fn key2btn(key: Keycode) -> Option<Buttons> {
+    match key {
+        Keycode::Down =>    { Some(Buttons::Down)   },
+        Keycode::Up =>      { Some(Buttons::Up)     },
+        Keycode::Right =>   { Some(Buttons::Right)  },
+        Keycode::Left =>    { Some(Buttons::Left)   },
+        Keycode::Return =>  { Some(Buttons::Start)  },
+        Keycode::Select =>  { Some(Buttons::Select) },
+        Keycode::X =>       { Some(Buttons::A)      },
+        Keycode::Z =>       { Some(Buttons::B)      },
+        _ =>                { None                  }
+    }
+}
+
+fn handle_buttons(keys: HashSet<Keycode>, gb: &mut Cpu, pressed: bool) {
+    for key in &keys {
+        let btn = key2btn(*key);
+        if btn.is_some() {
+            gb.toggle_button(btn.unwrap(), pressed);
+        }
+    }
 }
 
 fn load_rom(path: &str) -> Vec<u8> {
