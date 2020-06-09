@@ -13,13 +13,6 @@ document.addEventListener("change", e => {
     update_canvas()
 })
 
-document.addEventListener("keydown", function(e) {
-    // Space bar
-    if (e.keyCode == '32') {
-        // Currently does nothing
-    }
-})
-
 async function run() {
     await init()
     let gb = new wasm.GB();
@@ -28,6 +21,14 @@ async function run() {
         let title = gb.get_title()
         document.title = title
         mainloop(gb)
+    })
+
+    document.addEventListener("keydown", function(e) {
+        gb.handle_key(e, true)
+    })
+
+    document.addEventListener("keyup", function(e) {
+        gb.handle_key(e, false)
     })
 }
 

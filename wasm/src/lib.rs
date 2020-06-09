@@ -2,9 +2,10 @@
 use js_sys::DataView;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{Clamped, JsCast};
-use web_sys::ImageData;
+use web_sys::{ImageData, KeyboardEvent};
 
 use agba_core::cpu::Cpu;
+use agba_core::io::Buttons;
 use agba_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 //                           R,   G,   B,   A
@@ -124,5 +125,48 @@ impl GB {
         let height = SCREEN_HEIGHT as u32;
         let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut data), width, height).unwrap();
         self.ctx.put_image_data(&img_data, 0.0, 0.0).unwrap();
+    }
+
+    /// ```
+    /// Handle key event
+    ///
+    /// Sends HTML keypresses to the emulator
+    ///
+    /// Inputs:
+    ///     Browser key event (KeyboardEvent)
+    ///     Whether key was pressed or released (bool)
+    /// ```
+    #[wasm_bindgen]
+    pub fn handle_key(&mut self, event: KeyboardEvent, pressed: bool) {
+        let key = event.key();
+        let btn = GB::key2btn(&key);
+        if btn.is_some() {
+            self.cpu.toggle_button(btn.unwrap(), pressed);
+        }
+    }
+
+    /// ```
+    /// Key to Button
+    ///
+    /// Converts keycode into GameBoy button
+    ///
+    /// Input:
+    ///     JS key (String)
+    ///
+    /// Output:
+    ///     Gameboy button (Option<Buttons>)
+    /// ```
+    fn key2btn(key: &str) -> Option<Buttons> {
+        match key {
+            "ArrowDown" =>    { Some(Buttons::Down)   },
+            "ArrowUp" =>      { Some(Buttons::Up)     },
+            "ArrowRight" =>   { Some(Buttons::Right)  },
+            "ArrowLeft" =>    { Some(Buttons::Left)   },
+            "Enter" =>        { Some(Buttons::Start)  },
+            "Backspace" =>    { Some(Buttons::Select) },
+            "x" =>            { Some(Buttons::A)      },
+            "z" =>            { Some(Buttons::B)      },
+            _ =>              { None                  }
+        }
     }
 }
