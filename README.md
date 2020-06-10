@@ -1,15 +1,15 @@
-# agba
+# sonGBird
 
 My Game Boy emulator, written in Rust
 
-You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/agba/master)
+You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/songbird/master)
 
 ## CI Builds
 
-- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=win)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=osx)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=linux)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/agba.svg?task=wasm)
+- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=win)
+- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=osx)
+- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=linux)
+- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=wasm)
 
 ## Resources
 
@@ -27,7 +27,7 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
 - [ ] CPU
     - [x] Opcode functionality
     - [ ] Interrupts
-    - [ ] Keyboard input
+    - [x] Keyboard input
     - [ ] Pass Blargg tests
 - [ ] Memory Bank Controllers
     - [x] None
@@ -35,7 +35,7 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
     - [ ] MBC2
     - [ ] MBC3
 - [ ] PPU
-    - [ ] All PPU layers rendered
+    - [x] All PPU layers rendered
     - [ ] 8x16 sprites
 - [ ] Audio
 - [ ] Platforms

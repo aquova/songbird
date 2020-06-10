@@ -5,7 +5,7 @@
 # Build files
 **/pkg
 *.wasm
-**/agba_wasm.js
+**/songbird_wasm.js
 *.exe
 
 # Hide files that aren't ours

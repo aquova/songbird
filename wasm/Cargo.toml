@@ -1,5 +1,5 @@
 [package]
-name = "agba_wasm"
+name = "songbird_wasm"
 version = "0.1.0"
 authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 wasm-bindgen = "0.2.62"
 js-sys = "0.3.39"
-agba_core = { path = "../core" }
+songbird_core = { path = "../core" }
 
 [dependencies.web-sys]
 version = "0.3.39"

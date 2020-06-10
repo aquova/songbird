@@ -1,13 +1,13 @@
-// agba Game Boy Emulator
+// songbird Game Boy Emulator
 // Austin Bricker, 2019-2020
 
 extern crate sdl2;
 
 // Includes
-use agba_core::cpu::Cpu;
-use agba_core::debug::debugger;
-use agba_core::io::Buttons;
-use agba_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use songbird_core::cpu::Cpu;
+use songbird_core::debug::debugger;
+use songbird_core::io::Buttons;
+use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};

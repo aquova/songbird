@@ -1,4 +1,4 @@
-// The agba debugger module
+// The songbird debugger module
 use crate::cpu::*;
 use std::cmp::min;
 use std::collections::HashMap;
@@ -100,7 +100,7 @@ impl debugger {
     /// Prints the debugger start message
     /// ```
     pub fn print_info(&self, pc: u16) {
-        println!("agbd - The agba debugger");
+        println!("agbd - The songbird debugger");
         println!("Execution paused at {:#06x}", pc);
         println!("");
     }

@@ -10,13 +10,13 @@ linux_task:
     - make sdl
 
   package_script:
-    - mkdir -p agba/assets
-    - cp sdl/assets/icon_purple.png agba/assets
-    - cp sdl/target/debug/agba_sdl agba/agba
-    - zip -r agba_linux.zip agba
+    - mkdir -p songbird/assets
+    - cp sdl/assets/icon_purple.png songbird/assets
+    - cp sdl/target/debug/songbird_sdl songbird/songbird
+    - zip -r songbird_linux.zip songbird
 
-  agba_artifacts:
-    path: agba_linux.zip
+  songbird_artifacts:
+    path: songbird_linux.zip
 
 osx_task:
   osx_instance:
@@ -30,13 +30,13 @@ osx_task:
     - make sdl
 
   package_script:
-    - mkdir -p agba/assets
-    - cp sdl/assets/icon_purple.png agba/assets
-    - cp sdl/target/debug/agba_sdl agba/agba
-    - zip -r agba_mac.zip agba
+    - mkdir -p songbird/assets
+    - cp sdl/assets/icon_purple.png songbird/assets
+    - cp sdl/target/debug/songbird_sdl songbird/songbird
+    - zip -r songbird_mac.zip songbird
 
-  agba_artifacts:
-    path: agba_mac.zip
+  songbird_artifacts:
+    path: songbird_mac.zip
 
 win_task:
   container:
@@ -54,14 +54,14 @@ win_task:
     - make windows
 
   package_script:
-    - mkdir -p agba/assets
-    - cp sdl/assets/icon_purple.png agba/assets
-    - cp sdl/*.dll agba
-    - cp sdl/agba_sdl.exe agba/agba.exe
-    - zip -r agba_win.zip agba
+    - mkdir -p songbird/assets
+    - cp sdl/assets/icon_purple.png songbird/assets
+    - cp sdl/*.dll songbird
+    - cp sdl/songbird_sdl.exe songbird/songbird.exe
+    - zip -r songbird_win.zip songbird
 
-  agba_artifacts:
-    path: agba_win.zip
+  songbird_artifacts:
+    path: songbird_win.zip
 
 wasm_task:
   container:
@@ -77,7 +77,7 @@ wasm_task:
     - make wasm
 
   package_script:
-    - zip -r agba_wasm.zip web
+    - zip -r songbird_wasm.zip web
 
-  agba_artifacts:
-    path: agba_wasm.zip
+  songbird_artifacts:
+    path: songbird_wasm.zip

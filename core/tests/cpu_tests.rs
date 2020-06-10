@@ -1,7 +1,7 @@
-extern crate agba_core;
+extern crate songbird_core;
 
-use agba_core::cpu::*;
-use agba_core::utils::ModifyBytes;
+use songbird_core::cpu::*;
+use songbird_core::utils::ModifyBytes;
 
 #[test]
 /// Test joint 16-bit register operations

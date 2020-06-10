@@ -1,5 +1,5 @@
 [package]
-name = "agba_core"
+name = "songbird_core"
 version = "0.1.0"
 authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"

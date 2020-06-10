@@ -1,7 +1,7 @@
-extern crate agba_core;
+extern crate songbird_core;
 
-use agba_core::cartridge::MBC;
-use agba_core::cpu::*;
+use songbird_core::cartridge::MBC;
+use songbird_core::cpu::*;
 use std::fs::File;
 use std::io::Read;
 

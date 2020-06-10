@@ -4,9 +4,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::{Clamped, JsCast};
 use web_sys::{ImageData, KeyboardEvent};
 
-use agba_core::cpu::Cpu;
-use agba_core::io::Buttons;
-use agba_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use songbird_core::cpu::Cpu;
+use songbird_core::io::Buttons;
+use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 //                           R,   G,   B,   A
 const BLACK: [u8; 4] =      [0,   0,   0,   255];

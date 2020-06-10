@@ -1,4 +1,4 @@
-import init, * as wasm from "./agba_wasm.js"
+import init, * as wasm from "./songbird_wasm.js"
 
 const WIDTH = 160
 const HEIGHT = 144
