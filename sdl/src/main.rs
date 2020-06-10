@@ -16,15 +16,16 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use std::{env, io, process, thread};
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::Read;
-use std::{env, io, process, thread, time};
 use std::io::prelude::*;
+use std::io::Read;
+use std::time::{Duration, SystemTime};
 
 // Constants
 const SCALE: usize = 5;
-const CLOCK_SPEED_IN_NS: u64 = 954; // 1 MiHz
+const FRAME_TIME: u64 = 16670; // In microseconds
 
 // Colors
 const BLACK: (u8, u8, u8)            = (0,   0,   0);
@@ -69,7 +70,8 @@ pub fn main() {
     let mut events = sdl_context.event_pump().unwrap();
     let mut prev_keys = HashSet::new();
 
-    let clock_sleep = time::Duration::from_nanos(CLOCK_SPEED_IN_NS);
+    let frame_duration = Duration::from_micros(FRAME_TIME);
+    let mut last_frame = SystemTime::now();
 
     // Main loop
     'gameloop: loop {
@@ -220,7 +222,16 @@ pub fn main() {
             let draw_time = gb.tick();
             if draw_time {
                 let disp_arr = gb.render();
+
+                // Need to align to 60 FPS before drawing screen
+                let elapsed = last_frame.elapsed().unwrap();
+                let frame_wait = frame_duration.checked_sub(elapsed);
+                if frame_wait.is_some() {
+                    thread::sleep(frame_wait.unwrap());
+                }
+
                 draw_screen(disp_arr, &mut canvas);
+                last_frame = SystemTime::now();
             }
 
             // Break if we hit a break/watchpoint
@@ -228,9 +239,6 @@ pub fn main() {
                 debugging = true;
             }
         }
-
-        // TODO: Need to find better way to keep accurate clock cycles
-        // thread::sleep(clock_sleep);
     }
 }
 
