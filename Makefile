@@ -40,6 +40,7 @@ clean_windows:
 
 clean_sdl:
 	cd sdl && \
-	$(CARGO) clean
+	$(CARGO) clean && \
+	rm -f core
 
 .PHONY: all sdl wasm windows clean

@@ -248,6 +248,7 @@ impl PPU {
     fn render_sprites(&self, pixel_array: &mut [u8]) {
         // TODO: This does not check if sprite should be drawn above/below background
         // TODO: This does not support 8x16 sprites
+        // TODO: This does not support sprite X/Y flipping
         let spr_tile_set = self.get_spr_tile_set();
         let sprites = self.get_tiles(spr_tile_set);
         let screen_coords = self.get_scroll_coords();
@@ -266,7 +267,7 @@ impl PPU {
 
             for row in 0..TILESIZE {
                 let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
-                let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize) + row;
+                let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
                 let arr_index = spr_x + spr_y * MAP_PIXELS;
                 let pixels = tile.get_row(row);
                 // Iterate through each pixel in row, applying the palette
@@ -298,14 +299,18 @@ impl PPU {
         let scroll = self.get_scroll_coords();
 
         // Iterate through every visible pixel
-        // TODO: This needs to allow for screen wrapping
         let start_x = scroll.x as usize;
         let start_y = scroll.y as usize;
         for y in start_y..(start_y + SCREEN_HEIGHT) {
             for x in start_x..(start_x + SCREEN_WIDTH) {
-                let index = y * MAP_PIXELS + x;
+                // Wrap X/Y coord if needed
+                let adj_x = x % MAP_PIXELS;
+                let adj_y = y % MAP_PIXELS;
+
+                let index = adj_y * MAP_PIXELS + adj_x;
                 let pixel = pixel_array[index];
 
+                // Index in output array uses un-wrapped x/y for indices
                 let view_index = (y - start_y) * SCREEN_WIDTH + (x - start_x);
                 viewport[view_index] = pixel;
             }

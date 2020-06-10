@@ -2,5 +2,6 @@
 
 # Fetches and starts core dump debugging via gdb
 
-cp /tmp/core .
+rm -f core
+mv /tmp/core .
 gdb target/debug/songbird_sdl core
