@@ -121,6 +121,30 @@ impl Sprite {
     pub fn is_pal_0(&self) -> bool {
         self.palette_0
     }
+
+    /// ```
+    /// Is X flipped?
+    ///
+    /// Should the sprite be flipped in the X-direction (up-down)?
+    ///
+    /// Output:
+    ///     Whether sprite should be flipped
+    /// ```
+    pub fn is_x_flip(&self) -> bool {
+        self.x_flip
+    }
+
+    /// ```
+    /// Is Y flipped?
+    ///
+    /// Should the sprite be flipped in the Y-direction (left-right)?
+    ///
+    /// Output:
+    ///     Whether sprite should be flipped
+    /// ```
+    pub fn is_y_flip(&self) -> bool {
+        self.y_flip
+    }
 }
 
 impl Sprite {

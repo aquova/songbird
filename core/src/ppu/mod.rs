@@ -248,7 +248,6 @@ impl PPU {
     fn render_sprites(&self, pixel_array: &mut [u8]) {
         // TODO: This does not check if sprite should be drawn above/below background
         // TODO: This does not support 8x16 sprites
-        // TODO: This does not support sprite X/Y flipping
         let spr_tile_set = self.get_spr_tile_set();
         let sprites = self.get_tiles(spr_tile_set);
         let screen_coords = self.get_scroll_coords();
@@ -264,19 +263,32 @@ impl PPU {
             let tile = &sprites[spr_num as usize];
             let spr_coords = spr.get_coords();
             let palette = self.get_spr_palette(spr.is_pal_0());
+            let flip_x = spr.is_x_flip();
+            let flip_y = spr.is_y_flip();
 
             for row in 0..TILESIZE {
                 let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
                 let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
                 let arr_index = spr_x + spr_y * MAP_PIXELS;
-                let pixels = tile.get_row(row);
+                let pixels = if flip_x {
+                    tile.get_row(row)
+                } else {
+                    tile.get_row(TILESIZE - row - 1)
+                };
+
                 // Iterate through each pixel in row, applying the palette
                 for j in 0..TILESIZE {
                     let pixel = pixels[j as usize];
                     // Pixel value 0 is transparent
                     if pixel != 0 {
                         let corrected_pixel = palette[pixel as usize];
-                        pixel_array[arr_index + j] = corrected_pixel;
+                        let arr_offset = if flip_y {
+                            j
+                        } else {
+                            TILESIZE - j - 1
+                        };
+
+                        pixel_array[arr_index + arr_offset] = corrected_pixel;
                     }
                 }
             }
