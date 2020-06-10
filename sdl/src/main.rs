@@ -9,6 +9,7 @@ use songbird_core::debug::debugger;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
+use coredump::register_panic_handler;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
 use sdl2::pixels::Color;
@@ -41,6 +42,8 @@ const COLORS: [(u8, u8, u8); 4] = [
 ];
 
 pub fn main() {
+    register_panic_handler().unwrap();
+
     let args: Vec<_> = env::args().collect();
     if args.len() == 1 {
         println!("cargo run path/to/game");
