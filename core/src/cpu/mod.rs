@@ -10,6 +10,7 @@ use crate::utils::*;
 // = Constants =
 // =============
 const IF: u16 = 0xFF0F; // Interrupt Flag
+const IE: u16 = 0xFFFF; // Interrupt Enable
 const INTER_PRIORITIES: [Interrupts; 5] = [
     Interrupts::VBLANK,
     Interrupts::LCD_STAT,
@@ -1104,7 +1105,8 @@ const NINTENDO_LOGO: [u8; 48] = [
 
         // Interrupt must be requesting to occur
         let if_reg = self.read_ram(IF);
-        let valid_interrupt = if_reg & 0x1F;
+        let ie_reg = self.read_ram(IE);
+        let valid_interrupt = (if_reg & ie_reg) & 0x1F;
         let mut mask = 0b1;
 
         // If more than one interrupt is waiting, then the lower bit has higher priority
