@@ -13,7 +13,7 @@ use coredump::register_panic_handler;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
+use sdl2::rect::Point;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
@@ -290,8 +290,7 @@ fn get_color(color: (u8, u8, u8)) -> Color {
 ///     SDL2 Canvas (Canvas<Window>)
 /// ```
 fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
-    canvas.set_draw_color(get_color(WHITE));
-    canvas.clear();
+    canvas.set_scale(SCALE as f32, SCALE as f32).unwrap();
 
     for y in 0..SCREEN_HEIGHT {
         for x in 0..SCREEN_WIDTH {
@@ -301,13 +300,8 @@ fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
             let color = get_color(color_val);
             canvas.set_draw_color(color);
 
-            let rect = Rect::new(
-                (x * SCALE) as i32,
-                (y * SCALE) as i32,
-                SCALE as u32,
-                SCALE as u32
-            );
-            canvas.fill_rect(rect).expect("Unable to draw to canvas");
+            let point = Point::new(x as i32, y as i32);
+            canvas.draw_point(point).expect("Unable to draw to canvas");
         }
     }
 
