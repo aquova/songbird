@@ -2,7 +2,7 @@ mod sprite;
 mod tile;
 
 use sprite::Sprite;
-use tile::Tile;
+use tile::{Tile, TILE_BYTES};
 use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
 use std::ops::Range;
@@ -14,6 +14,7 @@ const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
 const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
+const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
 
 // VRAM registers
@@ -34,14 +35,15 @@ const WX: usize                      = 0xFF4B - VRAM_OFFSET;
 const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 const OAM_MEM: u16                    = 0xFE00 - (VRAM_OFFSET as u16);
 const OAM_MEM_END: u16                = 0xFE9F - (VRAM_OFFSET as u16); // Inclusive
+const TILE_SET: u16                   = 0x8000 - (VRAM_OFFSET as u16);
+const TILE_SET_END: u16               = 0x97FF - (VRAM_OFFSET as u16);
 
-const TILE_SET_0_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0x9000 - VRAM_OFFSET);
-const TILE_SET_1_RANGE: Range<usize> = (0x8800 - VRAM_OFFSET)..(0x9800 - VRAM_OFFSET);
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
 const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
+    tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
 }
 
@@ -52,6 +54,7 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
+            tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
         }
     }
@@ -71,18 +74,22 @@ impl PPU {
     pub fn write_vram(&mut self, raw_addr: u16, val: u8) {
         let addr = raw_addr - VRAM_OFFSET as u16;
 
-        // TODO: This needs to be here, but isn't working
-        // if self.is_valid_status(raw_addr) {
-        // Update OAM objects if needed
-        if is_in_oam(addr) {
-            let relative_addr = addr - OAM_MEM;
-            let spr_num = relative_addr / 4;
-            let byte_num = relative_addr % 4;
-            self.oam[spr_num as usize].update_byte(byte_num, val);
-        }
+        if self.is_valid_status(raw_addr) {
+            // Update OAM objects if needed
+            if is_in_oam(addr) {
+                let relative_addr = addr - OAM_MEM;
+                let spr_num = relative_addr / 4;
+                let byte_num = relative_addr % 4;
+                self.oam[spr_num as usize].update_byte(byte_num, val);
+            } else if is_in_tile_set(addr) {
+                let offset = addr - TILE_SET;
+                let tile_num = offset / TILE_BYTES;
+                let byte_num = offset % TILE_BYTES;
+                self.tiles[tile_num as usize].update_byte(byte_num, val);
+            }
 
-        self.vram[addr as usize] = val;
-        // }
+            self.vram[addr as usize] = val;
+        }
     }
 
     /// ```
@@ -136,15 +143,12 @@ impl PPU {
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; MAP_PIXELS * MAP_PIXELS];
-        let bkgd_wndw_tile_set = self.get_bkgd_wndw_tile_set();
-        let bkgd_wndw_tiles = self.get_tiles(bkgd_wndw_tile_set);
-
         if self.is_bkgd_dspl() {
-            self.render_background(&mut map_array, &bkgd_wndw_tiles);
+            self.render_background(&mut map_array);
         }
 
         if self.is_wndw_dspl() {
-            self.render_window(&mut map_array, &bkgd_wndw_tiles);
+            self.render_window(&mut map_array);
         }
 
         if self.is_sprt_dspl() {
@@ -168,9 +172,8 @@ impl PPU {
     ///
     /// Input:
     ///     Array of pixels to modify (&[u8])
-    ///     Background tile data (&[Tile])
     /// ```
-    fn render_background(&self, pixel_array: &mut [u8], bkgd: &[Tile]) {
+    fn render_background(&self, pixel_array: &mut [u8]) {
         let tile_map = self.get_bkgd_tile_map();
         let palette = self.get_bkgd_palette();
 
@@ -182,7 +185,7 @@ impl PPU {
             for x in 0..MAP_SIZE {
                 let index = y * MAP_SIZE + x;
                 let tile_index = tile_map[index];
-                let tile = &bkgd[(tile_index + signed_offset) as usize];
+                let tile = &self.tiles[(tile_index + signed_offset) as usize];
 
                 // Iterate through row in tile
                 for row in 0..TILESIZE {
@@ -207,9 +210,8 @@ impl PPU {
     ///
     /// Input:
     ///     Array of pixels to modify (&[u8])
-    ///     Window tile data (&[Tile])
     /// ```
-    fn render_window(&self, pixel_array: &mut [u8], wndw: &[Tile]) {
+    fn render_window(&self, pixel_array: &mut [u8]) {
         let coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
         let palette = self.get_bkgd_palette();
@@ -219,7 +221,7 @@ impl PPU {
             for x in (0..SCREEN_WIDTH).step_by(TILESIZE) {
                 let index = y * SCREEN_WIDTH + x;
                 let tile_index = wndw_map[index];
-                let tile = &wndw[tile_index as usize];
+                let tile = &self.tiles[tile_index as usize];
 
                 // If window is allowed to wrap, this needs to be changed
                 for row in 0..TILESIZE {
@@ -248,8 +250,6 @@ impl PPU {
     fn render_sprites(&self, pixel_array: &mut [u8]) {
         // TODO: This does not check if sprite should be drawn above/below background
         // TODO: This does not support 8x16 sprites
-        let spr_tile_set = self.get_spr_tile_set();
-        let sprites = self.get_tiles(spr_tile_set);
         let screen_coords = self.get_scroll_coords();
 
         // Iterate through every sprite
@@ -260,7 +260,7 @@ impl PPU {
             }
 
             let spr_num = spr.get_tile_num();
-            let tile = &sprites[spr_num as usize];
+            let tile = &self.tiles[spr_num as usize];
             let spr_coords = spr.get_coords();
             let palette = self.get_spr_palette(spr.is_pal_0());
             let flip_x = spr.is_x_flip();
@@ -329,63 +329,6 @@ impl PPU {
         }
 
         viewport
-    }
-
-    /// ```
-    /// Get background tiles
-    ///
-    /// Fetches the graphical data of background tiles from VRAM
-    ///
-    /// Output:
-    ///     A vector of tile objects (Vec<Tile>)
-    /// ```
-    fn get_tiles(&self, tile_set: &[u8]) -> Vec<Tile> {
-        // Tile set is the tile pixel data
-        // Tile map are the tile indices that make up the current background image
-        // TODO: This 100% can and should be cached
-        let mut tiles = Vec::new();
-        let num_tiles = tile_set.len() / (2 * TILESIZE);
-
-        for i in 0..num_tiles {
-            let tile_data = &tile_set[(2 * TILESIZE * i)..(2 * TILESIZE * (i + 1))];
-            let tile = Tile::new(tile_data);
-            tiles.push(tile);
-        }
-
-        tiles
-    }
-
-    /// ```
-    /// Get tile set
-    ///
-    /// Gets the tileset indices currently in use for background and window layers
-    ///
-    /// Output:
-    ///     Slice of tileset indices (&[u8])
-    /// ```
-    fn get_bkgd_wndw_tile_set(&self) -> &[u8] {
-        // $01 for $8000-$8FFF
-        // $00 for $8800-$97FF
-        let tile_set = if self.get_bkgd_tile_set_index() == 1 {
-            &self.vram[TILE_SET_0_RANGE]
-        } else {
-            &self.vram[TILE_SET_1_RANGE]
-        };
-
-        tile_set
-    }
-
-    /// ```
-    /// Get sprite tile set
-    ///
-    /// Gets the pixel data for sprite tiles
-    ///
-    /// Output:
-    ///     Slice of tilemap values (&[u8])
-    /// ```
-    fn get_spr_tile_set(&self) -> &[u8] {
-        // Sprites are always in $8000-$8FFF
-        &self.vram[TILE_SET_0_RANGE]
     }
 
     /// ```
@@ -629,5 +572,9 @@ impl PPU {
 ///     Whether the address is in OAM memory (bool)
 /// ```
 fn is_in_oam(addr: u16) -> bool {
-    return addr >= OAM_MEM && addr <= OAM_MEM_END
+    addr >= OAM_MEM && addr <= OAM_MEM_END
+}
+
+fn is_in_tile_set(addr: u16) -> bool {
+    addr >= TILE_SET && addr <= TILE_SET_END
 }

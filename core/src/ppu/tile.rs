@@ -1,24 +1,19 @@
 use crate::utils::*;
 
+pub const TILE_BYTES: u16 = 16;
+
+#[derive(Copy, Clone)]
 pub struct Tile {
+    data: [u8; TILE_BYTES as usize],
     pixels: [[u8; TILESIZE]; TILESIZE]
 }
 
 impl Tile {
-    pub fn new(data: &[u8]) -> Tile {
-        let mut new_tile = Tile {
+    pub fn new() -> Tile {
+        Tile {
+            data: [0; TILE_BYTES as usize],
             pixels: [[0; TILESIZE]; TILESIZE]
-        };
-
-        for i in 0..TILESIZE {
-            let low = data[2 * i];
-            let high = data[2 * i + 1];
-            let row = get_pixel_row(low, high);
-
-            new_tile.pixels[i].copy_from_slice(&row);
         }
-
-        new_tile
     }
 
     /// ```
@@ -34,6 +29,29 @@ impl Tile {
     /// ```
     pub fn get_row(&self, index: usize) -> &[u8] {
         &self.pixels[index]
+    }
+
+    /// ```
+    /// Update byte
+    ///
+    /// Updates byte of this tile's gfx data
+    ///
+    /// Inputs:
+    ///     Which byte to update (u16)
+    ///     New value (u8)
+    /// ```
+    pub fn update_byte(&mut self, index: u16, val: u8) {
+        if index >= TILE_BYTES {
+            panic!("Invalid Tile byte index to update");
+        }
+
+        self.data[index as usize] = val;
+        let i = if index % 2 == 0 { index as usize } else { (index - 1) as usize };
+        let low = self.data[i];
+        let high = self.data[i + 1];
+        let row = get_pixel_row(low, high);
+
+        self.pixels[i / 2].copy_from_slice(&row);
     }
 }
 
@@ -79,4 +97,3 @@ fn concat_bits(low: bool, high: bool) -> u8 {
     let concat = (high_bit << 1) | low_bit;
     concat
 }
-
