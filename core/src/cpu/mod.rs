@@ -1,10 +1,12 @@
 pub mod clock;
 pub mod opcodes;
+pub mod timer;
 
 use clock::Clock;
 use crate::bus::Bus;
 use crate::io::Buttons;
 use crate::utils::*;
+use timer::*;
 
 // =============
 // = Constants =
@@ -67,10 +69,11 @@ pub struct Cpu {
     f: u8,
     h: u8,
     l: u8,
-    pub clock: Clock,
-    pub interrupt_enabled: bool,
-    pub halted: bool,
-    pub bus: Bus
+    clock: Clock,
+    timer: Timer,
+    interrupt_enabled: bool,
+    halted: bool,
+    bus: Bus
 }
 
 impl Cpu {
@@ -88,6 +91,7 @@ impl Cpu {
             h: 0,
             l: 0,
             clock: Clock::new(),
+            timer: Timer::new(),
             interrupt_enabled: false,
             halted: false,
             bus: Bus::new()
@@ -148,7 +152,13 @@ impl Cpu {
     ///     Whether or not to render a frame (bool)
     /// ```
     pub fn tick(&mut self) -> bool {
-        // First check for interrupts
+        // Tick timer
+        // NOTE: Should this come before or after interrupt check?
+        if self.timer.tick() {
+            self.enable_interrupt(Interrupts::TIMER);
+        }
+
+        // Check for interrupts
         let inter = self.interrupt_check();
 
         if inter.is_some() {
@@ -168,7 +178,7 @@ impl Cpu {
             // But I had trouble finding a better place to detect VBLANK interrupt
             // Someday, may want to rethink this
             if draw_time {
-                self.toggle_interrupt(Interrupts::VBLANK);
+                self.enable_interrupt(Interrupts::VBLANK);
             }
             self.bus.set_scanline(self.clock.get_scanline());
             self.bus.set_status_reg(self.clock.get_mode());
@@ -238,7 +248,7 @@ impl Cpu {
     /// ```
     pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
         self.bus.toggle_button(btn, pressed);
-        self.toggle_interrupt(Interrupts::JOYPAD);
+        self.enable_interrupt(Interrupts::JOYPAD);
     }
 
     /// ```
@@ -640,7 +650,10 @@ impl Cpu {
     ///     Byte at specified address (u8)
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
-        self.bus.read_ram(addr)
+        match addr {
+            DIV_REG..=CON_REG => { self.timer.read_timer(addr) },
+            _ => { self.bus.read_ram(addr) }
+        }
     }
 
     /// ```
@@ -1067,7 +1080,14 @@ const NINTENDO_LOGO: [u8; 48] = [
     ///     Byte to write (u8)
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
-        self.bus.write_ram(addr, val);
+        match addr {
+            DIV_REG..=CON_REG => {
+                self.timer.write_timer(addr, val)
+            },
+            _ => {
+                self.bus.write_ram(addr, val)
+            }
+        };
     }
 
     /// ```
@@ -1169,14 +1189,14 @@ const NINTENDO_LOGO: [u8; 48] = [
     }
 
     /// ```
-    /// Toggle interrupt
+    /// Enable interrupt
     ///
     /// Engages the specific interrupt type
     ///
     /// Input:
     ///     Interrupt type (Interrupts)
     /// ```
-    fn toggle_interrupt(&mut self, inter: Interrupts) {
+    fn enable_interrupt(&mut self, inter: Interrupts) {
         let mut if_reg = self.read_ram(IF);
 
         match inter {

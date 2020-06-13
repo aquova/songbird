@@ -505,7 +505,7 @@ fn inc_34(cpu: &mut Cpu) -> u8 {
 fn dec_35(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
     let mut val = cpu.read_ram(hl);
-    val -= 1;
+    val = val.wrapping_sub(1);
     cpu.write_ram(hl, val);
     3
 }
