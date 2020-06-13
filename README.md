@@ -1,6 +1,6 @@
 # sonGBird
 
-My Game Boy emulator, written in Rust
+Songbird Game Boy emulator.
 
 You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/songbird/master)
 
@@ -26,7 +26,7 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
 
 - [ ] CPU
     - [x] Opcode functionality
-    - [ ] Interrupts
+    - [x] Interrupts
     - [x] Keyboard input
     - [ ] Pass Blargg tests
 - [ ] Memory Bank Controllers
