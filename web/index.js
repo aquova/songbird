@@ -42,6 +42,7 @@ async function run() {
             let buffer = fr.result
             const rom = new Uint8Array(buffer)
 
+            gb.reset()
             gb.load_rom(rom)
             let title = gb.get_title()
             document.title = title

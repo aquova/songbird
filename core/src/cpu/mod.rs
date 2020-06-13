@@ -77,8 +77,8 @@ impl Cpu {
     pub fn new() -> Cpu {
         // Magic values from pandocs
         let mut new_cpu = Cpu {
-            pc: 0x0100,
-            sp: 0xFFFE,
+            pc: 0,
+            sp: 0,
             a: 0,
             b: 0,
             c: 0,
@@ -93,11 +93,13 @@ impl Cpu {
             bus: Bus::new()
         };
 
-        new_cpu.init();
+        new_cpu.reset();
         new_cpu
     }
 
-    pub fn init(&mut self) {
+    pub fn reset(&mut self) {
+        self.set_pc(0x100);
+        self.set_sp(0xFFFE);
         self.set_reg_16(Regs16::AF, 0x01B0);
         self.set_reg_16(Regs16::BC, 0x0013);
         self.set_reg_16(Regs16::DE, 0x00D8);

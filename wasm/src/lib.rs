@@ -32,7 +32,7 @@ impl GB {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<GB, JsValue> {
         let mut cpu = Cpu::new();
-        cpu.init();
+        cpu.reset();
 
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("canvas").unwrap();
@@ -53,6 +53,16 @@ impl GB {
         };
 
         Ok(gb)
+    }
+
+    /// ```
+    /// Reset
+    ///
+    /// Resets the CPU
+    /// ```
+    #[wasm_bindgen]
+    pub fn reset(&mut self) {
+        self.cpu.reset();
     }
 
     /// ```
