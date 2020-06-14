@@ -62,11 +62,11 @@ const OAM: u16 = 0xFE00;
 const ROM: u16          = 0x0000;
 const ROM_END: u16      = 0x7FFF;
 const VRAM: u16         = ROM_END + 1;
-const VRAM_END: u16     = 0x9FFF;
-const CART_RAM: u16     = VRAM_END + 1;
-const CART_RAM_END: u16 = 0xBFFF;
-const WORK_RAM: u16     = CART_RAM_END + 1;
-const WORK_RAM_END: u16 = 0xDFFF;
+// const VRAM_END: u16     = 0x9FFF;
+// const CART_RAM: u16     = VRAM_END + 1;
+// const CART_RAM_END: u16 = 0xBFFF;
+// const WORK_RAM: u16     = CART_RAM_END + 1;
+// const WORK_RAM_END: u16 = 0xDFFF;
 const RAM_END: u16      = 0xFFFF;
 
 pub struct Bus {
