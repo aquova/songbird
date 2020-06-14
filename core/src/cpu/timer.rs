@@ -47,12 +47,12 @@ impl Timer {
             self.cnt_cycles += 1;
 
             if self.cnt_cycles == COUNT_SPEED_IN_CYCLES[self.cnt_index] {
+                self.cnt_cycles = 0;
                 let overflow = self.cnt_reg.checked_add(1);
                 // If overflow, set Timer counter to Timer Modulo value
                 if overflow.is_none() {
                     self.cnt_reg = self.mod_reg;
                     interrupt = true;
-                    self.cnt_cycles = 0;
                 } else {
                     self.cnt_reg += 1;
                 }

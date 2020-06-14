@@ -177,15 +177,17 @@ impl PPU {
         let tile_map = self.get_bkgd_tile_map();
         let palette = self.get_bkgd_palette();
 
-        // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-        let signed_offset = if self.get_bkgd_tile_set_index() == 0 { 128 } else { 0 };
-
         // Iterate through every tile in map
         for y in 0..MAP_SIZE {
             for x in 0..MAP_SIZE {
                 let index = y * MAP_SIZE + x;
-                let tile_index = tile_map[index];
-                let tile = &self.tiles[(tile_index + signed_offset) as usize];
+                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
+                let tile_index = if self.get_bkgd_tile_set_index() == 0 {
+                    (256 + (tile_map[index] as i8 as isize)) as usize
+                } else {
+                    tile_map[index] as usize
+                };
+                let tile = &self.tiles[tile_index];
 
                 // Iterate through row in tile
                 for row in 0..TILESIZE {
