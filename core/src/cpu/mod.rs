@@ -154,7 +154,8 @@ impl Cpu {
     pub fn tick(&mut self) -> bool {
         // Tick timer
         // NOTE: Should this come before or after interrupt check?
-        if self.timer.tick() {
+        let timer_interrupt = self.timer.tick();
+        if timer_interrupt {
             self.enable_interrupt(Interrupts::TIMER);
         }
 
@@ -651,7 +652,7 @@ impl Cpu {
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
         match addr {
-            DIV_REG..=CON_REG => { self.timer.read_timer(addr) },
+            DIV..=TAC => { self.timer.read_timer(addr) },
             _ => { self.bus.read_ram(addr) }
         }
     }
@@ -1081,7 +1082,7 @@ const NINTENDO_LOGO: [u8; 48] = [
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
         match addr {
-            DIV_REG..=CON_REG => {
+            DIV..=TAC => {
                 self.timer.write_timer(addr, val)
             },
             _ => {

@@ -17,12 +17,13 @@ use sdl2::rect::Point;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use std::{env, io, process, thread};
+use std::{env, io, process};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Read;
 use std::time::{Duration, SystemTime};
+use std::thread::sleep;
 
 // Constants
 const SCALE: usize = 5;
@@ -230,7 +231,7 @@ pub fn main() {
                 let elapsed = last_frame.elapsed().unwrap();
                 let frame_wait = frame_duration.checked_sub(elapsed);
                 if frame_wait.is_some() {
-                    thread::sleep(frame_wait.unwrap());
+                    sleep(frame_wait.unwrap());
                 }
 
                 draw_screen(disp_arr, &mut canvas);
