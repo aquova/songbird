@@ -14,9 +14,9 @@ Note that even many widely used emulators don't pass all the tests, but using th
 
 | Test number | cgb_sound | cpu_instrs         | dmg_sound | instr_timing | interrupt_time | mem_timing | mem_timing-2 | oam_bug            |
 | ----------- | --------- | ----------         | --------- | ------------ | -------------- | ---------- | ------------ | -------            |
-| 1           | :warning: | :x:                | :warning: | :x:          | :x:            | :warning:  | :warning:    | :x:                |
-| 2           | :warning: | :warning:          | :warning: |              |                | :warning:  | :warning:    | :x:                |
-| 3           | :warning: | :white_check_mark: | :warning: |              |                | :warning:  | :warning:    | :white_check_mark: |
+| 1           | :warning: | :x:                | :warning: | :x:          | :x:            | :x:        | :x:          | :x:                |
+| 2           | :warning: | :warning:          | :warning: |              |                | :x:        | :x:          | :x:                |
+| 3           | :warning: | :x:                | :warning: |              |                | :x:        | :x:          | :white_check_mark: |
 | 4           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
 | 5           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
 | 6           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :white_check_mark: |

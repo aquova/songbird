@@ -330,10 +330,10 @@ impl Cpu {
     /// ```
     pub fn clear_flag(&mut self, f: Flags) {
         match f {
-            Flags::Z => { self.f &= 0b0111_1111 },
-            Flags::N => { self.f &= 0b1011_1111 },
-            Flags::H => { self.f &= 0b1101_1111 },
-            Flags::C => { self.f &= 0b1110_1111 },
+            Flags::Z => { self.f &= 0b0111_0000 },
+            Flags::N => { self.f &= 0b1011_0000 },
+            Flags::H => { self.f &= 0b1101_0000 },
+            Flags::C => { self.f &= 0b1110_0000 },
         }
     }
 
@@ -775,7 +775,8 @@ impl Cpu {
             Regs::C => { self.c = val },
             Regs::D => { self.d = val },
             Regs::E => { self.e = val },
-            Regs::F => { self.f = val },
+            // The bottom 4 bits of F are always 0
+            Regs::F => { self.f = val & 0xF0 },
             Regs::H => { self.h = val },
             Regs::L => { self.l = val },
         }
