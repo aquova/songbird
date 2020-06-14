@@ -219,17 +219,25 @@ impl PPU {
         let palette = self.get_bkgd_palette();
 
         // Iterate through all tiles in window
-        for y in (0..SCREEN_HEIGHT).step_by(TILESIZE) {
-            for x in (0..SCREEN_WIDTH).step_by(TILESIZE) {
-                let index = y * SCREEN_WIDTH + x;
+        'tile_y: for y in 0..MAP_SIZE {
+            'tile_x: for x in 0..MAP_SIZE {
+                let index = y * MAP_SIZE + x;
                 let tile_index = wndw_map[index];
                 let tile = &self.tiles[tile_index as usize];
 
-                // If window is allowed to wrap, this needs to be changed
+                // Windows can only be drawn on bottom/right of screen
+                // If tiles have gone off to the right, we are done with this row
+                // If they've gone off the bottom, we're done period
+                let map_x = x + coords.x as usize;
+                let map_y = y + coords.y as usize;
+                if map_y > SCREEN_HEIGHT {
+                    break 'tile_y;
+                } else if map_x > SCREEN_WIDTH {
+                    break 'tile_x;
+                }
+
                 for row in 0..TILESIZE {
-                    let map_x = x + coords.x as usize;
-                    let map_y = y + (coords.y as usize) + row;
-                    let map_index = map_y * MAP_SIZE + map_x;
+                    let map_index = (map_y + row) * MAP_SIZE + map_x;
                     let pixels = tile.get_row(row);
                     // Iterate through each pixel in row, applying the palette
                     for i in 0..TILESIZE {
@@ -507,7 +515,7 @@ impl PPU {
     /// Output:
     ///     Location of the window (Point)
     fn get_wndw_coords(&self) -> Point {
-        let wndw_x = self.vram[WX] - 7;
+        let wndw_x = self.vram[WX].wrapping_sub(7);
         let wndw_y = self.vram[WY];
 
         Point::new(wndw_x, wndw_y)
