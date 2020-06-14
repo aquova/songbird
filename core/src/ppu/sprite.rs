@@ -81,7 +81,7 @@ impl Sprite {
         let x_visible = self.x > 0 && self.x < X_OFFSCREEN;
         let y_visible = self.y > 0 && self.y < Y_OFFSCREEN;
 
-        x_visible && y_visible
+        x_visible || y_visible
     }
 
     /// ```
