@@ -196,6 +196,6 @@ impl Sprite {
         self.above_bkgd = !val.get_bit(7);
         self.x_flip = !val.get_bit(6);
         self.y_flip = !val.get_bit(5);
-        self.palette_0 = val.get_bit(4);
+        self.palette_0 = !val.get_bit(4);
     }
 }
