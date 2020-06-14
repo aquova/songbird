@@ -79,6 +79,10 @@ function update_canvas() {
     scale = Math.floor(parseInt(scale_elem.value))
     canvas.width = WIDTH * scale
     canvas.height = HEIGHT * scale
+    // Set canvas to be white, so we can see it on page
+    let ctx = canvas.getContext("2d")
+    ctx.fillStyle = "#FFFFFF"
+    ctx.fillRect(0, 0, scale * WIDTH, scale * HEIGHT)
 }
 
 run().catch(console.error)
