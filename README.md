@@ -14,6 +14,7 @@ You can download the most recent build from [here](https://cirrus-ci.com/github/
 ## Resources
 
 - [Blargg test roms](https://github.com/retrio/gb-test-roms)
+- [RGBDS GBz80 Man Pages](https://rednex.github.io/rgbds/gbz80.7.html)
 - [Game Boy Opcode Table](http://pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
 - [Another Opcode Table](https://izik1.github.io/gbops/)
 - [Details about Opcode functionality](https://raw.githubusercontent.com/gb-archive/salvage/master/txt-files/gb-instructions.txt)

@@ -166,25 +166,29 @@ impl Cpu {
         if inter.is_some() {
             let inter_type = inter.unwrap();
             let vector = self.get_inter_vector(inter_type);
+            self.halted = false;
 
-            // Save current PC, jump to interrupt vector
-            self.push(self.get_pc());
-            self.set_pc(vector);
-            self.trigger_interrupt(inter_type);
+            // Save current PC, jump to interrupt vector if master interrupt enabled
+            // Otherwise, we simply wake up from halt
+            if self.interrupt_enabled {
+                self.push(self.get_pc());
+                self.set_pc(vector);
+                self.trigger_interrupt(inter_type);
+            }
             false
-        } else {
+        } else if !self.halted {
             let cycles = opcodes::execute(self);
             let draw_time = self.clock.clock_step(cycles);
             // If draw_time true, then VBLANK interrupt is toggled
-            // NOTE: I don't really care for how this is done
-            // But I had trouble finding a better place to detect VBLANK interrupt
-            // Someday, may want to rethink this
             if draw_time {
                 self.enable_interrupt(Interrupts::VBLANK);
             }
             self.bus.set_scanline(self.clock.get_scanline());
             self.bus.set_status_reg(self.clock.get_mode());
             draw_time
+        } else {
+            // Do nothing
+            false
         }
     }
 
@@ -1118,7 +1122,8 @@ impl Cpu {
     ///     The interrupt that has been triggered (if any) (Option<Interrupt>)
     /// ```
     fn interrupt_check(&self) -> Option<Interrupts> {
-        if !self.interrupt_enabled {
+        // If we're halted, interrupt will wake us up, regardless of master enable
+        if !self.interrupt_enabled && !self.halted {
             return None;
         }
 
