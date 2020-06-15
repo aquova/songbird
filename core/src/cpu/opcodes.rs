@@ -486,9 +486,8 @@ fn ld_32(cpu: &mut Cpu) -> u8 {
 
 /// INC SP
 fn inc_33(cpu: &mut Cpu) -> u8 {
-    // May need to check for flags
     let sp = cpu.get_sp();
-    cpu.set_sp(sp + 1);
+    cpu.set_sp(sp.wrapping_add(1));
     2
 }
 
@@ -559,7 +558,7 @@ fn ld_3a(cpu: &mut Cpu) -> u8 {
 /// DEC SP
 fn dec_3b(cpu: &mut Cpu) -> u8 {
     let sp = cpu.get_sp();
-    cpu.set_sp(sp - 1);
+    cpu.set_sp(sp.wrapping_sub(1));
     2
 }
 
@@ -1836,13 +1835,13 @@ fn add_e8(cpu: &mut Cpu) -> u8 {
     let val = cpu.fetch();
     let signed = val as i8 as i16 as u16;
     let sp = cpu.get_sp();
-    let result = sp.overflowing_add(signed);
-    let set_h = check_h_carry_u16(sp, signed);
-    cpu.set_sp(result.0);
+    cpu.set_sp(sp.wrapping_add(signed));
 
+    let set_c = sp.get_low_byte().checked_add(signed.get_low_byte()).is_none();
+    let set_h = check_h_carry_u8(sp.get_low_byte(), signed.get_low_byte());
     cpu.clear_flag(Flags::Z);
     cpu.clear_flag(Flags::N);
-    cpu.write_flag(Flags::C, result.1);
+    cpu.write_flag(Flags::C, set_c);
     cpu.write_flag(Flags::H, set_h);
     4
 }
@@ -1936,13 +1935,13 @@ fn ld_f8(cpu: &mut Cpu) -> u8 {
     let val = cpu.fetch();
     let signed = val as i8 as i16 as u16;
     let sp = cpu.get_sp();
-    let result = sp.overflowing_add(signed);
-    let set_h = check_h_carry_u8(sp.get_low_byte(), val);
-    cpu.set_reg_16(Regs16::HL, result.0);
+    cpu.set_reg_16(Regs16::HL, sp.wrapping_add(signed));
 
+    let set_c = sp.get_low_byte().checked_add(signed.get_low_byte()).is_none();
+    let set_h = check_h_carry_u8(sp.get_low_byte(), signed.get_low_byte());
     cpu.clear_flag(Flags::Z);
     cpu.clear_flag(Flags::N);
-    cpu.write_flag(Flags::C, result.1);
+    cpu.write_flag(Flags::C, set_c);
     cpu.write_flag(Flags::H, set_h);
     3
 }
