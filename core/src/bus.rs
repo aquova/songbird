@@ -1,4 +1,4 @@
-use crate::cartridge::Cart;
+use crate::cartridge::{Cart, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
@@ -59,15 +59,13 @@ const OAM: u16 = 0xFE00;
 // RAM ranges
 // NOTE: Rust *still* doesn't allow exclusive ranges in match statements
 // So we have to define both start and end values
-const ROM: u16          = 0x0000;
-const ROM_END: u16      = 0x7FFF;
-const VRAM: u16         = ROM_END + 1;
-// const VRAM_END: u16     = 0x9FFF;
-// const CART_RAM: u16     = VRAM_END + 1;
-// const CART_RAM_END: u16 = 0xBFFF;
-// const WORK_RAM: u16     = CART_RAM_END + 1;
+const ROM_START: u16            = 0x0000;
+const ROM_STOP: u16             = 0x7FFF;
+const VRAM_START: u16           = ROM_STOP + 1;
+const VRAM_STOP: u16            = 0x9FFF;
+const WORK_RAM_START: u16       = EXT_RAM_STOP + 1;
 // const WORK_RAM_END: u16 = 0xDFFF;
-const RAM_END: u16      = 0xFFFF;
+const RAM_END: u16              = 0xFFFF;
 
 pub struct Bus {
     ram_enabled: bool,
@@ -126,10 +124,10 @@ impl Bus {
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
         let val = match addr {
-            ROM..=ROM_END => {
-                self.rom.read_rom(addr)
+            ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
+                self.rom.read_cart(addr)
             },
-            VRAM..=RAM_END => {
+            VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
                 if addr == JOYPAD_REG {
                     self.io.read_btns()
                 } else {
@@ -152,10 +150,10 @@ impl Bus {
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8) {
         match addr {
-            ROM..=ROM_END => {
-                self.rom.write_rom(addr, val);
+            ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
+                self.rom.write_cart(addr, val);
             },
-            VRAM..=RAM_END => {
+            VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
                 if addr == JOYPAD_REG {
                     self.io.poll_btns(val);
                 } else if addr == DMA_REG {

@@ -1,7 +1,17 @@
 use std::str::from_utf8;
 
-const MAX_ROM_SIZE: usize = 32 * 1024; // 32 KiB, needs to be updated when other MBC's added
-const MAX_RAM_SIZE: usize = 32 * 1024; // 32 KiB
+const BANK_SIZE: u16 = 0x4000;
+
+const RAM_ENABLE_START: u16 = 0x0000;
+const RAM_ENABLE_STOP: u16 = 0x1FFF;
+const ROM_BANK_NUM_START: u16 = RAM_ENABLE_STOP + 1;
+const ROM_BANK_NUM_STOP: u16 = 0x3FFF;
+const RAM_BANK_NUM_START: u16 = ROM_BANK_NUM_STOP + 1;
+const RAM_BANK_NUM_STOP: u16 = 0x5FFF;
+const ROM_RAM_MODE_START: u16 = RAM_BANK_NUM_STOP + 1;
+const ROM_RAM_MODE_STOP: u16 = 0x7FFF;
+pub const EXT_RAM_START: u16 = 0xA000;
+pub const EXT_RAM_STOP: u16 = 0xBFFF;
 
 const MBC_TYPE_ADDR: usize = 0x0147;
 const ROM_SIZE_ADDR: usize = 0x0148;
@@ -45,25 +55,6 @@ const RAM_SIZE_ADDR: usize = 0x0149;
  *
  */
 
-const DMG_BOOTROM: [u8; 0x100] = [
-    0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCD, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
-    0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
-    0x47, 0x21, 0x04, 0x01, 0xE5, 0x11, 0xCB, 0x00, 0x1A, 0x13, 0xBE, 0x20, 0x6B, 0x23, 0x7D, 0xFE,
-    0x34, 0x20, 0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x20, 0x5A, 0xD1, 0x21,
-    0x10, 0x80, 0x1A, 0xCD, 0xA9, 0x00, 0xCD, 0xAA, 0x00, 0x13, 0x7B, 0xFE, 0x34, 0x20, 0xF3, 0x3E,
-    0x18, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x32, 0x3D, 0x28, 0x09, 0x0D, 0x20, 0xF9, 0x11, 0xEC, 0xFF,
-    0x19, 0x18, 0xF1, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04, 0x1E, 0x02,
-    0xCD, 0xBC, 0x00, 0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE,
-    0x64, 0x20, 0x06, 0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20,
-    0xDD, 0x05, 0x20, 0x69, 0x16, 0x20, 0x18, 0xD6, 0x3E, 0x91, 0xE0, 0x40, 0x1E, 0x14, 0xCD, 0xBC,
-    0x00, 0xF0, 0x47, 0xEE, 0xFF, 0xE0, 0x47, 0x18, 0xF3, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17,
-    0xC1, 0xCB, 0x11, 0x17, 0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0x0E, 0x0C, 0xF0, 0x44,
-    0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC,
-    0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88,
-    0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E,
-    0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0xFF, 0xFF, 0x3C, 0xE0, 0x50,
-];
-
 #[derive(Copy, Clone, PartialEq)]
 pub enum MBC {
     NONE,
@@ -73,12 +64,13 @@ pub enum MBC {
 }
 
 pub struct Cart {
-    pub mbc: MBC,
-    pub rom_size: u8,
-    pub ram_size: u8,
-    pub bank: u8,
-    pub rom: [u8; MAX_ROM_SIZE],
-    pub ram: [u8; MAX_RAM_SIZE],
+    mbc: MBC,
+    rom_bank: u8,
+    ram_bank: u8,
+    rom: Vec<u8>,
+    ram: Vec<u8>,
+    ext_ram_enable: bool,
+    rom_mode: bool,
 }
 
 // ==================
@@ -88,11 +80,12 @@ impl Cart {
     pub fn new() -> Cart {
         Cart {
             mbc: MBC::NONE,
-            rom_size: 0,
-            ram_size: 0,
-            bank: 1,
-            rom: [0; MAX_ROM_SIZE],
-            ram: [0; MAX_RAM_SIZE],
+            rom_bank: 1,
+            ram_bank: 0,
+            rom: Vec::new(),
+            ram: Vec::new(),
+            ext_ram_enable: false,
+            rom_mode: true,
         }
     }
 
@@ -105,14 +98,14 @@ impl Cart {
     ///     Array of game data
     /// ```
     pub fn load_cart(&mut self, rom: &[u8]) {
-        self.rom.copy_from_slice(rom);
-        self.rom_size = self.rom[ROM_SIZE_ADDR];
-        self.ram_size = self.rom[RAM_SIZE_ADDR];
+        for i in 0..rom.len() {
+            self.rom.push(rom[i]);
+        }
         self.set_mbc();
     }
 
     /// ```
-    /// Read ROM
+    /// Read from cart
     ///
     /// Returns the byte at the specified address in the ROM
     ///
@@ -122,27 +115,82 @@ impl Cart {
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_rom(&self, address: u16) -> u8 {
-        self.rom[address as usize]
+    pub fn read_cart(&self, address: u16) -> u8 {
+        if address < BANK_SIZE {
+            // If in Bank 0, simply read value
+            self.rom[address as usize]
+        } else {
+            // If in other bank, need to obey bank switching
+            let bank_address = ((self.rom_bank - 1) as u16) * BANK_SIZE + address;
+            self.rom[bank_address as usize]
+        }
     }
 
     /// ```
-    /// Write ROM
+    /// Write to cart
     ///
-    /// Writes value to ROM ($0000-$7FFF) area of memory
+    /// Writes value to ROM ($0000-$7FFF) or external RAM ($A000-$BFFF) area of memory
     ///
     /// Inputs:
     ///     Address to write to (u16)
     ///     Value to write (u8)
     /// ```
-    pub fn write_rom(&mut self, addr: u16, val: u8) {
+    pub fn write_cart(&mut self, addr: u16, val: u8) {
         match self.mbc {
             MBC::NONE => {
                 return;
             },
+            MBC::MBC1 => {
+                match addr {
+                    RAM_ENABLE_START..=RAM_ENABLE_STOP => {
+                        let enable_val = val & 0x0F;
+                        // External RAM access enabled if $0A written
+                        self.ext_ram_enable = enable_val == 0x0A;
+                    },
+                    ROM_BANK_NUM_START..=ROM_BANK_NUM_STOP => {
+                        let bank_val = val & 0x1F;
+
+                        // Bank numbers $00, $20, $40, or $60 aren't used
+                        // Instead they load $01, $21, $41, $61 respectively
+                        match bank_val {
+                            0x00 | 0x20 | 0x40 | 0x60 => {
+                                self.bank_switch(bank_val + 1);
+                            },
+                            _ => {
+                                self.bank_switch(bank_val);
+                            }
+                        }
+                    },
+                    RAM_BANK_NUM_START..=RAM_BANK_NUM_STOP => {
+                        let bits = val & 0b11;
+
+                        if self.rom_mode {
+                            // Set bits 5 & 6 of ROM bank
+                            self.rom_bank |= bits << 4;
+                        } else {
+                            // RAM bank switching
+                            self.ram_bank = bits;
+                        }
+                    },
+                    ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
+                        // ROM banking mode if $00
+                        // RAM banking mode if $01
+                        self.rom_mode = val == 0x00;
+                    },
+                    EXT_RAM_START..=EXT_RAM_STOP => {
+                        if self.ext_ram_enable {
+                            // TODO: Add RAM bank switching
+                            let ram_addr = addr - EXT_RAM_START;
+                            self.ram[ram_addr as usize] = val;
+                        }
+                    }
+                    _ => {
+                        panic!("Address too large for cartridge!");
+                    }
+                }
+            },
             _ => {
-                // TODO: More logic required here
-                self.bank_switch(val);
+                self.rom[addr as usize] = val;
             }
         }
 
@@ -196,6 +244,6 @@ impl Cart {
         if bank_num == 0 {
             panic!("Can't switch to bank 0");
         }
-        self.bank = bank_num;
+        self.rom_bank = bank_num;
     }
 }
