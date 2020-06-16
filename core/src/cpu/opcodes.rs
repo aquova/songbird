@@ -494,18 +494,28 @@ fn inc_33(cpu: &mut Cpu) -> u8 {
 /// INC (HL)
 fn inc_34(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut val = cpu.read_ram(hl);
-    val += 1;
-    cpu.write_ram(hl, val);
+    let val = cpu.read_ram(hl);
+    let new_val = val.wrapping_add(1);
+    cpu.write_ram(hl, new_val);
+
+    let set_h = check_h_carry_u8(val, 1);
+    cpu.write_flag(Flags::Z, new_val == 0);
+    cpu.clear_flag(Flags::N);
+    cpu.write_flag(Flags::H, set_h);
     3
 }
 
 /// DEC (HL)
 fn dec_35(cpu: &mut Cpu) -> u8 {
     let hl = cpu.get_reg_16(Regs16::HL);
-    let mut val = cpu.read_ram(hl);
-    val = val.wrapping_sub(1);
-    cpu.write_ram(hl, val);
+    let val = cpu.read_ram(hl);
+    let new_val = val.wrapping_sub(1);
+    cpu.write_ram(hl, new_val);
+
+    let set_h = check_h_borrow_u8(val, 1);
+    cpu.write_flag(Flags::Z, new_val == 0);
+    cpu.set_flag(Flags::N);
+    cpu.write_flag(Flags::H, set_h);
     3
 }
 

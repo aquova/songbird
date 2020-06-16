@@ -21,7 +21,7 @@ Note that even many widely used emulators don't pass all the tests, but using th
 | 5           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
 | 6           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :white_check_mark: |
 | 7           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
-| 8           | :warning: | :x:                | :warning: |              |                |            |              | :x:                |
+| 8           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
 | 9           | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 10          | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 11          | :warning: | :x:                | :warning: |              |                |            |              |                    |
