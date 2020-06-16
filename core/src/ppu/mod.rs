@@ -271,10 +271,6 @@ impl PPU {
     ///     [u8] - Graphics array to render upon
     /// ```
     fn render_sprites(&self, pixel_array: &mut [u8]) {
-        // TODO: This does not check if sprite should be drawn above/below background
-        // TODO: This does not support 8x16 sprites
-        let screen_coords = self.get_scroll_coords();
-
         // Iterate through every sprite
         for i in 0..OAM_SPR_NUM {
             let spr = self.oam[i];
@@ -282,37 +278,63 @@ impl PPU {
                 continue;
             }
 
+            let spr_coords = spr.get_coords();
             let spr_num = spr.get_tile_num();
             let tile = &self.tiles[spr_num as usize];
-            let spr_coords = spr.get_coords();
-            let palette = self.get_spr_palette(spr.is_pal_0());
-            let flip_x = spr.is_x_flip();
-            let flip_y = spr.is_y_flip();
+            self.draw_spr(pixel_array, tile, spr, spr_coords);
 
-            for row in 0..TILESIZE {
-                let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
-                let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
-                let arr_index = spr_x + spr_y * MAP_PIXELS;
-                let pixels = if flip_x {
-                    tile.get_row(row)
-                } else {
-                    tile.get_row(TILESIZE - row - 1)
-                };
+            // If sprites are 8x16, draw the bottom sprite
+            if self.spr_are_8x16() {
+                let top_coords = spr.get_coords();
+                let spr_coords = Point::new(top_coords.x, top_coords.y + TILESIZE as u8);
+                let spr_num = spr.get_tile_num() + 1;
+                let tile = &self.tiles[spr_num as usize];
+                self.draw_spr(pixel_array, tile, spr, spr_coords);
+            }
+        }
+    }
 
-                // Iterate through each pixel in row, applying the palette
-                for j in 0..TILESIZE {
-                    let pixel = pixels[j as usize];
-                    // Pixel value 0 is transparent
-                    if pixel != 0 {
-                        let corrected_pixel = palette[pixel as usize];
-                        let arr_offset = if flip_y {
-                            j
-                        } else {
-                            TILESIZE - j - 1
-                        };
+    /// ```
+    /// Draw sprite
+    ///
+    /// Draw sprite to screen
+    ///
+    /// Inputs:
+    ///     Graphics array to render upon ([u8])
+    ///     Tile to render (Tile)
+    ///     Sprite metadata (Sprite)
+    ///     Screen coordinates to draw to (Point)
+    /// ```
+    fn draw_spr(&self, pixel_array: &mut[u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
+        // TODO: This does not check if sprite should be drawn above/below background
+        let screen_coords = self.get_scroll_coords();
+        let palette = self.get_spr_palette(spr.is_pal_0());
+        let flip_x = spr.is_x_flip();
+        let flip_y = spr.is_y_flip();
 
-                        pixel_array[arr_index + arr_offset] = corrected_pixel;
-                    }
+        for row in 0..TILESIZE {
+            let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
+            let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
+            let arr_index = spr_x + spr_y * MAP_PIXELS;
+            let pixels = if flip_x {
+                tile.get_row(row)
+            } else {
+                tile.get_row(TILESIZE - row - 1)
+            };
+
+            // Iterate through each pixel in row, applying the palette
+            for j in 0..TILESIZE {
+                let pixel = pixels[j as usize];
+                // Pixel value 0 is transparent
+                if pixel != 0 {
+                    let corrected_pixel = palette[pixel as usize];
+                    let arr_offset = if flip_y {
+                        j
+                    } else {
+                        TILESIZE - j - 1
+                    };
+
+                    pixel_array[arr_index + arr_offset] = corrected_pixel;
                 }
             }
         }
@@ -503,6 +525,18 @@ impl PPU {
     fn get_wndw_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
         if lcd_control.get_bit(6) { return 1 } else { return 0 }
+    }
+
+    /// ```
+    /// Are sprites 8x16?
+    ///
+    /// Returns true if sprites are to be drawn 8x16
+    ///
+    /// Output:
+    ///     Whether spries are 8x16 (vs 8x8) (bool)
+    /// ```
+    fn spr_are_8x16(&self) -> bool {
+        self.vram[LCDC].get_bit(2)
     }
 
     /// ```

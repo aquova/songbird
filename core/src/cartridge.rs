@@ -1,6 +1,6 @@
 use std::str::from_utf8;
 
-const BANK_SIZE: u16 = 0x4000;
+const BANK_SIZE: usize = 0x4000;
 
 const RAM_ENABLE_START: u16 = 0x0000;
 const RAM_ENABLE_STOP: u16 = 0x1FFF;
@@ -116,12 +116,12 @@ impl Cart {
     ///     Byte at specified address (u8)
     /// ```
     pub fn read_cart(&self, address: u16) -> u8 {
-        if address < BANK_SIZE {
+        if address < BANK_SIZE as u16 {
             // If in Bank 0, simply read value
             self.rom[address as usize]
         } else {
             // If in other bank, need to obey bank switching
-            let bank_address = ((self.rom_bank - 1) as u16) * BANK_SIZE + address;
+            let bank_address = ((self.rom_bank - 1) as usize) * BANK_SIZE + address as usize;
             self.rom[bank_address as usize]
         }
     }
