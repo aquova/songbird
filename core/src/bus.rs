@@ -200,9 +200,12 @@ impl Bus {
     ///
     /// Input:
     ///     Line number (u8)
+    ///
+    /// Output:
+    ///     Whether to trigger LCDC interrupt
     /// ```
-    pub fn set_scanline(&mut self, line: u8) {
-        self.ppu.set_ly(line);
+    pub fn set_scanline(&mut self, line: u8) -> bool {
+        self.ppu.set_ly(line)
     }
 
     /// ```

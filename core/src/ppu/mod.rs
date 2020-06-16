@@ -18,8 +18,8 @@ const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
 
 // VRAM registers
-const LCD_DISP_REG: usize            = 0xFF40 - VRAM_OFFSET;
-const LCD_STAT_REG: usize            = 0xFF41 - VRAM_OFFSET;
+const LCDC: usize                    = 0xFF40 - VRAM_OFFSET;
+const STAT: usize                    = 0xFF41 - VRAM_OFFSET;
 const SCY: usize                     = 0xFF42 - VRAM_OFFSET;
 const SCX: usize                     = 0xFF43 - VRAM_OFFSET;
 const LY: usize                      = 0xFF44 - VRAM_OFFSET;
@@ -115,9 +115,22 @@ impl PPU {
     ///
     /// Input:
     ///     Value to write (u8)
+    ///
+    /// Output:
+    ///     Whether values in LY and LYC registers are equal
     /// ```
-    pub fn set_ly(&mut self, line: u8) {
+    pub fn set_ly(&mut self, line: u8) -> bool {
         self.vram[LY] = line;
+
+        if self.vram[LY] == self.vram[LYC] {
+            // If LY and LYC are equal:
+            // - Set coincidence bit in STAT register
+            // - Trigger LCDC status interrupt if enabled
+            self.vram[STAT].set_bit(2);
+            self.vram[STAT].get_bit(6)
+        } else {
+            false
+        }
     }
 
     /// ```
@@ -129,8 +142,8 @@ impl PPU {
     ///     Current clock mode (u8)
     /// ```
     pub fn set_status(&mut self, mode: u8) {
-        self.vram[LCD_STAT_REG] &= 0b1111_1100;
-        self.vram[LCD_STAT_REG] |= mode;
+        self.vram[STAT] &= 0b1111_1100;
+        self.vram[STAT] |= mode;
     }
 
     /// ```
@@ -423,7 +436,7 @@ impl PPU {
     ///     Whether or not background is displayed (bool)
     /// ```
     fn is_bkgd_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         lcd_control.get_bit(0)
     }
 
@@ -436,7 +449,7 @@ impl PPU {
     ///     Whether window layer is visible (bool)
     /// ```
     fn is_wndw_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         lcd_control.get_bit(5)
     }
 
@@ -449,7 +462,7 @@ impl PPU {
     ///     Whether the sprite layer is visible (bool)
     /// ```
     fn is_sprt_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         lcd_control.get_bit(1)
     }
 
@@ -462,7 +475,7 @@ impl PPU {
     ///     Tileset index (u8)
     /// ```
     fn get_bkgd_tile_set_index(&self) -> u8 {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         if lcd_control.get_bit(4) { return 1 } else { return 0 }
     }
 
@@ -475,7 +488,7 @@ impl PPU {
     ///     Tilemap index (u8)
     /// ```
     fn get_bkgd_tile_map_index(&self) -> u8 {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         if lcd_control.get_bit(3) { return 1 } else { return 0 }
     }
 
@@ -488,7 +501,7 @@ impl PPU {
     ///     Tilemap index (u8)
     /// ```
     fn get_wndw_tile_map_index(&self) -> u8 {
-        let lcd_control = self.vram[LCD_DISP_REG];
+        let lcd_control = self.vram[LCDC];
         if lcd_control.get_bit(6) { return 1 } else { return 0 }
     }
 
@@ -530,7 +543,7 @@ impl PPU {
     ///     Current clock mode (ModeTypes)
     /// ```
     fn get_lcdc_status(&self) -> ModeTypes {
-        let lcd_stat = self.vram[LCD_STAT_REG];
+        let lcd_stat = self.vram[STAT];
         let mode = lcd_stat & 0b0000_0011;
         match mode {
             0 => { ModeTypes::HBLANK },

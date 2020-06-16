@@ -3,8 +3,6 @@ import init, * as wasm from "./songbird_wasm.js"
 const WIDTH = 160
 const HEIGHT = 144
 
-const MAX_ROM = 32 * 1024 // Currently only support up to 32 KiB ROMs
-
 let scale = 1
 let scale_elem = document.getElementById("scale")
 
@@ -31,9 +29,6 @@ async function run() {
         let file = e.target.files[0]
         if (!file) {
             alert("Failed to read file")
-            return
-        } else if (file.size > MAX_ROM) {
-            alert("The emulator does not currently support ROMs of that size. Sorry!")
             return
         }
 

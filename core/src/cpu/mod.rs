@@ -178,12 +178,16 @@ impl Cpu {
             false
         } else if !self.halted {
             let cycles = opcodes::execute(self);
+
             let draw_time = self.clock.clock_step(cycles);
             // If draw_time true, then VBLANK interrupt is toggled
             if draw_time {
                 self.enable_interrupt(Interrupts::VBLANK);
             }
-            self.bus.set_scanline(self.clock.get_scanline());
+
+            if self.bus.set_scanline(self.clock.get_scanline()) {
+                self.enable_interrupt(Interrupts::LCD_STAT);
+            }
             self.bus.set_status_reg(self.clock.get_mode());
             draw_time
         } else {
