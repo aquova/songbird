@@ -732,7 +732,7 @@ fn ld_51(cpu: &mut Cpu) -> u8 {
 fn ld_52(cpu: &mut Cpu) -> u8 {
     let byte = cpu.get_reg(Regs::D);
     cpu.ld_n_d8(Regs::D, byte);
-    2
+    1
 }
 
 /// LD D, E
@@ -924,7 +924,7 @@ fn ld_6c(cpu: &mut Cpu) -> u8 {
 fn ld_6d(cpu: &mut Cpu) -> u8 {
     let byte = cpu.get_reg(Regs::L);
     cpu.ld_n_d8(Regs::L, byte);
-    4
+    1
 }
 
 /// LD L, (HL)
@@ -1001,7 +1001,7 @@ fn ld_77(cpu: &mut Cpu) -> u8 {
     let val = cpu.get_reg(Regs::A);
     let hl = cpu.get_reg_16(Regs16::HL);
     cpu.write_ram(hl, val);
-    1
+    2
 }
 
 /// LD A, B
@@ -1286,14 +1286,14 @@ fn sbc_9e(cpu: &mut Cpu) -> u8 {
 fn sbc_9f(cpu: &mut Cpu) -> u8 {
     let val = cpu.get_reg(Regs::A);
     cpu.sub_a_d8(val, true);
-    2
+    1
 }
 
 /// AND B
 fn and_a0(cpu: &mut Cpu) -> u8 {
     let val = cpu.get_reg(Regs::B);
     cpu.and_a_d8(val);
-    2
+    1
 }
 
 /// AND C
@@ -1658,7 +1658,7 @@ fn call_cd(cpu: &mut Cpu) -> u8 {
 fn adc_ce(cpu: &mut Cpu) -> u8 {
     let val = cpu.fetch();
     cpu.add_a_d8(val, true);
-    8
+    2
 }
 
 /// RST 08
@@ -1929,7 +1929,7 @@ fn push_f5(cpu: &mut Cpu) -> u8 {
 fn or_f6(cpu: &mut Cpu) -> u8 {
     let val = cpu.fetch();
     cpu.or_a_d8(val);
-    1
+    2
 }
 
 /// RST 30
