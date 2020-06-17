@@ -12,7 +12,7 @@ use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use coredump::register_panic_handler;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
-use sdl2::pixels::Color;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Point;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
@@ -234,7 +234,7 @@ pub fn main() {
                     sleep(frame_wait.unwrap());
                 }
 
-                draw_screen(disp_arr, &mut canvas);
+                draw_screen(&disp_arr, &mut canvas);
                 last_frame = SystemTime::now();
             }
 
@@ -290,21 +290,39 @@ fn get_color(color: (u8, u8, u8)) -> Color {
 ///     Pixel data ([u8])
 ///     SDL2 Canvas (Canvas<Window>)
 /// ```
-fn draw_screen(data: [u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
+fn draw_screen(data: &[u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     canvas.set_scale(SCALE as f32, SCALE as f32).unwrap();
 
-    for y in 0..SCREEN_HEIGHT {
-        for x in 0..SCREEN_WIDTH {
-            let index = y * SCREEN_WIDTH + x;
-            let pixel = data[index];
-            let color_val = COLORS[pixel as usize];
-            let color = get_color(color_val);
-            canvas.set_draw_color(color);
-
-            let point = Point::new(x as i32, y as i32);
-            canvas.draw_point(point).expect("Unable to draw to canvas");
-        }
+    let mut color_data: Vec<u8> = Vec::new();
+    for i in 0..data.len() {
+        let c = COLORS[data[i] as usize];
+        color_data.push(c.0);
+        color_data.push(c.1);
+        color_data.push(c.2);
     }
+
+    let texture_creator = canvas.texture_creator();
+    let mut texture = texture_creator.create_texture_streaming(PixelFormatEnum::RGB24, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32).unwrap();
+    texture.with_lock(None, |buffer: &mut [u8], _: usize| {
+        for i in 0..color_data.len() {
+            buffer[i] = color_data[i];
+        }
+    }).unwrap();
+
+    canvas.copy(&texture, None, None).unwrap();
+
+    // for y in 0..SCREEN_HEIGHT {
+    //     for x in 0..SCREEN_WIDTH {
+    //         let index = y * SCREEN_WIDTH + x;
+    //         let pixel = data[index];
+    //         let color_val = COLORS[pixel as usize];
+    //         let color = get_color(color_val);
+    //         canvas.set_draw_color(color);
+
+    //         let point = Point::new(x as i32, y as i32);
+    //         canvas.draw_point(point).expect("Unable to draw to canvas");
+    //     }
+    // }
 
     canvas.present();
 }
