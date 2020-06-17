@@ -176,8 +176,9 @@ impl Cpu {
                 self.trigger_interrupt(inter_type);
             }
             false
-        } else if !self.halted {
-            let cycles = opcodes::execute(self);
+        } else {
+            // If halted, simply continue counting without executing opcodes
+            let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
             let draw_time = self.clock.clock_step(cycles);
             // If draw_time true, then VBLANK interrupt is toggled
@@ -190,9 +191,6 @@ impl Cpu {
             }
             self.bus.set_status_reg(self.clock.get_mode());
             draw_time
-        } else {
-            // Do nothing
-            false
         }
     }
 

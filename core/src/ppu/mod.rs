@@ -305,7 +305,7 @@ impl PPU {
     ///     Sprite metadata (Sprite)
     ///     Screen coordinates to draw to (Point)
     /// ```
-    fn draw_spr(&self, pixel_array: &mut[u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
+    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
         // TODO: This does not check if sprite should be drawn above/below background
         let screen_coords = self.get_scroll_coords();
         let palette = self.get_spr_palette(spr.is_pal_0());
