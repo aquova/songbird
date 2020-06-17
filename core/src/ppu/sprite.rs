@@ -26,6 +26,16 @@ const Y_OFFSET: u8 = 16;
 const X_OFFSCREEN: u8 = 168;
 const Y_OFFSCREEN: u8 = 160;
 
+const Y_POS_BYTE: u16 = 0;
+const X_POS_BYTE: u16 = 1;
+const TILE_NUM_BYTE: u16 = 2;
+const FLAG_BYTE: u16 = 3;
+
+const PAL_NUM_BIT: u8 = 4;
+const X_FLIP_BIT: u8 = 5;
+const Y_FLIP_BIT: u8 = 6;
+const BG_PRIORITY_BIT: u8 = 7;
+
 #[derive(Copy, Clone)]
 pub struct Sprite {
     tile_num: u8,
@@ -61,10 +71,10 @@ impl Sprite {
     /// ```
     pub fn update_byte(&mut self, index: u16, byte: u8) {
         match index {
-            0 => { self.parse_oam_byte1(byte); },
-            1 => { self.parse_oam_byte2(byte); },
-            2 => { self.parse_oam_byte3(byte); },
-            3 => { self.parse_oam_byte4(byte); },
+            Y_POS_BYTE =>    { self.parse_oam_byte1(byte); },
+            X_POS_BYTE =>    { self.parse_oam_byte2(byte); },
+            TILE_NUM_BYTE => { self.parse_oam_byte3(byte); },
+            FLAG_BYTE =>     { self.parse_oam_byte4(byte); },
             _ => { panic!("Byte offset can only be from 0-3"); }
         }
     }
@@ -193,9 +203,9 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte4(&mut self, val: u8) {
-        self.above_bkgd = !val.get_bit(7);
-        self.y_flip = val.get_bit(6);
-        self.x_flip = val.get_bit(5);
-        self.palette_0 = !val.get_bit(4);
+        self.above_bkgd = !val.get_bit(BG_PRIORITY_BIT);
+        self.y_flip = val.get_bit(Y_FLIP_BIT);
+        self.x_flip = val.get_bit(X_FLIP_BIT);
+        self.palette_0 = !val.get_bit(PAL_NUM_BIT);
     }
 }
