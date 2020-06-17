@@ -29,19 +29,6 @@ use std::thread::sleep;
 const SCALE: usize = 5;
 const FRAME_TIME: u64 = 16670; // In microseconds
 
-// Colors
-const BLACK: (u8, u8, u8)            = (0,   0,   0);
-const LIGHT_GRAY: (u8, u8, u8)       = (148, 148, 165);
-const DARK_GRAY: (u8, u8, u8)        = (107, 107, 90);
-const WHITE: (u8, u8, u8)            = (255, 255, 255);
-
-const COLORS: [(u8, u8, u8); 4] = [
-    WHITE,
-    LIGHT_GRAY,
-    DARK_GRAY,
-    BLACK,
-];
-
 pub fn main() {
     register_panic_handler().unwrap();
 
@@ -293,37 +280,15 @@ fn get_color(color: (u8, u8, u8)) -> Color {
 fn draw_screen(data: &[u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
     canvas.set_scale(SCALE as f32, SCALE as f32).unwrap();
 
-    let mut color_data: Vec<u8> = Vec::new();
-    for i in 0..data.len() {
-        let c = COLORS[data[i] as usize];
-        color_data.push(c.0);
-        color_data.push(c.1);
-        color_data.push(c.2);
-    }
-
     let texture_creator = canvas.texture_creator();
-    let mut texture = texture_creator.create_texture_streaming(PixelFormatEnum::RGB24, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32).unwrap();
+    let mut texture = texture_creator.create_texture_streaming(PixelFormatEnum::RGBA32, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32).unwrap();
     texture.with_lock(None, |buffer: &mut [u8], _: usize| {
-        for i in 0..color_data.len() {
-            buffer[i] = color_data[i];
+        for i in 0..data.len() {
+            buffer[i] = data[i];
         }
     }).unwrap();
 
     canvas.copy(&texture, None, None).unwrap();
-
-    // for y in 0..SCREEN_HEIGHT {
-    //     for x in 0..SCREEN_WIDTH {
-    //         let index = y * SCREEN_WIDTH + x;
-    //         let pixel = data[index];
-    //         let color_val = COLORS[pixel as usize];
-    //         let color = get_color(color_val);
-    //         canvas.set_draw_color(color);
-
-    //         let point = Point::new(x as i32, y as i32);
-    //         canvas.draw_point(point).expect("Unable to draw to canvas");
-    //     }
-    // }
-
     canvas.present();
 }
 

@@ -8,19 +8,6 @@ use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-//                           R,   G,   B,   A
-const BLACK: [u8; 4] =      [0,   0,   0,   255];
-const LIGHT_GRAY: [u8; 4] = [148, 148, 165, 255];
-const DARK_GRAY: [u8; 4] =  [107, 107, 90,  255];
-const WHITE: [u8; 4] =      [255, 255, 255, 255];
-
-const COLORS: [[u8; 4]; 4] = [
-    WHITE,
-    LIGHT_GRAY,
-    DARK_GRAY,
-    BLACK
-];
-
 #[wasm_bindgen]
 pub struct GB {
     cpu: Cpu,
@@ -117,23 +104,8 @@ impl GB {
     /// ```
     #[wasm_bindgen]
     pub fn draw_screen(&mut self) {
-        let disp_arr = self.cpu.render();
-
-        let mut data = Vec::new();
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                let index = y * SCREEN_WIDTH + x;
-                let pixel = disp_arr[index];
-                let color_arr = COLORS[pixel as usize];
-                for i in 0..color_arr.len() {
-                    data.push(color_arr[i]);
-                }
-            }
-        }
-
-        let width = SCREEN_WIDTH as u32;
-        let height = SCREEN_HEIGHT as u32;
-        let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut data), width, height).unwrap();
+        let mut disp_arr = self.cpu.render();
+        let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut disp_arr), SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32).unwrap();
         self.ctx.put_image_data(&img_data, 0.0, 0.0).unwrap();
     }
 

@@ -3,7 +3,8 @@ pub const TILESIZE: usize = 8;
 
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
-pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
+pub const COLOR_CHANNELS: usize = 4;
+pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT * COLOR_CHANNELS;
 
 pub struct Point {
     pub x: u8,

@@ -41,6 +41,19 @@ const TILE_SET_END: u16               = 0x97FF - (VRAM_OFFSET as u16);
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
 const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 
+// Colors
+const BLACK: [u8; COLOR_CHANNELS]            = [0,   0,   0,   255];
+const LIGHT_GRAY: [u8; COLOR_CHANNELS]       = [148, 148, 165, 255];
+const DARK_GRAY: [u8; COLOR_CHANNELS]        = [107, 107, 90,  255];
+const WHITE: [u8; COLOR_CHANNELS]            = [255, 255, 255, 255];
+
+const COLORS: [[u8; COLOR_CHANNELS]; 4] = [
+    WHITE,
+    LIGHT_GRAY,
+    DARK_GRAY,
+    BLACK,
+];
+
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
     tiles: [Tile; TILE_NUM],
@@ -368,8 +381,11 @@ impl PPU {
                 let pixel = pixel_array[index];
 
                 // Index in output array uses un-wrapped x/y for indices
-                let view_index = (y - start_y) * SCREEN_WIDTH + (x - start_x);
-                viewport[view_index] = pixel;
+                let view_index = ((y - start_y) * SCREEN_WIDTH + (x - start_x)) * COLOR_CHANNELS;
+                let color = COLORS[pixel as usize];
+                for i in 0..color.len() {
+                    viewport[view_index + i] = color[i];
+                }
             }
         }
 
