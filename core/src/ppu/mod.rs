@@ -278,16 +278,16 @@ impl PPU {
                 continue;
             }
 
-            let spr_coords = spr.get_coords();
-            let spr_num = spr.get_tile_num();
-            let tile = &self.tiles[spr_num as usize];
-            self.draw_spr(pixel_array, tile, spr, spr_coords);
+            // If sprites are 8x8, just draw single tile
+            // If sprites are 8x16, need to draw tile and adjacent tile below it
+            // If sprites are 8x16 and Y-flipped, need to draw bottom tile on top
+            let num_spr = if self.spr_are_8x16() { 2 } else { 1 };
 
-            // If sprites are 8x16, draw the bottom sprite
-            if self.spr_are_8x16() {
+            for i in 0..num_spr {
                 let top_coords = spr.get_coords();
-                let spr_coords = Point::new(top_coords.x, top_coords.y + TILESIZE as u8);
-                let spr_num = spr.get_tile_num() + 1;
+                let spr_coords = Point::new(top_coords.x, top_coords.y + (TILESIZE as u8 * i));
+                let spr_offset = if spr.is_y_flip() { num_spr - i - 1 } else { i };
+                let spr_num = spr.get_tile_num() + spr_offset;
                 let tile = &self.tiles[spr_num as usize];
                 self.draw_spr(pixel_array, tile, spr, spr_coords);
             }
@@ -316,10 +316,10 @@ impl PPU {
             let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
             let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
             let arr_index = spr_x + spr_y * MAP_PIXELS;
-            let pixels = if flip_x {
-                tile.get_row(row)
-            } else {
+            let pixels = if flip_y {
                 tile.get_row(TILESIZE - row - 1)
+            } else {
+                tile.get_row(row)
             };
 
             // Iterate through each pixel in row, applying the palette
@@ -328,10 +328,10 @@ impl PPU {
                 // Pixel value 0 is transparent
                 if pixel != 0 {
                     let corrected_pixel = palette[pixel as usize];
-                    let arr_offset = if flip_y {
-                        j
-                    } else {
+                    let arr_offset = if flip_x {
                         TILESIZE - j - 1
+                    } else {
+                        j
                     };
 
                     pixel_array[arr_index + arr_offset] = corrected_pixel;

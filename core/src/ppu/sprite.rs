@@ -125,7 +125,7 @@ impl Sprite {
     /// ```
     /// Is X flipped?
     ///
-    /// Should the sprite be flipped in the X-direction (up-down)?
+    /// Should the sprite be flipped in the X-direction?
     ///
     /// Output:
     ///     Whether sprite should be flipped
@@ -137,7 +137,7 @@ impl Sprite {
     /// ```
     /// Is Y flipped?
     ///
-    /// Should the sprite be flipped in the Y-direction (left-right)?
+    /// Should the sprite be flipped in the Y-direction?
     ///
     /// Output:
     ///     Whether sprite should be flipped
@@ -194,8 +194,8 @@ impl Sprite {
     /// ```
     fn parse_oam_byte4(&mut self, val: u8) {
         self.above_bkgd = !val.get_bit(7);
-        self.x_flip = !val.get_bit(6);
-        self.y_flip = !val.get_bit(5);
+        self.y_flip = val.get_bit(6);
+        self.x_flip = val.get_bit(5);
         self.palette_0 = !val.get_bit(4);
     }
 }
