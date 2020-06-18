@@ -208,7 +208,7 @@ impl PPU {
             for x in 0..MAP_SIZE {
                 let index = y * MAP_SIZE + x;
                 // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-                let tile_index = if self.get_bkgd_tile_set_index() == 0 {
+                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
                     (256 + (tile_map[index] as i8 as isize)) as usize
                 } else {
                     tile_map[index] as usize
@@ -219,7 +219,7 @@ impl PPU {
                 for row in 0..TILESIZE {
                     let map_x = TILESIZE * x;
                     let map_y = (TILESIZE * y) + row;
-                    let map_index = (map_y * MAP_SIZE * TILESIZE) + map_x;
+                    let map_index = (map_y * MAP_PIXELS) + map_x;
                     let pixels = tile.get_row(row);
                     // Iterate through each pixel in row, applying the palette
                     for i in 0..TILESIZE {
@@ -240,22 +240,31 @@ impl PPU {
     ///     Array of pixels to modify (&[u8])
     /// ```
     fn render_window(&self, pixel_array: &mut [u8]) {
-        let coords = self.get_wndw_coords();
+        let screen_coords = self.get_scroll_coords();
+        let wndw_coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
         let palette = self.get_bkgd_palette();
+
+        let origin_x = (wndw_coords.x + screen_coords.x) as usize;
+        let origin_y = (wndw_coords.y + screen_coords.y) as usize;
 
         // Iterate through all tiles in window
         'tile_y: for y in 0..MAP_SIZE {
             'tile_x: for x in 0..MAP_SIZE {
                 let index = y * MAP_SIZE + x;
-                let tile_index = wndw_map[index];
-                let tile = &self.tiles[tile_index as usize];
+                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
+                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+                    (256 + (wndw_map[index] as i8 as isize)) as usize
+                } else {
+                    wndw_map[index] as usize
+                };
+                let tile = &self.tiles[tile_index];
 
                 // Windows can only be drawn on bottom/right of screen
                 // If tiles have gone off to the right, we are done with this row
                 // If they've gone off the bottom, we're done period
-                let map_x = x + coords.x as usize;
-                let map_y = y + coords.y as usize;
+                let map_x = (x * TILESIZE) + origin_x;
+                let map_y = (y * TILESIZE) + origin_y;
                 if map_y > SCREEN_HEIGHT {
                     break 'tile_y;
                 } else if map_x > SCREEN_WIDTH {
@@ -263,7 +272,7 @@ impl PPU {
                 }
 
                 for row in 0..TILESIZE {
-                    let map_index = (map_y + row) * MAP_SIZE + map_x;
+                    let map_index = (map_y + row) * MAP_PIXELS + map_x;
                     let pixels = tile.get_row(row);
                     // Iterate through each pixel in row, applying the palette
                     for i in 0..TILESIZE {
@@ -512,7 +521,7 @@ impl PPU {
     /// Output:
     ///     Tileset index (u8)
     /// ```
-    fn get_bkgd_tile_set_index(&self) -> u8 {
+    fn get_bkgd_wndw_tile_set_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
         if lcd_control.get_bit(4) { return 1 } else { return 0 }
     }

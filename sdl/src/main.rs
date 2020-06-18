@@ -12,8 +12,7 @@ use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use coredump::register_panic_handler;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
-use sdl2::pixels::{Color, PixelFormatEnum};
-use sdl2::rect::Point;
+use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
@@ -251,21 +250,6 @@ fn trim_newline(s: &mut String) {
             s.pop();
         }
     }
-}
-
-/// ```
-/// Get color
-///
-/// Covert RGB tuple into Color object
-///
-/// Input:
-///     RGB tuple ((u8, u8, u8))
-///
-/// Output:
-///     Corresponding Color object (Color)
-/// ```
-fn get_color(color: (u8, u8, u8)) -> Color {
-    Color::RGB(color.0, color.1, color.2)
 }
 
 /// ```
