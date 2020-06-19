@@ -8,14 +8,7 @@ edition = "2018"
 [dependencies]
 songbird_core = { path = "../core" }
 coredump = "^0.1.1"
-sdl2 = "^0.32.2"
 
-# Requires the cargo-bundle crate to generate .app
-[package.metadata.bundle]
-name = "songbird"
-identifier = "io.github.aquova.songbird"
-icon = ["32x32.png", "128x128.png", "128x128@2x.png"]
-version = "0.1.0"
-copyright = "Copyright (c) Austin Bricker 2019-2020. All rights reserved."
-category = "Games"
-osx_frameworks = ["SDL2"]
+[dependencies.sdl2]
+version = "0.34.0"
+features = ["bundled", "static-link"]
