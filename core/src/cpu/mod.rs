@@ -366,32 +366,40 @@ impl Cpu {
     ///
     /// Performs BCD operation
     ///
-    /// Note: Implementation from here: https://forums.nesdev.com/viewtopic.php?t=15944
+    /// Note: Implementation from here: https://github.com/benkonz/gameboy_emulator
     /// ```
     pub fn daa(&mut self) {
-        let mut a = self.get_reg(Regs::A);
+        let mut a = self.get_reg(Regs::A) as i32;
+
         if !self.get_flag(Flags::N) {
-            if self.get_flag(Flags::C) || a > 0x99 {
-                a = a.wrapping_add(0x60);
-                self.set_flag(Flags::C);
+            if self.get_flag(Flags::H) || (a & 0x0F) > 0x09 {
+                a += 0x06;
             }
 
-            if self.get_flag(Flags::H) || (a & 0x0F) < 0x09 {
-                a = a.wrapping_add(0x06);
+            if self.get_flag(Flags::C) || a > 0x9F {
+                a += 0x60;
             }
         } else {
-            if self.get_flag(Flags::C) {
-                a = a.wrapping_sub(0x60);
+            if self.get_flag(Flags::H) {
+                a = (a - 6) & 0xFF;
             }
 
-            if self.get_flag(Flags::H) {
-                a = a.wrapping_sub(0x06);
+            if self.get_flag(Flags::C) {
+                a -= 0x60;
             }
         }
 
-        self.write_flag(Flags::Z, a == 0);
         self.clear_flag(Flags::H);
-        self.set_reg(Regs::A, a);
+        self.clear_flag(Flags::Z);
+
+        if (a & 0x100) == 0x100 {
+            self.set_flag(Flags::C);
+        }
+
+        a &= 0xFF;
+        self.write_flag(Flags::Z, a == 0);
+
+        self.set_reg(Regs::A, a as u8);
     }
 
     /// ```

@@ -14,7 +14,7 @@ Note that even many widely used emulators don't pass all the tests, but using th
 
 | Test number | cgb_sound | cpu_instrs         | dmg_sound | instr_timing | interrupt_time | mem_timing | mem_timing-2 | oam_bug            |
 | ----------- | --------- | ----------         | --------- | ------------ | -------------- | ---------- | ------------ | -------            |
-| 1           | :warning: | :x:                | :warning: | :x:          | :x:            | :x:        | :x:          | :x:                |
+| 1           | :warning: | :white_check_mark: | :warning: | :x:          | :x:            | :x:        | :x:          | :x:                |
 | 2           | :warning: | :white_check_mark: | :warning: |              |                | :x:        | :x:          | :x:                |
 | 3           | :warning: | :white_check_mark: | :warning: |              |                | :x:        | :x:          | :white_check_mark: |
 | 4           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
@@ -24,5 +24,5 @@ Note that even many widely used emulators don't pass all the tests, but using th
 | 8           | :warning: | :white_check_mark: | :warning: |              |                |            |              | :x:                |
 | 9           | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 10          | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
-| 11          | :warning: | :x:                | :warning: |              |                |            |              |                    |
+| 11          | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 11          | :warning: |                    | :warning: |              |                |            |              |                    |
