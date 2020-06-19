@@ -7,7 +7,7 @@
 *.wasm
 **/songbird_wasm.js
 *.exe
-**/core
+**/sdl/core
 
 # Hide files that aren't ours
 **/games

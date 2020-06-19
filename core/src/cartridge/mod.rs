@@ -1,4 +1,11 @@
+mod mbc1;
+mod mbc2;
+mod mbc3;
+
 use std::str::from_utf8;
+use mbc1::{mbc1_read_byte, mbc1_write_byte};
+use mbc2::{mbc2_read_byte, mbc2_write_byte};
+use mbc3::{mbc3_read_byte, mbc3_write_byte};
 
 const ROM_BANK_SIZE: usize = 0x4000;
 const RAM_BANK_SIZE: usize = 0x2000;
@@ -64,12 +71,14 @@ pub enum MBC {
     NONE,
     MBC1,
     MBC2,
-    MBC3
+    MBC3,
+    HuC1,
+    MBC5
 }
 
 pub struct Cart {
     mbc: MBC,
-    rom_bank: u8,
+    rom_bank: u16,
     ram_bank: u8,
     rom: Vec<u8>,
     ram: Vec<u8>,
@@ -126,13 +135,16 @@ impl Cart {
         } else if address < ROM_STOP {
             // If in other rom bank, need to obey bank switching
             // NOTE: MBC2 only goes up to 16 banks
-            let bank_address = ((self.rom_bank - 1) as usize) * ROM_BANK_SIZE + address as usize;
+            let rel_address = (address as usize) - ROM_BANK_SIZE;
+            let bank_address = (self.rom_bank as usize) * ROM_BANK_SIZE + rel_address;
             self.rom[bank_address as usize]
         } else {
-            let rel_addr = (address - EXT_RAM_START) as usize;
-            // Reading from external RAM
-            let ram_bank_addr = (self.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
-            self.ram[ram_bank_addr]
+            match self.mbc {
+                MBC::MBC1 => { mbc1_read_byte(self, address) },
+                MBC::MBC2 => { mbc2_read_byte(self, address) },
+                MBC::MBC3 => { mbc3_read_byte(self, address) },
+                _ => { 0 }
+            }
         }
     }
 
@@ -146,58 +158,12 @@ impl Cart {
     ///     Value to write (u8)
     /// ```
     pub fn write_cart(&mut self, addr: u16, val: u8) {
-        if self.mbc == MBC::NONE {
-            return;
+        match self.mbc {
+            MBC::MBC1 => { mbc1_write_byte(self, addr, val); },
+            MBC::MBC2 => { mbc2_write_byte(self, addr, val); },
+            MBC::MBC3 => { mbc3_write_byte(self, addr, val); },
+            _ => { return; }
         }
-
-        match addr {
-            RAM_ENABLE_START..=RAM_ENABLE_STOP => {
-                let enable_val = val & 0x0F;
-                // External RAM access enabled if $0A written
-                self.ext_ram_enable = enable_val == 0x0A;
-            },
-            ROM_BANK_NUM_START..=ROM_BANK_NUM_STOP => {
-                let bank_val = val & 0x1F;
-
-                // Bank numbers $00, $20, $40, or $60 aren't used
-                // Instead they load $01, $21, $41, $61 respectively
-                match bank_val {
-                    0x00 | 0x20 | 0x40 | 0x60 => {
-                        self.bank_switch(bank_val + 1);
-                    },
-                    _ => {
-                        self.bank_switch(bank_val);
-                    }
-                }
-            },
-            RAM_BANK_NUM_START..=RAM_BANK_NUM_STOP => {
-                let bits = val & 0b11;
-
-                if self.rom_mode {
-                    // Set bits 5 & 6 of ROM bank
-                    self.rom_bank |= bits << 4;
-                } else {
-                    // RAM bank switching
-                    self.ram_bank = bits;
-                }
-            },
-            ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
-                // ROM banking mode if $00
-                // RAM banking mode if $01
-                self.rom_mode = val == 0x00;
-            },
-            EXT_RAM_START..=EXT_RAM_STOP => {
-                if self.ext_ram_enable {
-                    // TODO: Add RAM bank switching
-                    let ram_addr = addr - EXT_RAM_START;
-                    self.ram[ram_addr as usize] = val;
-                }
-            }
-            _ => {
-                panic!("Address too large for cartridge!");
-            }
-        }
-
     }
 
     /// ```
@@ -234,20 +200,5 @@ impl Cart {
         };
 
         self.mbc = mbc;
-    }
-
-    /// ```
-    /// Bank Switch
-    ///
-    /// Switches which ROM bank is currently loaded into RAM
-    ///
-    /// Input:
-    ///     Bank number to switch to (u8)
-    /// ```
-    fn bank_switch(&mut self, bank_num: u8) {
-        if bank_num == 0 {
-            panic!("Can't switch to bank 0");
-        }
-        self.rom_bank = bank_num;
     }
 }
