@@ -17,7 +17,6 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 use std::{env, io, process};
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Read;
@@ -36,8 +35,6 @@ pub fn main() {
         println!("cargo run path/to/game");
         process::exit(1);
     }
-    let mut paused = false;
-    let mut debugging = false;
 
     // Start game
     let mut gb = Cpu::new();
@@ -47,18 +44,18 @@ pub fn main() {
 
     // Initialize debugger
     let mut agbd = debugger::new();
+    let mut debugging = false;
 
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window(title, (SCALE * SCREEN_WIDTH) as u32, (SCALE * SCREEN_HEIGHT) as u32).position_centered().opengl().build().unwrap();
-    let mut canvas = window.into_canvas().build().unwrap();
+    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     canvas.clear();
     canvas.present();
 
     // Setup I/O
     let mut events = sdl_context.event_pump().unwrap();
-    let mut prev_keys = HashSet::new();
 
     let frame_duration = Duration::from_micros(FRAME_TIME);
     let mut last_frame = SystemTime::now();
@@ -81,26 +78,21 @@ pub fn main() {
                     debugging = true;
                     agbd.print_info(gb.get_pc());
                 },
-                // Pause with Space
-                Event::KeyDown{keycode: Some(Keycode::Space), ..} => {
-                    paused = !paused;
-                    if paused {
-                        println!("Paused");
+                // Send keypresses to CPU
+                Event::KeyDown { keycode: Some(keycode), .. } => {
+                    if let Some(btn) = key2btn(keycode) {
+                        gb.toggle_button(btn, true);
+                    }
+                },
+                // Send key releases to CPU
+                Event::KeyUp { keycode: Some(keycode), .. } => {
+                    if let Some(btn) = key2btn(keycode) {
+                        gb.toggle_button(btn, false);
                     }
                 },
                 _ => {}
             }
         }
-
-        // Get list of pressed keys
-        let keys = events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
-        // Engage newly pressed buttons
-        let pressed_keys = &keys - &prev_keys;
-        handle_buttons(pressed_keys, &mut gb, true);
-        // Disable released buttons
-        let released_keys = &prev_keys - &keys;
-        handle_buttons(released_keys, &mut gb, false);
-        prev_keys = keys;
 
         // Debugging menu
         if debugging {
@@ -205,29 +197,27 @@ pub fn main() {
             }
         }
 
-        if !paused {
-            let watch_vals = agbd.get_watch_vals(&gb);
+        let watch_vals = agbd.get_watch_vals(&gb);
 
-            // Game loop
-            let draw_time = gb.tick();
-            if draw_time {
-                let disp_arr = gb.render();
+        // Game loop
+        let draw_time = gb.tick();
+        if draw_time {
+            let disp_arr = gb.render();
 
-                // Need to align to 60 FPS before drawing screen
-                let elapsed = last_frame.elapsed().unwrap();
-                let frame_wait = frame_duration.checked_sub(elapsed);
-                if frame_wait.is_some() {
-                    sleep(frame_wait.unwrap());
-                }
-
-                draw_screen(&disp_arr, &mut canvas);
-                last_frame = SystemTime::now();
+            // Need to align to 60 FPS before drawing screen
+            let elapsed = last_frame.elapsed().unwrap();
+            let frame_wait = frame_duration.checked_sub(elapsed);
+            if frame_wait.is_some() {
+                sleep(frame_wait.unwrap());
             }
 
-            // Break if we hit a break/watchpoint
-            if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
-                debugging = true;
-            }
+            draw_screen(&disp_arr, &mut canvas);
+            last_frame = SystemTime::now();
+        }
+
+        // Break if we hit a break/watchpoint
+        if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
+            debugging = true;
         }
     }
 }
@@ -298,25 +288,6 @@ fn key2btn(key: Keycode) -> Option<Buttons> {
         Keycode::X =>       { Some(Buttons::A)      },
         Keycode::Z =>       { Some(Buttons::B)      },
         _ =>                { None                  }
-    }
-}
-
-/// ```
-/// Handle buttons
-///
-/// Sets keypresses in emulator
-///
-/// Inputs:
-///     Set of key changes (HashSet<Keycode>)
-///     Gameboy object (Cpu)
-///     Whether keyset is pressed or released (bool)
-/// ```
-fn handle_buttons(keys: HashSet<Keycode>, gb: &mut Cpu, pressed: bool) {
-    for key in &keys {
-        let btn = key2btn(*key);
-        if btn.is_some() {
-            gb.toggle_button(btn.unwrap(), pressed);
-        }
     }
 }
 
