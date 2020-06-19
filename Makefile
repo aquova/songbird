@@ -2,12 +2,13 @@ CARGO = cargo
 WASM_PACK = wasm-pack
 WASM_TARGET = web
 WIN_TARGET = x86_64-pc-windows-gnu
+REL_FLAGS = --release
 
-all: sdl wasm windows
+all: sdl wasm windows debug
 
 sdl:
 	cd sdl && \
-	$(CARGO) build
+	$(CARGO) build $(REL_FLAGS)
 
 wasm:
 	cd wasm && \
@@ -19,6 +20,10 @@ windows:
 	cd sdl && \
 	$(CARGO) build --target $(WIN_TARGET) && \
 	mv ./target/x86_64-pc-windows-gnu/debug/songbird_sdl.exe .
+
+debug:
+	cd sdl && \
+	$(CARGO) build
 
 clean: clean_core clean_sdl clean_wasm clean_windows
 
@@ -43,4 +48,4 @@ clean_sdl:
 	$(CARGO) clean && \
 	rm -f core
 
-.PHONY: all sdl wasm windows clean
+.PHONY: all sdl wasm windows debug clean

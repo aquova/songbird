@@ -68,7 +68,6 @@ const WORK_RAM_START: u16       = EXT_RAM_STOP + 1;
 const RAM_END: u16              = 0xFFFF;
 
 pub struct Bus {
-    ram_enabled: bool,
     rom: Cart,
     io: IO,
     ppu: PPU
@@ -80,7 +79,6 @@ pub struct Bus {
 impl Bus {
     pub fn new() -> Bus {
         Bus {
-            ram_enabled: false,
             rom: Cart::new(),
             io: IO::new(),
             ppu: PPU::new()
