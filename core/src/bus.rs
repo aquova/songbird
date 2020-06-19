@@ -1,4 +1,4 @@
-use crate::cartridge::{Cart, EXT_RAM_START, EXT_RAM_STOP};
+use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::utils::DISP_SIZE;
@@ -59,8 +59,6 @@ const OAM: u16 = 0xFE00;
 // RAM ranges
 // NOTE: Rust *still* doesn't allow exclusive ranges in match statements
 // So we have to define both start and end values
-const ROM_START: u16            = 0x0000;
-const ROM_STOP: u16             = 0x7FFF;
 const VRAM_START: u16           = ROM_STOP + 1;
 const VRAM_STOP: u16            = 0x9FFF;
 const WORK_RAM_START: u16       = EXT_RAM_STOP + 1;

@@ -1,17 +1,21 @@
 use std::str::from_utf8;
 
-const BANK_SIZE: usize = 0x4000;
+const ROM_BANK_SIZE: usize = 0x4000;
+const RAM_BANK_SIZE: usize = 0x2000;
 
-const RAM_ENABLE_START: u16 = 0x0000;
-const RAM_ENABLE_STOP: u16 = 0x1FFF;
-const ROM_BANK_NUM_START: u16 = RAM_ENABLE_STOP + 1;
-const ROM_BANK_NUM_STOP: u16 = 0x3FFF;
-const RAM_BANK_NUM_START: u16 = ROM_BANK_NUM_STOP + 1;
-const RAM_BANK_NUM_STOP: u16 = 0x5FFF;
-const ROM_RAM_MODE_START: u16 = RAM_BANK_NUM_STOP + 1;
-const ROM_RAM_MODE_STOP: u16 = 0x7FFF;
-pub const EXT_RAM_START: u16 = 0xA000;
-pub const EXT_RAM_STOP: u16 = 0xBFFF;
+pub const ROM_START: u16        = 0x0000;
+pub const ROM_STOP: u16         = 0x7FFF;
+
+const RAM_ENABLE_START: u16     = ROM_START;
+const RAM_ENABLE_STOP: u16      = 0x1FFF;
+const ROM_BANK_NUM_START: u16   = RAM_ENABLE_STOP + 1;
+const ROM_BANK_NUM_STOP: u16    = 0x3FFF;
+const RAM_BANK_NUM_START: u16   = ROM_BANK_NUM_STOP + 1;
+const RAM_BANK_NUM_STOP: u16    = 0x5FFF;
+const ROM_RAM_MODE_START: u16   = RAM_BANK_NUM_STOP + 1;
+const ROM_RAM_MODE_STOP: u16    = 0x7FFF;
+pub const EXT_RAM_START: u16    = 0xA000;
+pub const EXT_RAM_STOP: u16     = 0xBFFF;
 
 const MBC_TYPE_ADDR: usize = 0x0147;
 const ROM_SIZE_ADDR: usize = 0x0148;
@@ -116,13 +120,19 @@ impl Cart {
     ///     Byte at specified address (u8)
     /// ```
     pub fn read_cart(&self, address: u16) -> u8 {
-        if address < BANK_SIZE as u16 {
+        if address < ROM_BANK_SIZE as u16 {
             // If in Bank 0, simply read value
             self.rom[address as usize]
-        } else {
-            // If in other bank, need to obey bank switching
-            let bank_address = ((self.rom_bank - 1) as usize) * BANK_SIZE + address as usize;
+        } else if address < ROM_STOP {
+            // If in other rom bank, need to obey bank switching
+            // NOTE: MBC2 only goes up to 16 banks
+            let bank_address = ((self.rom_bank - 1) as usize) * ROM_BANK_SIZE + address as usize;
             self.rom[bank_address as usize]
+        } else {
+            let rel_addr = (address - EXT_RAM_START) as usize;
+            // Reading from external RAM
+            let ram_bank_addr = (self.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
+            self.ram[ram_bank_addr]
         }
     }
 
@@ -136,61 +146,55 @@ impl Cart {
     ///     Value to write (u8)
     /// ```
     pub fn write_cart(&mut self, addr: u16, val: u8) {
-        match self.mbc {
-            MBC::NONE => {
-                return;
+        if self.mbc == MBC::NONE {
+            return;
+        }
+
+        match addr {
+            RAM_ENABLE_START..=RAM_ENABLE_STOP => {
+                let enable_val = val & 0x0F;
+                // External RAM access enabled if $0A written
+                self.ext_ram_enable = enable_val == 0x0A;
             },
-            MBC::MBC1 => {
-                match addr {
-                    RAM_ENABLE_START..=RAM_ENABLE_STOP => {
-                        let enable_val = val & 0x0F;
-                        // External RAM access enabled if $0A written
-                        self.ext_ram_enable = enable_val == 0x0A;
-                    },
-                    ROM_BANK_NUM_START..=ROM_BANK_NUM_STOP => {
-                        let bank_val = val & 0x1F;
+            ROM_BANK_NUM_START..=ROM_BANK_NUM_STOP => {
+                let bank_val = val & 0x1F;
 
-                        // Bank numbers $00, $20, $40, or $60 aren't used
-                        // Instead they load $01, $21, $41, $61 respectively
-                        match bank_val {
-                            0x00 | 0x20 | 0x40 | 0x60 => {
-                                self.bank_switch(bank_val + 1);
-                            },
-                            _ => {
-                                self.bank_switch(bank_val);
-                            }
-                        }
+                // Bank numbers $00, $20, $40, or $60 aren't used
+                // Instead they load $01, $21, $41, $61 respectively
+                match bank_val {
+                    0x00 | 0x20 | 0x40 | 0x60 => {
+                        self.bank_switch(bank_val + 1);
                     },
-                    RAM_BANK_NUM_START..=RAM_BANK_NUM_STOP => {
-                        let bits = val & 0b11;
-
-                        if self.rom_mode {
-                            // Set bits 5 & 6 of ROM bank
-                            self.rom_bank |= bits << 4;
-                        } else {
-                            // RAM bank switching
-                            self.ram_bank = bits;
-                        }
-                    },
-                    ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
-                        // ROM banking mode if $00
-                        // RAM banking mode if $01
-                        self.rom_mode = val == 0x00;
-                    },
-                    EXT_RAM_START..=EXT_RAM_STOP => {
-                        if self.ext_ram_enable {
-                            // TODO: Add RAM bank switching
-                            let ram_addr = addr - EXT_RAM_START;
-                            self.ram[ram_addr as usize] = val;
-                        }
-                    }
                     _ => {
-                        panic!("Address too large for cartridge!");
+                        self.bank_switch(bank_val);
                     }
                 }
             },
+            RAM_BANK_NUM_START..=RAM_BANK_NUM_STOP => {
+                let bits = val & 0b11;
+
+                if self.rom_mode {
+                    // Set bits 5 & 6 of ROM bank
+                    self.rom_bank |= bits << 4;
+                } else {
+                    // RAM bank switching
+                    self.ram_bank = bits;
+                }
+            },
+            ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
+                // ROM banking mode if $00
+                // RAM banking mode if $01
+                self.rom_mode = val == 0x00;
+            },
+            EXT_RAM_START..=EXT_RAM_STOP => {
+                if self.ext_ram_enable {
+                    // TODO: Add RAM bank switching
+                    let ram_addr = addr - EXT_RAM_START;
+                    self.ram[ram_addr as usize] = val;
+                }
+            }
             _ => {
-                self.rom[addr as usize] = val;
+                panic!("Address too large for cartridge!");
             }
         }
 
