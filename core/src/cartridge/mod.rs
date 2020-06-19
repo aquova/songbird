@@ -28,6 +28,13 @@ const MBC_TYPE_ADDR: usize = 0x0147;
 const ROM_SIZE_ADDR: usize = 0x0148;
 const RAM_SIZE_ADDR: usize = 0x0149;
 
+const RAM_SIZES: [usize; 4] = [
+    0,          // None
+    2 * 1024,   // 2 KiB
+    8 * 1024,   // 8 KiB
+    32 * 1024   // 32 KiB
+];
+
 /*
  * ROM Header Layout
  * Header runs from $0100-$014F
@@ -115,6 +122,7 @@ impl Cart {
             self.rom.push(rom[i]);
         }
         self.set_mbc();
+        self.init_ext_ram();
     }
 
     /// ```
@@ -200,5 +208,25 @@ impl Cart {
         };
 
         self.mbc = mbc;
+    }
+
+    /// ```
+    /// Initialize external RAM
+    ///
+    /// Sets RAM vector to be the correct size
+    /// ```
+    fn init_ext_ram(&mut self) {
+        match self.mbc {
+            MBC::NONE => (),
+            MBC::MBC2 => {
+                self.ram = vec![0; 512];
+            },
+            _ => {
+                let ram_type = self.rom[RAM_SIZE_ADDR];
+                assert!(ram_type <= 0x03, "Invalid RAM type");
+                let ram_size = RAM_SIZES[ram_type as usize];
+                self.ram = vec![0; ram_size];
+            }
+        }
     }
 }
