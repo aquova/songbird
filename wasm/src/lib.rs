@@ -18,8 +18,7 @@ pub struct GB {
 impl GB {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<GB, JsValue> {
-        let mut cpu = Cpu::new();
-        cpu.reset();
+        let cpu = Cpu::new();
 
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("canvas").unwrap();
@@ -49,7 +48,7 @@ impl GB {
     /// ```
     #[wasm_bindgen]
     pub fn reset(&mut self) {
-        self.cpu.reset();
+        self.cpu = Cpu::new();
     }
 
     /// ```

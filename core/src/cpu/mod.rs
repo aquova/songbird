@@ -81,16 +81,16 @@ impl Cpu {
     pub fn new() -> Cpu {
         // Magic values from pandocs
         let mut new_cpu = Cpu {
-            pc: 0,
-            sp: 0,
-            a: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            f: 0,
-            h: 0,
-            l: 0,
+            pc: 0x100,
+            sp: 0xFFFE,
+            a: 0x01,
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            f: 0xB0,
+            h: 0x01,
+            l: 0x4D,
             clock: Clock::new(),
             timer: Timer::new(),
             interrupt_enabled: false,
@@ -98,50 +98,40 @@ impl Cpu {
             bus: Bus::new()
         };
 
-        new_cpu.reset();
+        // Magic values for RAM initialization
+        new_cpu.write_ram(0xFF05, 0x00);
+        new_cpu.write_ram(0xFF06, 0x00);
+        new_cpu.write_ram(0xFF07, 0x00);
+        new_cpu.write_ram(0xFF10, 0x80);
+        new_cpu.write_ram(0xFF11, 0xBF);
+        new_cpu.write_ram(0xFF12, 0xF3);
+        new_cpu.write_ram(0xFF14, 0xBF);
+        new_cpu.write_ram(0xFF16, 0x3F);
+        new_cpu.write_ram(0xFF17, 0x00);
+        new_cpu.write_ram(0xFF19, 0xBF);
+        new_cpu.write_ram(0xFF1A, 0x7F);
+        new_cpu.write_ram(0xFF1B, 0xFF);
+        new_cpu.write_ram(0xFF1C, 0x9F);
+        new_cpu.write_ram(0xFF1E, 0xBF);
+        new_cpu.write_ram(0xFF20, 0xFF);
+        new_cpu.write_ram(0xFF21, 0x00);
+        new_cpu.write_ram(0xFF22, 0x00);
+        new_cpu.write_ram(0xFF23, 0xBF);
+        new_cpu.write_ram(0xFF24, 0x77);
+        new_cpu.write_ram(0xFF25, 0xF3);
+        new_cpu.write_ram(0xFF26, 0xF1); // $F0 for SGB
+        new_cpu.write_ram(0xFF40, 0x91);
+        new_cpu.write_ram(0xFF42, 0x00);
+        new_cpu.write_ram(0xFF43, 0x00);
+        new_cpu.write_ram(0xFF45, 0x00);
+        new_cpu.write_ram(0xFF47, 0xFC);
+        new_cpu.write_ram(0xFF48, 0xFF);
+        new_cpu.write_ram(0xFF49, 0xFF);
+        new_cpu.write_ram(0xFF4A, 0x00);
+        new_cpu.write_ram(0xFF4B, 0x00);
+        new_cpu.write_ram(0xFF4F, 0x00);
+
         new_cpu
-    }
-
-    pub fn reset(&mut self) {
-        self.set_pc(0x100);
-        self.set_sp(0xFFFE);
-        self.set_reg_16(Regs16::AF, 0x01B0);
-        self.set_reg_16(Regs16::BC, 0x0013);
-        self.set_reg_16(Regs16::DE, 0x00D8);
-        self.set_reg_16(Regs16::HL, 0x014D);
-
-        // More magic values for RAM initialization
-        self.write_ram(0xFF05, 0x00);
-        self.write_ram(0xFF06, 0x00);
-        self.write_ram(0xFF07, 0x00);
-        self.write_ram(0xFF10, 0x80);
-        self.write_ram(0xFF11, 0xBF);
-        self.write_ram(0xFF12, 0xF3);
-        self.write_ram(0xFF14, 0xBF);
-        self.write_ram(0xFF16, 0x3F);
-        self.write_ram(0xFF17, 0x00);
-        self.write_ram(0xFF19, 0xBF);
-        self.write_ram(0xFF1A, 0x7F);
-        self.write_ram(0xFF1B, 0xFF);
-        self.write_ram(0xFF1C, 0x9F);
-        self.write_ram(0xFF1E, 0xBF);
-        self.write_ram(0xFF20, 0xFF);
-        self.write_ram(0xFF21, 0x00);
-        self.write_ram(0xFF22, 0x00);
-        self.write_ram(0xFF23, 0xBF);
-        self.write_ram(0xFF24, 0x77);
-        self.write_ram(0xFF25, 0xF3);
-        self.write_ram(0xFF26, 0xF1); // $F0 for SGB
-        self.write_ram(0xFF40, 0x91);
-        self.write_ram(0xFF42, 0x00);
-        self.write_ram(0xFF43, 0x00);
-        self.write_ram(0xFF45, 0x00);
-        self.write_ram(0xFF47, 0xFC);
-        self.write_ram(0xFF48, 0xFF);
-        self.write_ram(0xFF49, 0xFF);
-        self.write_ram(0xFF4A, 0x00);
-        self.write_ram(0xFF4B, 0x00);
-        self.write_ram(0xFF4F, 0x00);
     }
 
     /// ```
