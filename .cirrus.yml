@@ -4,19 +4,13 @@ linux_task:
 
   setup_script:
     - apt-get update
-    - apt-get -y install libsdl2-dev zip
+    - apt-get -y install cmake
 
   build_script:
     - make sdl
 
-  package_script:
-    - mkdir -p songbird/assets
-    - cp sdl/assets/icon_purple.png songbird/assets
-    - cp sdl/target/debug/songbird_sdl songbird/songbird
-    - zip -r songbird_linux.zip songbird
-
   songbird_artifacts:
-    path: songbird_linux.zip
+    path: sdl/target/release/songbird_sdl
 
 osx_task:
   osx_instance:
@@ -24,19 +18,13 @@ osx_task:
 
   setup_script:
     - brew update
-    - brew install rust sdl2
+    - brew install rust cmake sdl2
 
   build_script:
     - make sdl
 
-  package_script:
-    - mkdir -p songbird/assets
-    - cp sdl/assets/icon_purple.png songbird/assets
-    - cp sdl/target/debug/songbird_sdl songbird/songbird
-    - zip -r songbird_mac.zip songbird
-
   songbird_artifacts:
-    path: songbird_mac.zip
+    path: sdl/target/release/songbird_sdl
 
 win_task:
   container:
@@ -44,24 +32,14 @@ win_task:
 
   setup_script:
     - apt-get update
-    - apt-get -y install libsdl2-dev zip gcc-mingw-w64-x86-64
-    # This is from sdl/setup_win.sh
+    - apt-get -y install cmake gcc-mingw-w64-x86-64
     - rustup target add x86_64-pc-windows-gnu
-    - cp -r sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/lib/* $RUSTUP_HOME/toolchains/1.44.0-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib
-    - cp sdl/lib/SDL2-2.0.12/x86_64-w64-mingw32/bin/SDL2.dll sdl
 
   build_script:
     - make windows
 
-  package_script:
-    - mkdir -p songbird/assets
-    - cp sdl/assets/icon_purple.png songbird/assets
-    - cp sdl/*.dll songbird
-    - cp sdl/songbird_sdl.exe songbird/songbird.exe
-    - zip -r songbird_win.zip songbird
-
   songbird_artifacts:
-    path: songbird_win.zip
+    path: sdl/songbird_sdl.exe
 
 wasm_task:
   container:
