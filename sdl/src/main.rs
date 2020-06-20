@@ -9,7 +9,9 @@ use songbird_core::debug::debugger;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
+#[cfg(feature = "debug")]
 use coredump::register_panic_handler;
+
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
 use sdl2::pixels::PixelFormatEnum;
@@ -28,6 +30,7 @@ const SCALE: usize = 5;
 const FRAME_TIME: u64 = 16670; // In microseconds
 
 pub fn main() {
+    #[cfg(feature = "debug")]
     register_panic_handler().unwrap();
 
     let args: Vec<_> = env::args().collect();
