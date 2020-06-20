@@ -1,15 +1,20 @@
-# sonGBird
+sonGBird
+========
 
-Songbird Game Boy emulator.
+[![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=win)](https://cirrus-ci.com/github/aquova/songbird/master)
+[![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=osx)](https://cirrus-ci.com/github/aquova/songbird/master)
+[![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=linux)](https://cirrus-ci.com/github/aquova/songbird/master)
+[![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=wasm)](https://cirrus-ci.com/github/aquova/songbird/master)
 
-You can download the most recent build from [here](https://cirrus-ci.com/github/aquova/songbird/master)
+A work in progress Game Boy emulator written in Rust for Windows/Mac/Linux and browsers via WebAssembly.
 
-## CI Builds
+Latest builds can be downloaded [here](https://cirrus-ci.com/github/aquova/songbird/master)
 
-- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=win)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=osx)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=linux)
-- ![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=wasm)
+Run the desktop version via:
+
+```
+$ cd sdl && cargo run --release "path/to/game.gb"
+```
 
 ## Resources
 

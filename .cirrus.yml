@@ -1,10 +1,6 @@
 linux_task:
   container:
-    image: rust:latest
-
-  setup_script:
-    - apt-get update
-    - apt-get -y install cmake
+    image: aquova/songbird:1.0
 
   build_script:
     - make sdl
@@ -18,7 +14,7 @@ osx_task:
 
   setup_script:
     - brew update
-    - brew install rust cmake sdl2
+    - brew install rust cmake
 
   build_script:
     - make sdl
@@ -28,28 +24,17 @@ osx_task:
 
 win_task:
   container:
-    image: rust:1.44.0
-
-  setup_script:
-    - apt-get update
-    - apt-get -y install cmake gcc-mingw-w64-x86-64
-    - rustup target add x86_64-pc-windows-gnu
+    image: aquova/songbird:1.0
 
   build_script:
     - make windows
 
   songbird_artifacts:
-    path: sdl/songbird_sdl.exe
+    path: sdl/target/x86_64-pc-windows-gnu/release/songbird_sdl.exe
 
 wasm_task:
   container:
-    image: rust:latest
-
-  setup_script:
-    - apt-get update
-    - apt-get -y install zip
-    # Install wasm-pack
-    - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    image: aquova/songbird:1.0
 
   build_script:
     - make wasm

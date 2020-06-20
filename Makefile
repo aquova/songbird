@@ -19,8 +19,7 @@ wasm:
 
 windows:
 	cd sdl && \
-	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS) && \
-	mv ./target/x86_64-pc-windows-gnu/debug/songbird_sdl.exe .
+	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS)
 
 debug:
 	cd sdl && \
