@@ -1,14 +1,18 @@
 mod mbc1;
 mod mbc2;
 mod mbc3;
+mod mbc5;
 
 use std::str::from_utf8;
 use mbc1::{mbc1_read_byte, mbc1_write_byte};
 use mbc2::{mbc2_read_byte, mbc2_write_byte};
 use mbc3::{mbc3_read_byte, mbc3_write_byte};
+use mbc5::{mbc5_read_byte, mbc5_write_byte};
 
 const ROM_BANK_SIZE: usize = 0x4000;
 const RAM_BANK_SIZE: usize = 0x2000;
+const MAX_RAM_SIZE: usize = 32 * 1024; // 32 KiB
+const MBC5_MAX_RAM_SIZE: usize = 128 * 1024; // 128 KiB
 
 pub const ROM_START: u16        = 0x0000;
 pub const ROM_STOP: u16         = 0x7FFF;
@@ -24,16 +28,10 @@ const ROM_RAM_MODE_STOP: u16    = 0x7FFF;
 pub const EXT_RAM_START: u16    = 0xA000;
 pub const EXT_RAM_STOP: u16     = 0xBFFF;
 
+const TITLE_ADDR: usize = 0x0134;
+const DMG_TITLE_ADDR_END: usize = 0x013F;
+const CGB_FLAG_ADDR: usize = 0x0143;
 const MBC_TYPE_ADDR: usize = 0x0147;
-const ROM_SIZE_ADDR: usize = 0x0148;
-const RAM_SIZE_ADDR: usize = 0x0149;
-
-const RAM_SIZES: [usize; 4] = [
-    0,          // None
-    2 * 1024,   // 2 KiB
-    8 * 1024,   // 8 KiB
-    32 * 1024   // 32 KiB
-];
 
 /*
  * ROM Header Layout
@@ -91,6 +89,7 @@ pub struct Cart {
     ram: Vec<u8>,
     ext_ram_enable: bool,
     rom_mode: bool,
+    cgb: bool,
 }
 
 // ==================
@@ -106,6 +105,7 @@ impl Cart {
             ram: Vec::new(),
             ext_ram_enable: false,
             rom_mode: true,
+            cgb: false,
         }
     }
 
@@ -122,6 +122,7 @@ impl Cart {
             self.rom.push(rom[i]);
         }
         self.set_mbc();
+        self.set_cgb();
         self.init_ext_ram();
     }
 
@@ -148,9 +149,11 @@ impl Cart {
             self.rom[bank_address as usize]
         } else {
             match self.mbc {
+                // TODO: What to return if no MBC or ext. RAM disabled?
                 MBC::MBC1 => { mbc1_read_byte(self, address) },
                 MBC::MBC2 => { mbc2_read_byte(self, address) },
                 MBC::MBC3 => { mbc3_read_byte(self, address) },
+                MBC::MBC5 => { mbc5_read_byte(self, address) },
                 _ => { 0 }
             }
         }
@@ -170,6 +173,7 @@ impl Cart {
             MBC::MBC1 => { mbc1_write_byte(self, addr, val); },
             MBC::MBC2 => { mbc2_write_byte(self, addr, val); },
             MBC::MBC3 => { mbc3_write_byte(self, addr, val); },
+            MBC::MBC5 => { mbc5_write_byte(self, addr, val); },
             _ => { return; }
         }
     }
@@ -177,13 +181,17 @@ impl Cart {
     /// ```
     /// Get Game Title
     ///
-    /// Returns the title of the game, from $0134 - $0142 in ROM
+    /// Returns the title of the game
     ///
     /// Output:
     ///     Title of the game, from ROM (&str)
     /// ```
     pub fn get_title(&self) -> &str {
-        let data = &self.rom[0x0134..0x0143];
+        let data = if self.cgb {
+            &self.rom[TITLE_ADDR..DMG_TITLE_ADDR_END]
+        } else {
+            &self.rom[TITLE_ADDR..CGB_FLAG_ADDR]
+        };
         from_utf8(data).unwrap()
     }
 }
@@ -210,23 +218,24 @@ impl Cart {
         self.mbc = mbc;
     }
 
+    fn set_cgb(&mut self) {
+        let val = self.rom[CGB_FLAG_ADDR];
+        self.cgb = (val == 0x80) || (val == 0xC0);
+    }
+
     /// ```
     /// Initialize external RAM
     ///
     /// Sets RAM vector to be the correct size
     /// ```
     fn init_ext_ram(&mut self) {
-        match self.mbc {
-            MBC::NONE => (),
-            MBC::MBC2 => {
-                self.ram = vec![0; 512];
-            },
-            _ => {
-                let ram_type = self.rom[RAM_SIZE_ADDR];
-                assert!(ram_type <= 0x03, "Invalid RAM type");
-                let ram_size = RAM_SIZES[ram_type as usize];
-                self.ram = vec![0; ram_size];
-            }
+        // NOTE: This originally sized the RAM vector based on ROM header information
+        // However, some ROMs *cough Blargg tests cough* don't report correctly
+        // So now, simply assume we need maximum size
+        if self.mbc == MBC::MBC5 {
+            self.ram = vec![0; MBC5_MAX_RAM_SIZE];
+        } else {
+            self.ram = vec![0; MAX_RAM_SIZE];
         }
     }
 }
