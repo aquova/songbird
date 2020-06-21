@@ -356,7 +356,8 @@ impl PPU {
                         j
                     };
 
-                    pixel_array[arr_index + arr_offset] = corrected_pixel;
+                    let pixel_index = (arr_index + arr_offset) % pixel_array.len();
+                    pixel_array[pixel_index] = corrected_pixel;
                 }
             }
         }

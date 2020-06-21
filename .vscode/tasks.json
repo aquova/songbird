@@ -96,6 +96,7 @@
             "options": [
                 "all",
                 "sdl",
+                "debug",
                 "wasm",
                 "windows",
             ],

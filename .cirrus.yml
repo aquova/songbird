@@ -14,7 +14,7 @@ osx_task:
 
   setup_script:
     - brew update
-    - brew install rust cmake
+    - brew install rust
 
   build_script:
     - make sdl

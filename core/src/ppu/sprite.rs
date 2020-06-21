@@ -115,8 +115,8 @@ impl Sprite {
     ///     Sprite coordinates (Point)
     /// ```
     pub fn get_coords(&self) -> Point {
-        let x = self.x;
-        let y = self.y;
+        let x = self.x.wrapping_sub(X_OFFSET);
+        let y = self.y.wrapping_sub(Y_OFFSET);
         Point::new(x, y)
     }
 
@@ -167,7 +167,7 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte1(&mut self, val: u8) {
-        self.y = val.wrapping_sub(Y_OFFSET);
+        self.y = val;
     }
 
     /// ```
@@ -179,7 +179,7 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte2(&mut self, val: u8) {
-        self.x = val.wrapping_sub(X_OFFSET);
+        self.x = val;
     }
 
     /// ```
