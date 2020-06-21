@@ -155,6 +155,18 @@ impl Sprite {
     pub fn is_y_flip(&self) -> bool {
         self.y_flip
     }
+
+    /// ```
+    /// Is sprite above background?
+    ///
+    /// Should the sprite be draw above or below the background
+    ///
+    /// Output:
+    ///     If sprite is drawn on top of background
+    /// ```
+    pub fn is_above_bkgd(&self) -> bool {
+        self.above_bkgd
+    }
 }
 
 impl Sprite {

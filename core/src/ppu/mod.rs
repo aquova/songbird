@@ -328,11 +328,12 @@ impl PPU {
     ///     Screen coordinates to draw to (Point)
     /// ```
     fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
-        // TODO: This does not check if sprite should be drawn above/below background
+        // TODO: Needs to handle sprite priority
         let screen_coords = self.get_scroll_coords();
         let palette = self.get_spr_palette(spr.is_pal_0());
         let flip_x = spr.is_x_flip();
         let flip_y = spr.is_y_flip();
+        let above_bg = spr.is_above_bkgd();
 
         for row in 0..TILESIZE {
             let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
@@ -347,16 +348,20 @@ impl PPU {
             // Iterate through each pixel in row, applying the palette
             for j in 0..TILESIZE {
                 let pixel = pixels[j as usize];
-                // Pixel value 0 is transparent
-                if pixel != 0 {
-                    let corrected_pixel = palette[pixel as usize];
-                    let arr_offset = if flip_x {
-                        TILESIZE - j - 1
-                    } else {
-                        j
-                    };
+                let arr_offset = if flip_x {
+                    TILESIZE - j - 1
+                } else {
+                    j
+                };
 
-                    let pixel_index = (arr_index + arr_offset) % pixel_array.len();
+                let pixel_index = (arr_index + arr_offset) % pixel_array.len();
+                let corrected_pixel = palette[pixel as usize];
+
+                // Only draw pixel if
+                // - Sprite is above background, and the pixel being drawn isn't transparent
+                // - Sprite is below background, and background has transparent color here
+                let should_draw = (above_bg && pixel != 0) || (!above_bg && pixel_array[pixel_index] == 0);
+                if should_draw {
                     pixel_array[pixel_index] = corrected_pixel;
                 }
             }
