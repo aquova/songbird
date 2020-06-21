@@ -4,21 +4,102 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run test game",
+            "label": "Run SDL debug build",
             "type": "shell",
-            "command": "cargo run ../games/test_roms/opus5.gb",
+            "command": "cargo run --features 'debug' ../games/${input:game}",
             "options": {
                 "cwd": "${workspaceFolder}/sdl"
             },
             "presentation": {
                 "echo": true,
                 "reveal": "always",
-                "focus": false,
+                "focus": true,
                 "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
+            }
+        },
+        {
+            "label": "Run SDL release build",
+            "type": "shell",
+            "command": "cargo run --release ../games/${input:game}",
+            "options": {
+                "cwd": "${workspaceFolder}/sdl"
             },
-            "problemMatcher": []
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+        {
+            "label": "Run WASM build",
+            "type": "shell",
+            "command": "./run.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "make ${input:build}",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "make clean",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+        {
+            "label": "Debug core dump",
+            "type": "shell",
+            "command": "./debug_coredump.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/sdl"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "game",
+            "description": "Title of game",
+            "default": "Tetris.gb"
+        },
+        {
+            "type": "pickString",
+            "id": "build",
+            "description": "Which build type to make",
+            "options": [
+                "all",
+                "sdl",
+                "wasm",
+                "windows",
+            ],
+            "default": "all"
         }
     ]
 }
