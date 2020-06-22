@@ -251,6 +251,15 @@ impl PPU {
         // Iterate through all tiles in window
         'tile_y: for y in 0..MAP_SIZE {
             'tile_x: for x in 0..MAP_SIZE {
+                // Windows can only be drawn on bottom/right of screen
+                // If tiles have gone off to the right, we are done with this row
+                // If they've gone off the bottom, we're done period
+                if (wndw_coords.x as usize + x * TILESIZE) > SCREEN_WIDTH {
+                    break 'tile_x;
+                } else if (wndw_coords.y as usize + y * TILESIZE) > SCREEN_HEIGHT {
+                    break 'tile_y;
+                }
+
                 let index = y * MAP_SIZE + x;
                 // The tile indexes in the second tile pattern table ($8800-97ff) are signed
                 let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
@@ -260,24 +269,18 @@ impl PPU {
                 };
                 let tile = &self.tiles[tile_index];
 
-                // Windows can only be drawn on bottom/right of screen
-                // If tiles have gone off to the right, we are done with this row
-                // If they've gone off the bottom, we're done period
                 let map_x = (x * TILESIZE) + origin_x;
                 let map_y = (y * TILESIZE) + origin_y;
-                if map_y > SCREEN_HEIGHT {
-                    break 'tile_y;
-                } else if map_x > SCREEN_WIDTH {
-                    break 'tile_x;
-                }
 
                 for row in 0..TILESIZE {
-                    let map_index = (map_y + row) * MAP_PIXELS + map_x;
                     let pixels = tile.get_row(row);
                     // Iterate through each pixel in row, applying the palette
                     for i in 0..TILESIZE {
+                        let pixel_x = (map_x + i) % MAP_PIXELS;
+                        let pixel_y = (map_y + row) % MAP_PIXELS;
+                        let pixel_index = pixel_y * MAP_PIXELS + pixel_x;
                         let corrected_pixel = palette[pixels[i as usize] as usize];
-                        pixel_array[map_index + i] = corrected_pixel;
+                        pixel_array[pixel_index] = corrected_pixel;
                     }
                 }
             }
@@ -335,10 +338,10 @@ impl PPU {
         let flip_y = spr.is_y_flip();
         let above_bg = spr.is_above_bkgd();
 
+        let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
+        let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize);
+
         for row in 0..TILESIZE {
-            let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
-            let spr_y = ((screen_coords.y as usize) + (spr_coords.y as usize) + row) % MAP_PIXELS;
-            let arr_index = spr_x + spr_y * MAP_PIXELS;
             let pixels = if flip_y {
                 tile.get_row(TILESIZE - row - 1)
             } else {
@@ -348,13 +351,15 @@ impl PPU {
             // Iterate through each pixel in row, applying the palette
             for j in 0..TILESIZE {
                 let pixel = pixels[j as usize];
-                let arr_offset = if flip_x {
+                let x_offset = if flip_x {
                     TILESIZE - j - 1
                 } else {
                     j
                 };
 
-                let pixel_index = (arr_index + arr_offset) % pixel_array.len();
+                let pixel_x = (spr_x + x_offset) % MAP_PIXELS;
+                let pixel_y = (spr_y + row) % MAP_PIXELS;
+                let pixel_index = pixel_x + MAP_PIXELS * pixel_y;
                 let corrected_pixel = palette[pixel as usize];
 
                 // Only draw pixel if
