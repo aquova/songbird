@@ -187,6 +187,15 @@ impl Cpu {
     }
 
     /// ```
+    /// Clean battery flag
+    ///
+    /// Resets dirty battery RAM flag
+    /// ```
+    pub fn clean_battery_flag(&mut self) {
+        self.dirty_battery_ram = false;
+    }
+
+    /// ```
     /// Render
     ///
     /// Renders one frame on the screen
