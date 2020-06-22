@@ -11,7 +11,9 @@ pub fn mbc2_read_byte(cart: &Cart, addr: u16) -> u8 {
     cart.ram[ram_bank_addr]
 }
 
-pub fn mbc2_write_byte(cart: &mut Cart, addr: u16, val: u8) {
+pub fn mbc2_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
+    let mut battery_write = false;
+
     match addr {
         RAM_ENABLE_START..=RAM_ENABLE_STOP => {
             // RAM enable is toggled if bit 5 is 0
@@ -29,10 +31,13 @@ pub fn mbc2_write_byte(cart: &mut Cart, addr: u16, val: u8) {
                 let rel_addr = (addr - EXT_RAM_START) as usize;
                 let ram_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
                 cart.ram[ram_addr] = val;
+                battery_write = true;
             }
         }
         _ => {
             panic!("Writing to undefined address!");
         }
     }
+
+    battery_write
 }

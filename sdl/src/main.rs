@@ -19,7 +19,7 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 use std::{env, io, process};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::Read;
 use std::time::{Duration, SystemTime};
@@ -41,7 +41,8 @@ pub fn main() {
 
     // Start game
     let mut gb = Cpu::new();
-    let rom = load_rom(&args[1]);
+    let filename = &args[1];
+    let rom = load_rom(filename);
     gb.load_game(&rom);
     let title = gb.get_title();
 
@@ -218,6 +219,12 @@ pub fn main() {
             last_frame = SystemTime::now();
         }
 
+        // Update save file if needed
+        // NOTE: Currently commented out, as it runs super poorly
+        // if gb.is_battery_dirty() {
+        //     battery_save(&gb, filename);
+        // }
+
         // Break if we hit a break/watchpoint
         if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
             debugging = true;
@@ -312,4 +319,17 @@ fn load_rom(path: &str) -> Vec<u8> {
     f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
 
     buffer
+}
+
+/// ```
+/// Battery save
+///
+/// Updates save file to latest contents of battery RAM
+/// ```
+fn battery_save(gb: &Cpu, gamename: &str) {
+    let ram_data = gb.get_ext_ram();
+
+    // TODO: Need to generate SAV file name from ROM name
+    let mut file = OpenOptions::new().write(true).create(true).open("test.sav").expect("Error opening save file");
+    file.write(ram_data);
 }

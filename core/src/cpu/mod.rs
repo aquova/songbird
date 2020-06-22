@@ -74,7 +74,8 @@ pub struct Cpu {
     timer: Timer,
     interrupt_enabled: bool,
     halted: bool,
-    bus: Bus
+    bus: Bus,
+    dirty_battery_ram: bool,
 }
 
 impl Cpu {
@@ -95,7 +96,8 @@ impl Cpu {
             timer: Timer::new(),
             interrupt_enabled: false,
             halted: false,
-            bus: Bus::new()
+            bus: Bus::new(),
+            dirty_battery_ram: false,
         };
 
         // Magic values for RAM initialization
@@ -221,6 +223,30 @@ impl Cpu {
         let val = self.read_ram(pc);
         self.pc += 1;
         val
+    }
+
+    /// ```
+    /// Get external RAM
+    ///
+    /// Returns a slice to the external RAM object, used for battery saving
+    ///
+    /// Output:
+    ///     External RAM, as a slice (&[u8])
+    /// ```
+    pub fn get_ext_ram(&self) -> &[u8] {
+        self.bus.get_ext_ram()
+    }
+
+    /// ```
+    /// Is battery RAM dirty?
+    ///
+    /// Checks whether battery RAM has been updated
+    ///
+    /// Output:
+    ///     Whether battery RAM needs to be saved
+    /// ```
+    pub fn is_battery_dirty(&self) -> bool {
+        self.dirty_battery_ram
     }
 
     /// ```
@@ -1083,12 +1109,12 @@ impl Cpu {
     pub fn write_ram(&mut self, addr: u16, val: u8) {
         match addr {
             DIV..=TAC => {
-                self.timer.write_timer(addr, val)
+                self.timer.write_timer(addr, val);
             },
             _ => {
-                self.bus.write_ram(addr, val)
+                self.dirty_battery_ram |= self.bus.write_ram(addr, val);
             }
-        };
+        }
     }
 
     /// ```

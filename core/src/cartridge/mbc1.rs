@@ -7,7 +7,9 @@ pub fn mbc1_read_byte(cart: &Cart, addr: u16) -> u8 {
     cart.ram[ram_bank_addr]
 }
 
-pub fn mbc1_write_byte(cart: &mut Cart, addr: u16, val: u8) {
+pub fn mbc1_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
+    let mut battery_write = false;
+
     match addr {
         RAM_ENABLE_START..=RAM_ENABLE_STOP => {
             // External RAM access enabled if $0A written
@@ -48,10 +50,13 @@ pub fn mbc1_write_byte(cart: &mut Cart, addr: u16, val: u8) {
                 let rel_addr = (addr - EXT_RAM_START) as usize;
                 let ram_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
                 cart.ram[ram_addr] = val;
+                battery_write = true;
             }
         }
         _ => {
             panic!("Address too large for cartridge!");
         }
     }
+
+    battery_write
 }

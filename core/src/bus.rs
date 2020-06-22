@@ -143,11 +143,14 @@ impl Bus {
     /// Input:
     ///     RAM address (u16)
     ///     Value to write (u8)
+    ///
+    /// Output:
+    ///     Whether data was written to battery-saved RAM
     /// ```
-    pub fn write_ram(&mut self, addr: u16, val: u8) {
+    pub fn write_ram(&mut self, addr: u16, val: u8) -> bool {
         match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
-                self.rom.write_cart(addr, val);
+                self.rom.write_cart(addr, val)
             },
             VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
                 if addr == JOYPAD_REG {
@@ -157,6 +160,7 @@ impl Bus {
                 } else {
                     self.ppu.write_vram(addr, val);
                 }
+                false
             }
         }
     }
@@ -172,6 +176,18 @@ impl Bus {
     /// ```
     pub fn toggle_button(&mut self, btn: Buttons, pressed: bool) {
         self.io.btn_toggle(btn, pressed);
+    }
+
+    /// ```
+    /// Get external RAM
+    ///
+    /// Returns a slice to the external RAM object, used for battery saving
+    ///
+    /// Output:
+    ///     External RAM, as a slice (&[u8])
+    /// ```
+    pub fn get_ext_ram(&self) -> &[u8] {
+        self.rom.get_ext_ram()
     }
 
     /// ```

@@ -110,6 +110,18 @@ impl Cart {
     }
 
     /// ```
+    /// Get external RAM
+    ///
+    /// Returns a slice to the external RAM object, used for battery saving
+    ///
+    /// Output:
+    ///     External RAM, as a slice (&[u8])
+    /// ```
+    pub fn get_ext_ram(&self) -> &[u8] {
+        &self.ram
+    }
+
+    /// ```
     /// Load cartridge
     ///
     /// Loads the game from file into Cartridge object
@@ -167,14 +179,17 @@ impl Cart {
     /// Inputs:
     ///     Address to write to (u16)
     ///     Value to write (u8)
+    ///
+    /// Output:
+    ///     Whether data was written to battery saved-memory (bool)
     /// ```
-    pub fn write_cart(&mut self, addr: u16, val: u8) {
+    pub fn write_cart(&mut self, addr: u16, val: u8) -> bool {
         match self.mbc {
-            MBC::MBC1 => { mbc1_write_byte(self, addr, val); },
-            MBC::MBC2 => { mbc2_write_byte(self, addr, val); },
-            MBC::MBC3 => { mbc3_write_byte(self, addr, val); },
-            MBC::MBC5 => { mbc5_write_byte(self, addr, val); },
-            _ => { return; }
+            MBC::MBC1 => { mbc1_write_byte(self, addr, val) },
+            MBC::MBC2 => { mbc2_write_byte(self, addr, val) },
+            MBC::MBC3 => { mbc3_write_byte(self, addr, val) },
+            MBC::MBC5 => { mbc5_write_byte(self, addr, val) },
+            _ => { false }
         }
     }
 
