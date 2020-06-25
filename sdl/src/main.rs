@@ -44,6 +44,7 @@ pub fn main() {
     let filename = &args[1];
     let rom = load_rom(filename);
     gb.load_game(&rom);
+    load_battery_save(&mut gb, filename);
     let title = gb.get_title();
 
     // Initialize debugger
@@ -221,7 +222,7 @@ pub fn main() {
 
         // Update save file if needed
         if gb.is_battery_dirty() {
-            battery_save(&mut gb, filename);
+            write_battery_save(&mut gb, filename);
         }
 
         // Break if we hit a break/watchpoint
@@ -321,15 +322,41 @@ fn load_rom(path: &str) -> Vec<u8> {
 }
 
 /// ```
-/// Battery save
+/// Load Battery save
+///
+/// Loads battery save file (if one exists)
+///
+/// Inputs:
+///     Game Boy CPU object (Cpu)
+///     Name of ROM file (&str)
+/// ```
+fn load_battery_save(gb: &mut Cpu, gamename: &str) {
+    let mut battery_ram: Vec<u8> = Vec::new();
+    let mut filename = gamename.to_owned();
+    filename.push_str(".sav");
+
+    let f = OpenOptions::new().read(true).open(filename);
+    if f.is_ok() {
+        f.unwrap().read_to_end(&mut battery_ram).expect("Error reading external RAM");
+        gb.write_ext_ram(&battery_ram);
+    }
+}
+
+/// ```
+/// Write Battery save
 ///
 /// Updates save file to latest contents of battery RAM
+///
+/// Inputs:
+///     Game Boy CPU object (Cpu)
+///     Name of ROM file (&str)
 /// ```
-fn battery_save(gb: &mut Cpu, gamename: &str) {
+fn write_battery_save(gb: &mut Cpu, gamename: &str) {
     let ram_data = gb.get_ext_ram();
+    let mut filename = gamename.to_owned();
+    filename.push_str(".sav");
 
-    // TODO: Need to generate SAV file name from ROM name
-    let mut file = OpenOptions::new().write(true).create(true).open("test.sav").expect("Error opening save file");
+    let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
     file.write(ram_data).unwrap();
     gb.clean_battery_flag();
 }

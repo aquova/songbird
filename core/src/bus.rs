@@ -232,6 +232,18 @@ impl Bus {
         let mode = mode & 0b0000_0011;
         self.ppu.set_status(mode);
     }
+
+    /// ```
+    /// Write external RAM
+    ///
+    /// Writes data to the external RAM memory, for battery saves
+    ///
+    /// Input:
+    ///     Raw RAM data: (&[u8])
+    /// ```
+    pub fn write_ext_ram(&mut self, data: &[u8]) {
+        self.rom.write_ext_ram(data);
+    }
 }
 
 // Private functions

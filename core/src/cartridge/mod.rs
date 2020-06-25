@@ -194,6 +194,18 @@ impl Cart {
     }
 
     /// ```
+    /// Write external RAM
+    ///
+    /// Writes data to the external RAM memory, for battery saves
+    ///
+    /// Input:
+    ///     Raw RAM data: (&[u8])
+    /// ```
+    pub fn write_ext_ram(&mut self, data: &[u8]) {
+        self.ram.copy_from_slice(data);
+    }
+
+    /// ```
     /// Get Game Title
     ///
     /// Returns the title of the game

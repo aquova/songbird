@@ -285,6 +285,18 @@ impl Cpu {
     }
 
     /// ```
+    /// Write external RAM
+    ///
+    /// Writes data to the external RAM memory, for battery saves
+    ///
+    /// Input:
+    ///     Raw RAM data: (&[u8])
+    /// ```
+    pub fn write_ext_ram(&mut self, data: &[u8]) {
+        self.bus.write_ext_ram(data);
+    }
+
+    /// ```
     /// ADD A d8
     ///
     /// Adds specified value to A register
