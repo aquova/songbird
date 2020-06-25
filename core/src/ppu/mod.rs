@@ -598,7 +598,7 @@ impl PPU {
     /// Output:
     ///     Location of the window (Point)
     fn get_wndw_coords(&self) -> Point {
-        let wndw_x = self.vram[WX].wrapping_sub(7);
+        let wndw_x = self.vram[WX].saturating_sub(7);
         let wndw_y = self.vram[WY];
 
         Point::new(wndw_x, wndw_y)
