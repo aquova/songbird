@@ -30,7 +30,7 @@ pub fn mbc3_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
                 },
                 0x08..=0x0C => {
                     // Map in RTC register
-                    panic!("RTC not supported");
+                    // TODO: Set up RTC
                 },
                 _ => {
                     // Unknown behavior
@@ -39,7 +39,6 @@ pub fn mbc3_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
         },
         ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
             // TODO: Setup RTC registers
-            panic!("RTC not supported");
         },
         EXT_RAM_START..=EXT_RAM_STOP => {
             // TODO: Setup RTC
