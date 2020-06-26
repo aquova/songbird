@@ -221,6 +221,15 @@ impl Bus {
     }
 
     /// ```
+    /// Render scanline
+    ///
+    /// Renders the current scanline into the screen buffer
+    /// ```
+    pub fn render_scanline(&mut self) {
+        self.ppu.render_scanline();
+    }
+
+    /// ```
     /// Set status register
     ///
     /// Sets the status register to match current screen mode

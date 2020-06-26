@@ -56,6 +56,7 @@ const COLORS: [[u8; COLOR_CHANNELS]; 4] = [
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
+    map_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
 }
@@ -67,6 +68,7 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
+            map_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
         }
@@ -147,6 +149,50 @@ impl PPU {
     }
 
     /// ```
+    /// Render scanline
+    ///
+    /// Renders specified scanline to buffer
+    /// ```
+    pub fn render_scanline(&mut self) {
+        let line = self.vram[LY];
+
+        // Render current scanline
+        let mut pixel_row = [0; SCREEN_WIDTH];
+
+        // Limit scope to appease the Borrow Checker Gods
+        {
+            let tile_map = self.get_bkgd_tile_map();
+            let palette = self.get_bkgd_palette();
+            let screen_coords = self.get_scroll_coords();
+
+            // Get the row of tiles containing our scanline
+            let y = (screen_coords.y + line) as usize;
+            let row = ((screen_coords.y + line) as usize) % TILESIZE;
+            let start_x = screen_coords.x as usize;
+            for x in 0..SCREEN_WIDTH {
+                // Get coords for current tile
+                let map_x = ((start_x + x) % MAP_PIXELS) / TILESIZE;
+                let map_y = y / TILESIZE;
+                let index = map_y * MAP_SIZE + map_x;
+                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
+                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+                    (256 + (tile_map[index] as i8 as isize)) as usize
+                } else {
+                    tile_map[index] as usize
+                };
+                let tile = &self.tiles[tile_index];
+                let col = (start_x + x) % TILESIZE;
+                let pixel = tile.get_row(row)[col];
+                let corrected_pixel = palette[pixel as usize];
+                pixel_row[x] = corrected_pixel;
+            }
+        }
+        let start_index = line as usize * SCREEN_WIDTH;
+        let end_index = (line + 1) as usize * SCREEN_WIDTH;
+        self.map_buffer[start_index..end_index].copy_from_slice(&pixel_row);
+    }
+
+    /// ```
     /// Set status
     ///
     /// Sets the current value of the status register ($FF41)
@@ -168,9 +214,10 @@ impl PPU {
     ///     Array of pixels to draw ([u8])
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
-        let mut map_array = [0; MAP_PIXELS * MAP_PIXELS];
+        let mut map_array = [0; SCREEN_HEIGHT * SCREEN_WIDTH];
+
         if self.is_bkgd_dspl() {
-            self.render_background(&mut map_array);
+            map_array.copy_from_slice(&self.map_buffer);
         }
 
         if self.is_wndw_dspl() {
@@ -181,8 +228,7 @@ impl PPU {
             self.render_sprites(&mut map_array);
         }
 
-        // TODO: Someday this all should be rewritten so that this function isn't needed
-        let screen = self.get_view(&map_array);
+        let screen = self.get_color(&map_array);
 
         screen
     }
@@ -190,46 +236,6 @@ impl PPU {
     // ===================
     // = Private methods =
     // ===================
-
-    /// ```
-    /// Render background
-    ///
-    /// Renders the background tiles onto the pixel array
-    ///
-    /// Input:
-    ///     Array of pixels to modify (&[u8])
-    /// ```
-    fn render_background(&self, pixel_array: &mut [u8]) {
-        let tile_map = self.get_bkgd_tile_map();
-        let palette = self.get_bkgd_palette();
-
-        // Iterate through every tile in map
-        for y in 0..MAP_SIZE {
-            for x in 0..MAP_SIZE {
-                let index = y * MAP_SIZE + x;
-                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
-                    (256 + (tile_map[index] as i8 as isize)) as usize
-                } else {
-                    tile_map[index] as usize
-                };
-                let tile = &self.tiles[tile_index];
-
-                // Iterate through row in tile
-                for row in 0..TILESIZE {
-                    let map_x = TILESIZE * x;
-                    let map_y = (TILESIZE * y) + row;
-                    let map_index = (map_y * MAP_PIXELS) + map_x;
-                    let pixels = tile.get_row(row);
-                    // Iterate through each pixel in row, applying the palette
-                    for i in 0..TILESIZE {
-                        let corrected_pixel = palette[pixels[i as usize] as usize];
-                        pixel_array[map_index + i] = corrected_pixel;
-                    }
-                }
-            }
-        }
-    }
 
     /// ```
     /// Render window
@@ -240,27 +246,20 @@ impl PPU {
     ///     Array of pixels to modify (&[u8])
     /// ```
     fn render_window(&self, pixel_array: &mut [u8]) {
-        let screen_coords = self.get_scroll_coords();
         let wndw_coords = self.get_wndw_coords();
         let wndw_map = self.get_wndw_tile_map();
         let palette = self.get_bkgd_palette();
 
-        let origin_x = (wndw_coords.x + screen_coords.x) as usize;
-        let origin_y = (wndw_coords.y + screen_coords.y) as usize;
+        let origin_x = wndw_coords.x as usize;
+        let origin_y = wndw_coords.y as usize;
 
-        // Iterate through all tiles in window
-        'tile_y: for y in 0..MAP_SIZE {
-            'tile_x: for x in 0..MAP_SIZE {
-                // Windows can only be drawn on bottom/right of screen
-                // If tiles have gone off to the right, we are done with this row
-                // If they've gone off the bottom, we're done period
-                if (wndw_coords.x as usize + x * TILESIZE) > SCREEN_WIDTH {
-                    break 'tile_x;
-                } else if (wndw_coords.y as usize + y * TILESIZE) > SCREEN_HEIGHT {
-                    break 'tile_y;
-                }
+        // Iterate thru visible pixels in window
+        for y in origin_y..SCREEN_HEIGHT {
+            for x in origin_x..SCREEN_WIDTH {
+                let tile_x = (x - origin_x) / TILESIZE;
+                let tile_y = (y - origin_y) / TILESIZE;
+                let index = tile_y * MAP_SIZE + tile_x;
 
-                let index = y * MAP_SIZE + x;
                 // The tile indexes in the second tile pattern table ($8800-97ff) are signed
                 let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
                     (256 + (wndw_map[index] as i8 as isize)) as usize
@@ -268,21 +267,13 @@ impl PPU {
                     wndw_map[index] as usize
                 };
                 let tile = &self.tiles[tile_index];
+                let col = (x - origin_x) % TILESIZE;
+                let row = (y - origin_y) % TILESIZE;
+                let pixel = tile.get_row(row)[col];
 
-                let map_x = (x * TILESIZE) + origin_x;
-                let map_y = (y * TILESIZE) + origin_y;
-
-                for row in 0..TILESIZE {
-                    let pixels = tile.get_row(row);
-                    // Iterate through each pixel in row, applying the palette
-                    for i in 0..TILESIZE {
-                        let pixel_x = (map_x + i) % MAP_PIXELS;
-                        let pixel_y = (map_y + row) % MAP_PIXELS;
-                        let pixel_index = pixel_y * MAP_PIXELS + pixel_x;
-                        let corrected_pixel = palette[pixels[i as usize] as usize];
-                        pixel_array[pixel_index] = corrected_pixel;
-                    }
-                }
+                let index = y * SCREEN_WIDTH + x;
+                let corrected_pixel = palette[pixel as usize];
+                pixel_array[index] = corrected_pixel;
             }
         }
     }
@@ -332,16 +323,15 @@ impl PPU {
     /// ```
     fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
         // TODO: Needs to handle sprite priority
-        let screen_coords = self.get_scroll_coords();
         let palette = self.get_spr_palette(spr.is_pal_0());
         let flip_x = spr.is_x_flip();
         let flip_y = spr.is_y_flip();
         let above_bg = spr.is_above_bkgd();
 
-        let spr_x = (screen_coords.x as usize) + (spr_coords.x as usize);
-        let spr_y = (screen_coords.y as usize) + (spr_coords.y as usize);
+        let spr_x = spr_coords.x as usize;
+        let spr_y = spr_coords.y as usize;
 
-        for row in 0..TILESIZE {
+        'draw_row: for row in 0..TILESIZE {
             let pixels = if flip_y {
                 tile.get_row(TILESIZE - row - 1)
             } else {
@@ -349,17 +339,24 @@ impl PPU {
             };
 
             // Iterate through each pixel in row, applying the palette
-            for j in 0..TILESIZE {
-                let pixel = pixels[j as usize];
+            'draw_col: for col in 0..TILESIZE {
+                let pixel = pixels[col as usize];
                 let x_offset = if flip_x {
-                    TILESIZE - j - 1
+                    TILESIZE - col - 1
                 } else {
-                    j
+                    col
                 };
 
-                let pixel_x = (spr_x + x_offset) % MAP_PIXELS;
-                let pixel_y = (spr_y + row) % MAP_PIXELS;
-                let pixel_index = pixel_x + MAP_PIXELS * pixel_y;
+                let pixel_x = spr_x + x_offset;
+                let pixel_y = spr_y + row;
+                // Stop if pixel is going to be drawn off-screen
+                if pixel_x >= SCREEN_WIDTH {
+                    continue 'draw_col;
+                } else if pixel_y >= SCREEN_HEIGHT {
+                    continue 'draw_row;
+                }
+
+                let pixel_index = pixel_x + SCREEN_WIDTH * pixel_y;
                 let corrected_pixel = palette[pixel as usize];
 
                 // Only draw pixel if
@@ -374,42 +371,33 @@ impl PPU {
     }
 
     /// ```
-    /// Get view
+    /// Get color
     ///
     /// Gets the pixel values for the pixels currently on screen
     ///
     /// Input:
-    ///     Entire 256x256 screen pixel array (&[u8])
+    ///     160x144 screen pixel array (&[u8])
     ///
     /// Output:
-    ///     Index values for on-screen pixels ([u8])
+    ///     RGB values for on-screen pixels ([u8])
     /// ```
-    fn get_view(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
-        let mut viewport = [0; DISP_SIZE];
-        let scroll = self.get_scroll_coords();
-
+    fn get_color(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
+        let mut rgb_screen = [0; DISP_SIZE];
         // Iterate through every visible pixel
-        let start_x = scroll.x as usize;
-        let start_y = scroll.y as usize;
-        for y in start_y..(start_y + SCREEN_HEIGHT) {
-            for x in start_x..(start_x + SCREEN_WIDTH) {
-                // Wrap X/Y coord if needed
-                let adj_x = x % MAP_PIXELS;
-                let adj_y = y % MAP_PIXELS;
-
-                let index = adj_y * MAP_PIXELS + adj_x;
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                let index = y * SCREEN_WIDTH + x;
                 let pixel = pixel_array[index];
 
-                // Index in output array uses un-wrapped x/y for indices
-                let view_index = ((y - start_y) * SCREEN_WIDTH + (x - start_x)) * COLOR_CHANNELS;
+                let view_index = index * COLOR_CHANNELS;
                 let color = COLORS[pixel as usize];
                 for i in 0..color.len() {
-                    viewport[view_index + i] = color[i];
+                    rgb_screen[view_index + i] = color[i];
                 }
             }
         }
 
-        viewport
+        rgb_screen
     }
 
     /// ```

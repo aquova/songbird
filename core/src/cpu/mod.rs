@@ -2,7 +2,7 @@ pub mod clock;
 pub mod opcodes;
 pub mod timer;
 
-use clock::Clock;
+use clock::{Clock, ClockResults};
 use crate::bus::Bus;
 use crate::io::Buttons;
 use crate::utils::*;
@@ -169,19 +169,33 @@ impl Cpu {
             }
             false
         } else {
+            let mut draw_time = false;
             // If halted, simply continue counting without executing opcodes
             let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
-            let draw_time = self.clock.clock_step(cycles);
-            // If draw_time true, then VBLANK interrupt is toggled
-            if draw_time {
-                self.enable_interrupt(Interrupts::VBLANK);
-            }
-
-            if self.bus.set_scanline(self.clock.get_scanline()) {
-                self.enable_interrupt(Interrupts::LCD_STAT);
-            }
+            let clock_result = self.clock.clock_step(cycles);
+            self.bus.set_scanline(self.clock.get_scanline());
             self.bus.set_status_reg(self.clock.get_mode());
+
+            match clock_result {
+                ClockResults::RenderFrame => {
+                    // Render the final scanline before rendering frame
+                    self.bus.render_scanline();
+                    // If time to render frame, then VBLANK interrupt is toggled
+                    self.enable_interrupt(Interrupts::VBLANK);
+                    draw_time = true;
+                },
+                ClockResults::RenderScanline => {
+                    self.bus.render_scanline();
+                    // if is_interrupt {
+                    //     self.enable_interrupt(Interrupts::LCD_STAT);
+                    // }
+                },
+                _ => {
+                    // Do nothing
+                }
+            };
+
             draw_time
         }
     }

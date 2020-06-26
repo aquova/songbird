@@ -8,6 +8,13 @@ const VBLANK_LINE_START: u8 = 143;
 const VBLANK_LINE_END: u8 = VBLANK_LINE_START + 10;
 
 #[derive(PartialEq)]
+pub enum ClockResults {
+    NoAction,
+    RenderScanline,
+    RenderFrame
+}
+
+#[derive(PartialEq)]
 pub enum ModeTypes {
     HBLANK,
     VBLANK,
@@ -39,11 +46,11 @@ impl Clock {
     ///     Number of cycles of most recent instruction (u8)
     ///
     /// Output:
-    ///     Whether or not to render the screen (bool)
+    ///     Action to take following this clock cycle (ClockResults)
     /// ```
-    pub fn clock_step(&mut self, cycles: u8) -> bool {
+    pub fn clock_step(&mut self, cycles: u8) -> ClockResults {
         self.cycles += cycles as usize;
-        let mut draw_screen = false;
+        let mut result = ClockResults::NoAction;
 
         match self.mode {
             // Screen gets drawn after final hblank
@@ -56,7 +63,7 @@ impl Clock {
                         self.mode = ModeTypes::VBLANK;
                         // VBLANK is starting, time to draw screen
                         // The VBLANK interrupt is triggered here
-                        draw_screen = true;
+                        result = ClockResults::RenderFrame;
                     } else {
                         self.mode = ModeTypes::OAMReadMode;
                     }
@@ -84,12 +91,13 @@ impl Clock {
                 if self.cycles >= VRAM_READ_LEN {
                     self.cycles = 0;
                     self.mode = ModeTypes::HBLANK;
-                    // Renders scanline here, if we were to do so
+                    // Render current scanline here
+                    result = ClockResults::RenderScanline;
                 }
             }
         }
 
-        draw_screen
+        result
     }
 
     /// ```

@@ -50,7 +50,7 @@ pub fn main() {
     // Initialize debugger
     let mut agbd = debugger::new();
     let mut debugging = false;
-    let trace_log = true;
+    let trace_log = false;
 
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
