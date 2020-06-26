@@ -133,14 +133,15 @@ impl debugger {
     /// Input:
     ///     Reference to CPU object (&Cpu)
     /// ```
-    pub fn print_registers(&self, gb: &Cpu) {
-        println!("PC: ${:04x}", gb.get_pc());
-        println!("SP: ${:04x}", gb.get_sp());
-        println!("AF: ${:04x}", gb.get_reg_16(Regs16::AF));
-        println!("BC: ${:04x}", gb.get_reg_16(Regs16::BC));
-        println!("DE: ${:04x}", gb.get_reg_16(Regs16::DE));
-        println!("HL: ${:04x}", gb.get_reg_16(Regs16::HL));
-        println!("");
+    pub fn print_registers(&self, gb: &Cpu) -> String {
+        let mut reg_info = format!("PC: ${:04x}\n", gb.get_pc());
+        reg_info = format!("{}SP: ${:04x}\n", reg_info, gb.get_sp());
+        reg_info = format!("{}AF: ${:04x}\n", reg_info, gb.get_reg_16(Regs16::AF));
+        reg_info = format!("{}BC: ${:04x}\n", reg_info, gb.get_reg_16(Regs16::BC));
+        reg_info = format!("{}DE: ${:04x}\n", reg_info, gb.get_reg_16(Regs16::DE));
+        reg_info = format!("{}HL: ${:04x}\n", reg_info, gb.get_reg_16(Regs16::HL));
+
+        reg_info
     }
 
     /// ```

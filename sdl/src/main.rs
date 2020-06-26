@@ -50,6 +50,7 @@ pub fn main() {
     // Initialize debugger
     let mut agbd = debugger::new();
     let mut debugging = false;
+    let trace_log = true;
 
     // Set up SDL
     let sdl_context = sdl2::init().unwrap();
@@ -181,7 +182,8 @@ pub fn main() {
                     },
                     // List register values
                     "reg" => {
-                        agbd.print_registers(&gb);
+                        let info = agbd.print_registers(&gb);
+                        println!("{}", info);
                     },
                     // Set watchpoint
                     "w" => {
@@ -228,6 +230,11 @@ pub fn main() {
         // Break if we hit a break/watchpoint
         if agbd.check_break(gb.get_pc()) || agbd.check_watch(&gb, watch_vals) {
             debugging = true;
+        }
+
+        // Output to trace log if enabled
+        if trace_log {
+            log_to_file(&gb, &agbd);
         }
     }
 }
@@ -359,4 +366,11 @@ fn write_battery_save(gb: &mut Cpu, gamename: &str) {
     let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
     file.write(ram_data).unwrap();
     gb.clean_battery_flag();
+}
+
+fn log_to_file(gb: &Cpu, debug: &debugger) {
+    let mut f = OpenOptions::new().create(true).append(true).open("trace.log").expect("Error opening trace log file");
+
+    let info = debug.print_registers(gb);
+    f.write(info.as_bytes()).unwrap();
 }
