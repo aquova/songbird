@@ -174,7 +174,10 @@ impl Cpu {
             let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
             let clock_result = self.clock.clock_step(cycles);
-            self.bus.set_scanline(self.clock.get_scanline());
+            let lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
+            if lcd_interrupt {
+                self.enable_interrupt(Interrupts::LCD_STAT);
+            }
             self.bus.set_status_reg(self.clock.get_mode());
 
             match clock_result {
@@ -187,9 +190,6 @@ impl Cpu {
                 },
                 ClockResults::RenderScanline => {
                     self.bus.render_scanline();
-                    // if is_interrupt {
-                    //     self.enable_interrupt(Interrupts::LCD_STAT);
-                    // }
                 },
                 _ => {
                     // Do nothing
