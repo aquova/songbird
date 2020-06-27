@@ -166,8 +166,8 @@ impl PPU {
             let screen_coords = self.get_scroll_coords();
 
             // Get the row of tiles containing our scanline
-            let y = (screen_coords.y + line) as usize;
-            let row = ((screen_coords.y + line) as usize) % TILESIZE;
+            let y = ((screen_coords.y as usize) + (line as usize)) % MAP_PIXELS;
+            let row = y % TILESIZE;
             let start_x = screen_coords.x as usize;
             for x in 0..SCREEN_WIDTH {
                 // Get coords for current tile

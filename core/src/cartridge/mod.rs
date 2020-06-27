@@ -153,7 +153,7 @@ impl Cart {
         if address < ROM_BANK_SIZE as u16 {
             // If in Bank 0, simply read value
             self.rom[address as usize]
-        } else if address < ROM_STOP {
+        } else if address <= ROM_STOP {
             // If in other rom bank, need to obey bank switching
             // NOTE: MBC2 only goes up to 16 banks
             let rel_address = (address as usize) - ROM_BANK_SIZE;
