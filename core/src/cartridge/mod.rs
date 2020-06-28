@@ -155,13 +155,11 @@ impl Cart {
             self.rom[address as usize]
         } else if address <= ROM_STOP {
             // If in other rom bank, need to obey bank switching
-            // NOTE: MBC2 only goes up to 16 banks
             let rel_address = (address as usize) - ROM_BANK_SIZE;
             let bank_address = (self.rom_bank as usize) * ROM_BANK_SIZE + rel_address;
             self.rom[bank_address as usize]
         } else {
             match self.mbc {
-                // TODO: What to return if no MBC or ext. RAM disabled?
                 MBC::MBC1 => { mbc1_read_byte(self, address) },
                 MBC::MBC2 => { mbc2_read_byte(self, address) },
                 MBC::MBC3 => { mbc3_read_byte(self, address) },
@@ -221,6 +219,18 @@ impl Cart {
         };
         from_utf8(data).unwrap()
     }
+
+    /// ```
+    /// Get ROM bank number
+    ///
+    /// Returns ROM bank number, used for debugging
+    ///
+    /// Output:
+    ///     ROM bank number (u16)
+    /// ```
+    pub fn get_rom_bank(&self) -> u16 {
+        self.rom_bank
+    }
 }
 
 // ===================
@@ -228,9 +238,9 @@ impl Cart {
 // ===================
 impl Cart {
     /// ```
-    /// Get MBC type
+    /// Set MBC type
     ///
-    /// Gets the Memory Bank Controller type for this game
+    /// Sets the Memory Bank Controller type for this game
     /// ```
     fn set_mbc(&mut self) {
         let val = self.rom[MBC_TYPE_ADDR];
@@ -239,6 +249,7 @@ impl Cart {
             0x01..=0x03 => { MBC::MBC1 },
             0x05..=0x06 => { MBC::MBC2 },
             0x0F..=0x13 => { MBC::MBC3 },
+            0x19..=0x1E => { MBC::MBC5 },
             _ =>           { MBC::NONE }
         };
 
