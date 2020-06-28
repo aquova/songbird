@@ -33,6 +33,9 @@ const DMG_TITLE_ADDR_END: usize = 0x013F;
 const CGB_FLAG_ADDR: usize = 0x0143;
 const MBC_TYPE_ADDR: usize = 0x0147;
 
+const DMG_CGB_FLAG: u8  = 0x80;
+const CGB_ONLY_FLAG: u8 = 0xC0;
+
 /*
  * ROM Header Layout
  * Header runs from $0100-$014F
@@ -256,9 +259,14 @@ impl Cart {
         self.mbc = mbc;
     }
 
+    /// ```
+    /// Set CGB
+    ///
+    /// Sets whether the game has Game Boy Color support
+    /// ```
     fn set_cgb(&mut self) {
         let val = self.rom[CGB_FLAG_ADDR];
-        self.cgb = (val == 0x80) || (val == 0xC0);
+        self.cgb = (val == DMG_CGB_FLAG) || (val == CGB_ONLY_FLAG);
     }
 
     /// ```

@@ -4,6 +4,18 @@ use crate::utils::ModifyBits;
 const MBC5_LOW_BITS_ROM_BANK_STOP: u16 = 0x2FFF;
 const MBC5_HIGH_BIT_ROM_BANK_START: u16 = MBC5_LOW_BITS_ROM_BANK_STOP + 1;
 
+/// ```
+/// Read byte
+///
+/// Read byte from cartridge
+///
+/// Inputs:
+///     Cartridge object (&Cart)
+///     Memory address (u16)
+///
+/// Output:
+///     Byte read (u8)
+/// ```
 pub fn mbc5_read_byte(cart: &Cart, addr: u16) -> u8 {
     if cart.ext_ram_enable {
         let rel_addr = (addr - EXT_RAM_START) as usize;
@@ -15,6 +27,19 @@ pub fn mbc5_read_byte(cart: &Cart, addr: u16) -> u8 {
     }
 }
 
+/// ```
+/// Write byte
+///
+/// Write byte to cartridge memory
+///
+/// Inputs:
+///     Cartridge object (&Cart)
+///     Memory address (u16)
+///     Value to write (u8)
+///
+/// Output:
+///     Whether external RAM is dirty (bool)
+/// ```
 pub fn mbc5_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
     let mut battery_write = false;
 

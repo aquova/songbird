@@ -1,7 +1,7 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
-use crate::utils::DISP_SIZE;
+use crate::utils::{BYTE, DISP_SIZE};
 
 /*
  * RAM Map
@@ -153,12 +153,16 @@ impl Bus {
                 self.rom.write_cart(addr, val)
             },
             VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
-                if addr == JOYPAD_REG {
-                    self.io.poll_btns(val);
-                } else if addr == DMA_REG {
-                    self.oam_dma(val);
-                } else {
-                    self.ppu.write_vram(addr, val);
+                match addr {
+                    JOYPAD_REG => {
+                        self.io.poll_btns(val);
+                    },
+                    DMA_REG => {
+                        self.oam_dma(val);
+                    },
+                    _ => {
+                        self.ppu.write_vram(addr, val);
+                    }
                 }
                 false
             }
@@ -267,7 +271,7 @@ impl Bus {
     /// ```
     fn oam_dma(&mut self, val: u8) {
         // If value is $XX, then copy $XX00-$XX9F into OAM RAM
-        let source_addr = (val as u16).wrapping_shl(8);
+        let source_addr = (val as u16).wrapping_shl(BYTE as u32);
         let dest_addr = OAM;
 
         for i in 0..0xA0 {

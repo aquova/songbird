@@ -30,6 +30,7 @@ const Y_POS_BYTE: u16 = 0;
 const X_POS_BYTE: u16 = 1;
 const TILE_NUM_BYTE: u16 = 2;
 const FLAG_BYTE: u16 = 3;
+pub const OAM_BYTE_SIZE: u16 = 4;
 
 const PAL_NUM_BIT: u8 = 4;
 const X_FLIP_BIT: u8 = 5;

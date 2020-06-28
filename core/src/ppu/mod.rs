@@ -1,7 +1,7 @@
 mod sprite;
 mod tile;
 
-use sprite::Sprite;
+use sprite::{OAM_BYTE_SIZE, Sprite};
 use tile::{Tile, TILE_BYTES};
 use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
@@ -41,6 +41,22 @@ const TILE_SET_END: u16               = 0x97FF - (VRAM_OFFSET as u16);
 const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
 const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 
+// Register bit constants
+const BG_DISP_BIT: u8           = 0;
+const SPR_DISP_BIT: u8          = 1;
+const SPR_SIZE_BIT: u8          = 2;
+const BG_TILE_MAP_BIT: u8       = 3;
+const BG_WNDW_TILE_DATA_BIT: u8 = 4;
+const WNDW_DISP_BIT: u8         = 5;
+const WNDW_TILE_MAP_BIT: u8     = 6;
+// const LCD_DISP_BIT: u8          = 7;
+
+const LYC_LY_FLAG_BIT: u8 =         2;
+// const HBLANK_INTERRUPT_BIT: u8 =    3;
+// const VBLANK_INTERRUPT_BIT: u8 =    4;
+// const OAM_INTERRUPT_BIT: u8 =       5;
+const LYC_LY_INTERRUPT_BIT: u8 =    6;
+
 // Colors
 const BLACK: [u8; COLOR_CHANNELS]            = [0,   0,   0,   255];
 const LIGHT_GRAY: [u8; COLOR_CHANNELS]       = [148, 148, 165, 255];
@@ -79,10 +95,7 @@ impl PPU {
     ///
     /// Write value to specified address in VRAM
     ///
-    /// Can't access OAM memory during OAM Interrupt
-    /// Can't access OAM or VRAM during LCD transfer
-    ///
-    /// Input:
+    /// Inputs:
     ///     Address to write to (u16)
     ///     Value to write (u8)
     /// ```
@@ -93,8 +106,8 @@ impl PPU {
             // Update OAM objects if needed
             if is_in_oam(addr) {
                 let relative_addr = addr - OAM_MEM;
-                let spr_num = relative_addr / 4;
-                let byte_num = relative_addr % 4;
+                let spr_num = relative_addr / OAM_BYTE_SIZE;
+                let byte_num = relative_addr % OAM_BYTE_SIZE;
                 self.oam[spr_num as usize].update_byte(byte_num, val);
             } else if is_in_tile_set(addr) {
                 let offset = addr - TILE_SET;
@@ -132,7 +145,7 @@ impl PPU {
     ///     Value to write (u8)
     ///
     /// Output:
-    ///     Whether values in LY and LYC registers are equal
+    ///     Whether values in LY and LYC registers are equal (bool)
     /// ```
     pub fn set_ly(&mut self, line: u8) -> bool {
         self.vram[LY] = line;
@@ -141,8 +154,8 @@ impl PPU {
             // If LY and LYC are equal:
             // - Set coincidence bit in STAT register
             // - Trigger LCDC status interrupt if enabled
-            self.vram[STAT].set_bit(2);
-            self.vram[STAT].get_bit(6)
+            self.vram[STAT].set_bit(LYC_LY_FLAG_BIT);
+            self.vram[STAT].get_bit(LYC_LY_INTERRUPT_BIT)
         } else {
             false
         }
@@ -284,7 +297,7 @@ impl PPU {
     /// Renders the sprites onto the graphics array
     ///
     /// Input:
-    ///     [u8] - Graphics array to render upon
+    ///     Graphics array to render upon (&[u8])
     /// ```
     fn render_sprites(&self, pixel_array: &mut [u8]) {
         // Iterate through every sprite
@@ -305,7 +318,7 @@ impl PPU {
                 let spr_offset = if spr.is_y_flip() { num_spr - i - 1 } else { i };
                 let spr_num = spr.get_tile_num() + spr_offset;
                 let tile = &self.tiles[spr_num as usize];
-                self.draw_spr(pixel_array, tile, spr, spr_coords);
+                self.draw_spr(pixel_array, tile, &spr, spr_coords);
             }
         }
     }
@@ -316,12 +329,12 @@ impl PPU {
     /// Draw sprite to screen
     ///
     /// Inputs:
-    ///     Graphics array to render upon ([u8])
-    ///     Tile to render (Tile)
-    ///     Sprite metadata (Sprite)
+    ///     Graphics array to render upon (&[u8])
+    ///     Tile to render (&Tile)
+    ///     Sprite metadata (&Sprite)
     ///     Screen coordinates to draw to (Point)
     /// ```
-    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: Sprite, spr_coords: Point) {
+    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: &Sprite, spr_coords: Point) {
         // TODO: Needs to handle sprite priority
         let palette = self.get_spr_palette(spr.is_pal_0());
         let flip_x = spr.is_x_flip();
@@ -483,7 +496,7 @@ impl PPU {
     /// ```
     fn is_bkgd_dspl(&self) -> bool {
         let lcd_control = self.vram[LCDC];
-        lcd_control.get_bit(0)
+        lcd_control.get_bit(BG_DISP_BIT)
     }
 
     /// ```
@@ -496,7 +509,7 @@ impl PPU {
     /// ```
     fn is_wndw_dspl(&self) -> bool {
         let lcd_control = self.vram[LCDC];
-        lcd_control.get_bit(5)
+        lcd_control.get_bit(WNDW_DISP_BIT)
     }
 
     /// ```
@@ -509,7 +522,7 @@ impl PPU {
     /// ```
     fn is_sprt_dspl(&self) -> bool {
         let lcd_control = self.vram[LCDC];
-        lcd_control.get_bit(1)
+        lcd_control.get_bit(SPR_DISP_BIT)
     }
 
     /// ```
@@ -522,7 +535,7 @@ impl PPU {
     /// ```
     fn get_bkgd_wndw_tile_set_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(4) { return 1 } else { return 0 }
+        if lcd_control.get_bit(BG_WNDW_TILE_DATA_BIT) { return 1 } else { return 0 }
     }
 
     /// ```
@@ -535,7 +548,7 @@ impl PPU {
     /// ```
     fn get_bkgd_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(3) { return 1 } else { return 0 }
+        if lcd_control.get_bit(BG_TILE_MAP_BIT) { return 1 } else { return 0 }
     }
 
     /// ```
@@ -548,7 +561,7 @@ impl PPU {
     /// ```
     fn get_wndw_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(6) { return 1 } else { return 0 }
+        if lcd_control.get_bit(WNDW_TILE_MAP_BIT) { return 1 } else { return 0 }
     }
 
     /// ```
@@ -560,7 +573,7 @@ impl PPU {
     ///     Whether spries are 8x16 (vs 8x8) (bool)
     /// ```
     fn spr_are_8x16(&self) -> bool {
-        self.vram[LCDC].get_bit(2)
+        self.vram[LCDC].get_bit(SPR_SIZE_BIT)
     }
 
     /// ```
@@ -585,6 +598,7 @@ impl PPU {
     ///
     /// Output:
     ///     Location of the window (Point)
+    /// ```
     fn get_wndw_coords(&self) -> Point {
         let wndw_x = self.vram[WX].saturating_sub(7);
         let wndw_y = self.vram[WY];
@@ -656,6 +670,17 @@ fn is_in_oam(addr: u16) -> bool {
     addr >= OAM_MEM && addr <= OAM_MEM_END
 }
 
+/// ```
+/// Is in tile set?
+///
+/// Helper function to determine if address is in tile set memory
+///
+/// Input:
+///     Address in question (u16)
+///
+/// Output:
+///     Whether address is in tile set memory (bool)
+/// ```
 fn is_in_tile_set(addr: u16) -> bool {
     addr >= TILE_SET && addr <= TILE_SET_END
 }
