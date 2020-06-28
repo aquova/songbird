@@ -145,28 +145,12 @@ impl Cpu {
     ///     Whether or not to render a frame (bool)
     /// ```
     pub fn tick(&mut self) -> bool {
-        // Tick timer
-        // NOTE: Should this come before or after interrupt check?
-        let timer_interrupt = self.timer.tick();
-        if timer_interrupt {
-            self.enable_interrupt(Interrupts::TIMER);
-        }
-
         // Check for interrupts
         let inter = self.interrupt_check();
 
         if inter.is_some() {
             let inter_type = inter.unwrap();
-            let vector = self.get_inter_vector(inter_type);
-            self.halted = false;
-
-            // Save current PC, jump to interrupt vector if master interrupt enabled
-            // Otherwise, we simply wake up from halt
-            if self.interrupt_enabled {
-                self.push(self.get_pc());
-                self.set_pc(vector);
-                self.trigger_interrupt(inter_type);
-            }
+            self.trigger_interrupt(inter_type);
             false
         } else {
             let mut draw_time = false;
@@ -179,6 +163,12 @@ impl Cpu {
                 self.enable_interrupt(Interrupts::LCD_STAT);
             }
             self.bus.set_status_reg(self.clock.get_mode());
+
+            // Tick timer
+            let timer_interrupt = self.timer.tick(cycles);
+            if timer_interrupt {
+                self.enable_interrupt(Interrupts::TIMER);
+            }
 
             match clock_result {
                 ClockResults::RenderFrame => {
@@ -1237,18 +1227,27 @@ impl Cpu {
     /// ```
     fn trigger_interrupt(&mut self, inter: Interrupts) {
         let mut if_reg = self.read_ram(IF);
+        let vector = self.get_inter_vector(inter);
+        self.halted = false;
 
-        self.interrupt_enabled = false;
-        match inter {
-            Interrupts::VBLANK =>   { if_reg.clear_bit(0) },
-            Interrupts::LCD_STAT => { if_reg.clear_bit(1) },
-            Interrupts::TIMER =>    { if_reg.clear_bit(2) },
-            Interrupts::SERIAL =>   { if_reg.clear_bit(3) },
-            Interrupts::JOYPAD =>   { if_reg.clear_bit(4) },
+        // Save current PC, jump to interrupt vector if master interrupt enabled
+        // Otherwise, we simply wake up from halt
+        if self.interrupt_enabled {
+            self.interrupt_enabled = false;
+            self.push(self.get_pc());
+            self.set_pc(vector);
+
+            match inter {
+                Interrupts::VBLANK =>   { if_reg.clear_bit(0) },
+                Interrupts::LCD_STAT => { if_reg.clear_bit(1) },
+                Interrupts::TIMER =>    { if_reg.clear_bit(2) },
+                Interrupts::SERIAL =>   { if_reg.clear_bit(3) },
+                Interrupts::JOYPAD =>   { if_reg.clear_bit(4) },
+            }
+
+            self.write_ram(IF, if_reg);
+            self.clock.clock_step(3);
         }
-
-        self.write_ram(IF, if_reg);
-        self.clock.clock_step(3);
     }
 
     /// ```

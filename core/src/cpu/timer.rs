@@ -5,17 +5,18 @@ pub const TIMA: u16 = 0xFF05; // Counter register
 pub const TMA: u16 = 0xFF06; // Modulo register
 pub const TAC: u16 = 0xFF07; // Control register
 
-const TIMER_SPEED_IN_CYCLES: u8 = 16;
-const COUNT_SPEED_IN_CYCLES: [u8; 4] = [64, 1, 4, 16];
+// const TIMA_SPEED_IN_CYCLES: [u16; 4] = [1024, 16, 64, 256];
+const DIV_SPEED_IN_CYCLES: u16 = 64;
+const TIMA_SPEED_IN_CYCLES: [u16; 4] = [256, 4, 16, 64];
 
 pub struct Timer {
     running: bool,
-    div_cycles: u8,
-    cnt_cycles: u8,
-    cnt_index: usize,
-    div_reg: u8, // $FF04
-    cnt_reg: u8, // $FF05
-    mod_reg: u8, // $FF06
+    div_cycles: u16,
+    tima_cycles: u16,
+    tima_index: usize,
+    div: u8, // $FF04
+    tima: u8, // $FF05
+    tma: u8, // $FF06
 }
 
 impl Timer {
@@ -23,38 +24,39 @@ impl Timer {
         Timer {
             running: false,
             div_cycles: 0,
-            cnt_cycles: 0,
-            cnt_index: 0,
-            div_reg: 0,
-            cnt_reg: 0,
-            mod_reg: 0,
+            tima_cycles: 0,
+            tima_index: 0,
+            div: 0,
+            tima: 0,
+            tma: 0,
         }
     }
 
-    pub fn tick(&mut self) -> bool {
+    pub fn tick(&mut self, cycles: u8) -> bool {
         let mut interrupt = false;
 
         // Timer clock runs slower than CPU clock
         // So timer registers only increment on set multiple of clock cycles
         // DIV always runs, while TIMA only runs when set
-        self.div_cycles += 1;
-        if self.div_cycles == TIMER_SPEED_IN_CYCLES {
-            self.div_reg = self.div_reg.wrapping_add(1);
-            self.div_cycles = 0;
+        self.div_cycles += cycles as u16;
+        if self.div_cycles >= DIV_SPEED_IN_CYCLES {
+            self.div = self.div.wrapping_add(1);
+            self.div_cycles %= DIV_SPEED_IN_CYCLES;
         }
 
         if self.running {
-            self.cnt_cycles += 1;
+            self.tima_cycles += cycles as u16;
 
-            if self.cnt_cycles == COUNT_SPEED_IN_CYCLES[self.cnt_index] {
-                self.cnt_cycles = 0;
-                let overflow = self.cnt_reg.checked_add(1);
+            let cnt_spd = TIMA_SPEED_IN_CYCLES[self.tima_index];
+            if self.tima_cycles >= cnt_spd {
+                self.tima_cycles %= cnt_spd;
+                let overflow = self.tima.checked_add(1);
                 // If overflow, set Timer counter to Timer Modulo value
                 if overflow.is_none() {
-                    self.cnt_reg = self.mod_reg;
+                    self.tima = self.tma;
                     interrupt = true;
                 } else {
-                    self.cnt_reg += 1;
+                    self.tima += 1;
                 }
             }
         }
@@ -64,12 +66,12 @@ impl Timer {
 
     pub fn read_timer(&self, addr: u16) -> u8 {
         let val = match addr {
-            DIV => { self.div_reg },
-            TIMA => { self.cnt_reg },
-            TMA => { self.mod_reg },
+            DIV => { self.div },
+            TIMA => { self.tima },
+            TMA => { self.tma },
             TAC => {
                 let running_val = if self.running { 0b100 } else { 0 };
-                let output = running_val | (self.cnt_index as u8);
+                let output = running_val | (self.tima_index as u8);
                 output
             },
             _ => { panic!("Trying to read a non-timer register") }
@@ -80,14 +82,14 @@ impl Timer {
 
     pub fn write_timer(&mut self, addr: u16, val: u8) {
         match addr {
-            DIV => { self.div_reg = 0 },
-            TIMA => { self.cnt_reg = 0 },
-            TMA => { self.mod_reg = val },
+            DIV => { self.div = 0 },
+            TIMA => { self.tima = 0 },
+            TMA => { self.tma = val },
             TAC => {
                 self.running = val.get_bit(2);
 
                 let clock_spd = val & 0x3;
-                self.cnt_index = clock_spd as usize;
+                self.tima_index = clock_spd as usize;
             },
             _ => {
                 panic!("Trying to write to non-timer register")
