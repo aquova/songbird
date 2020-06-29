@@ -1,4 +1,4 @@
-use crate::utils::{ModifyBits, Point};
+use crate::utils::ModifyBits;
 
 /*
  * Object Attribute Memory (OAM) Layout
@@ -20,11 +20,10 @@ use crate::utils::{ModifyBits, Point};
  *
 **/
 
-const X_OFFSET: u8 = 8;
-const Y_OFFSET: u8 = 16;
-
-const X_OFFSCREEN: u8 = 168;
-const Y_OFFSCREEN: u8 = 160;
+const X_OFFSET: i16 = 8;
+const Y_OFFSET: i16 = 16;
+const X_OFFSCREEN: i16 = 168;
+const Y_OFFSCREEN: i16 = 160;
 
 const Y_POS_BYTE: u16 = 0;
 const X_POS_BYTE: u16 = 1;
@@ -40,8 +39,8 @@ const BG_PRIORITY_BIT: u8 = 7;
 #[derive(Copy, Clone)]
 pub struct Sprite {
     tile_num: u8,
-    x: u8,
-    y: u8,
+    x: i16,
+    y: i16,
     above_bkgd: bool,
     x_flip: bool,
     y_flip: bool,
@@ -89,8 +88,8 @@ impl Sprite {
     ///     Is sprite onscreen (bool)
     /// ```
     pub fn is_onscreen(&self) -> bool {
-        let x_visible = self.x > 0 && self.x < X_OFFSCREEN;
-        let y_visible = self.y > 0 && self.y < Y_OFFSCREEN;
+        let x_visible = self.x > -X_OFFSET && self.x < X_OFFSCREEN;
+        let y_visible = self.y > -Y_OFFSET && self.y < Y_OFFSCREEN;
 
         x_visible || y_visible
     }
@@ -113,12 +112,10 @@ impl Sprite {
     /// Get screen coordinates for this sprite
     ///
     /// Output:
-    ///     Sprite coordinates (Point)
+    ///     Sprite coordinates ((i16, i16))
     /// ```
-    pub fn get_coords(&self) -> Point {
-        let x = self.x.wrapping_sub(X_OFFSET);
-        let y = self.y.wrapping_sub(Y_OFFSET);
-        Point::new(x, y)
+    pub fn get_coords(&self) -> (i16, i16) {
+        (self.x, self.y)
     }
 
     /// ```
@@ -180,7 +177,7 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte1(&mut self, val: u8) {
-        self.y = val;
+        self.y = (val as i16)- Y_OFFSET;
     }
 
     /// ```
@@ -192,7 +189,7 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte2(&mut self, val: u8) {
-        self.x = val;
+        self.x = (val as i16) - X_OFFSET;
     }
 
     /// ```

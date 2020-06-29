@@ -313,12 +313,12 @@ impl PPU {
             let num_spr = if self.spr_are_8x16() { 2 } else { 1 };
 
             for i in 0..num_spr {
-                let top_coords = spr.get_coords();
-                let spr_coords = Point::new(top_coords.x, top_coords.y + (TILESIZE as u8 * i));
+                let (top_x, top_y) = spr.get_coords();
+                let spr_y = top_y + (TILESIZE as u8 * i) as i16;
                 let spr_offset = if spr.is_y_flip() { num_spr - i - 1 } else { i };
                 let spr_num = spr.get_tile_num() + spr_offset;
                 let tile = &self.tiles[spr_num as usize];
-                self.draw_spr(pixel_array, tile, &spr, spr_coords);
+                self.draw_spr(pixel_array, tile, &spr, top_x, spr_y);
             }
         }
     }
@@ -332,17 +332,18 @@ impl PPU {
     ///     Graphics array to render upon (&[u8])
     ///     Tile to render (&Tile)
     ///     Sprite metadata (&Sprite)
-    ///     Screen coordinates to draw to (Point)
+    ///     X coordinate of sprite (i16)
+    ///     Y coordinate of sprite (i16)
     /// ```
-    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: &Sprite, spr_coords: Point) {
+    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: &Sprite, x: i16, y: i16) {
         // TODO: Needs to handle sprite priority
         let palette = self.get_spr_palette(spr.is_pal_0());
         let flip_x = spr.is_x_flip();
         let flip_y = spr.is_y_flip();
         let above_bg = spr.is_above_bkgd();
 
-        let spr_x = spr_coords.x as usize;
-        let spr_y = spr_coords.y as usize;
+        let spr_x = x as usize;
+        let spr_y = y as usize;
 
         'draw_row: for row in 0..TILESIZE {
             let pixels = if flip_y {
