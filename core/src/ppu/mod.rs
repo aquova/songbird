@@ -301,8 +301,9 @@ impl PPU {
     /// ```
     fn render_sprites(&self, pixel_array: &mut [u8]) {
         // Iterate through every sprite
-        for i in 0..OAM_SPR_NUM {
-            let spr = self.oam[i];
+        let sorted_sprites = self.sort_sprites();
+        for i in 0..sorted_sprites.len() {
+            let spr = sorted_sprites[i];
             if !spr.is_onscreen() {
                 continue;
             }
@@ -485,6 +486,23 @@ impl PPU {
         };
 
         pal
+    }
+
+    /// ```
+    /// Sort sprites
+    ///
+    /// Sort sprites into correct drawing order
+    ///
+    /// Output:
+    ///     Sorted sprites (Vec<Sprite>)
+    /// ```
+    fn sort_sprites(&self) -> Vec<Sprite> {
+        // In event of overlap, sprites are drawn
+        // (on DMG) with the lowest x-coordinate on top.
+        // If tie, lowest sprite number goes on top
+        let mut sprites = self.oam.to_vec();
+        sprites.sort_by(|a, b| b.get_coords().0.cmp(&a.get_coords().0));
+        sprites
     }
 
     /// ```
