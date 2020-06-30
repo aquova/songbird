@@ -2,12 +2,14 @@ mod mbc1;
 mod mbc2;
 mod mbc3;
 mod mbc5;
+mod rtc;
 
 use std::str::from_utf8;
 use mbc1::{mbc1_read_byte, mbc1_write_byte};
 use mbc2::{mbc2_read_byte, mbc2_write_byte};
 use mbc3::{mbc3_read_byte, mbc3_write_byte};
 use mbc5::{mbc5_read_byte, mbc5_write_byte};
+use rtc::RTC;
 
 const ROM_BANK_SIZE: usize = 0x4000;
 const RAM_BANK_SIZE: usize = 0x2000;
@@ -93,6 +95,7 @@ pub struct Cart {
     ext_ram_enable: bool,
     rom_mode: bool,
     cgb: bool,
+    rtc: RTC,
 }
 
 // ==================
@@ -109,6 +112,7 @@ impl Cart {
             ext_ram_enable: false,
             rom_mode: true,
             cgb: false,
+            rtc: RTC::new(),
         }
     }
 

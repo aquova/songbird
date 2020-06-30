@@ -13,10 +13,14 @@ use crate::cartridge::*;
 ///     Byte read (u8)
 /// ```
 pub fn mbc3_read_byte(cart: &Cart, addr: u16) -> u8 {
-    let rel_addr = (addr - EXT_RAM_START) as usize;
-    // Reading from external RAM
-    let ram_bank_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
-    cart.ram[ram_bank_addr]
+    if cart.rtc.is_enabled() && (0x08 <= cart.ram_bank && cart.ram_bank <= 0x0C) {
+        cart.rtc.read_byte(cart.ram_bank)
+    } else {
+        let rel_addr = (addr - EXT_RAM_START) as usize;
+        // Reading from external RAM
+        let ram_bank_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
+        cart.ram[ram_bank_addr]
+    }
 }
 
 /// ```
@@ -49,29 +53,29 @@ pub fn mbc3_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
             }
         },
         RAM_BANK_NUM_START..=RAM_BANK_NUM_STOP => {
-            match val {
-                0x00..=0x03 => {
-                    cart.ram_bank = val;
-                },
-                0x08..=0x0C => {
-                    // Map in RTC register
-                    // TODO: Set up RTC
-                },
-                _ => {
-                    // Unknown behavior
-                }
-            }
+            cart.ram_bank = val;
         },
         ROM_RAM_MODE_START..=ROM_RAM_MODE_STOP => {
-            // TODO: Setup RTC registers
+            // RTC registers will latch if $00, then $01 is written
+            cart.rtc.write_byte(val);
         },
         EXT_RAM_START..=EXT_RAM_STOP => {
-            // TODO: Setup RTC
             if cart.ext_ram_enable {
-                let rel_addr = (addr - EXT_RAM_START) as usize;
-                let ram_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
-                cart.ram[ram_addr] = val;
-                battery_write = true;
+                match cart.ram_bank {
+                    // RAM banks can go from 0-3
+                    0x00..=0x03 => {
+                        let rel_addr = (addr - EXT_RAM_START) as usize;
+                        let ram_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
+                        cart.ram[ram_addr] = val;
+                        battery_write = true;
+                    },
+                    0x08..=0x0C => {
+                        cart.rtc.write_byte(val);
+                    },
+                    _ => {
+                        // Unknown behavior, do nothing
+                    }
+                }
             }
         }
         _ => {
