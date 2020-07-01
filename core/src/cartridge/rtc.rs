@@ -1,4 +1,5 @@
-use std::time::Instant;
+extern crate wasm_timer;
+use wasm_timer::Instant;
 
 const SECS_IN_MIN: u64 = 60;
 const MIN_IN_HOURS: u64 = 60;
