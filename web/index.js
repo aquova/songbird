@@ -6,6 +6,8 @@ const HEIGHT = 144
 let scale = 1
 let scale_elem = document.getElementById("scale")
 
+let my_storage = window.localStorage
+
 let canvas = document.getElementById("canvas")
 update_canvas()
 
@@ -39,6 +41,7 @@ async function run() {
 
             gb.reset()
             gb.load_rom(rom)
+            load_save(gb)
             let title = gb.get_title()
             document.title = title
 
@@ -61,6 +64,11 @@ function mainloop(gb) {
                 ctx.drawImage(canvas, 0, 0, WIDTH, HEIGHT, 0, 0, canvas.width, canvas.height)
             }
 
+            // Save game if contents have been modified
+            if (gb.is_battery_dirty()) {
+                save_game(gb)
+            }
+
             window.requestAnimationFrame(() => {
                 mainloop(gb)
             })
@@ -70,6 +78,9 @@ function mainloop(gb) {
     }
 }
 
+/// Update Canvas
+///
+/// Resizes canvas based on user input
 function update_canvas() {
     scale = Math.floor(parseInt(scale_elem.value))
     canvas.width = WIDTH * scale
@@ -78,6 +89,49 @@ function update_canvas() {
     let ctx = canvas.getContext("2d")
     ctx.fillStyle = "#FFFFFF"
     ctx.fillRect(0, 0, scale * WIDTH, scale * HEIGHT)
+}
+
+/// Load save
+///
+/// Loads save data from local storage, sends it to emulator
+function load_save(gb) {
+    let title = gb.get_title()
+    let save = my_storage.getItem(title)
+    if (save != null) {
+        console.log("Save data loaded")
+        let u8 = from_base64(save)
+        let data = new Uint8Array(u8)
+        gb.load_save_data(data)
+    } else {
+        console.log("No save data found for " + title)
+    }
+}
+
+/// Save game
+///
+/// Gets external RAM data from emulator, saves it to local storage as Base64 encoding
+function save_game(gb) {
+    let ram_data = gb.get_save_data()
+    let title = gb.get_title()
+
+    let b64 = to_base64(ram_data)
+    my_storage.setItem(title, b64)
+}
+
+/// To Base64
+///
+/// Converts Uint8Array into a Base64-encoded string
+function to_base64(u8) {
+    return btoa(String.fromCharCode.apply(null, u8))
+}
+
+/// From Base64
+///
+/// Converts Base64-encoded string into Uint8Array
+function from_base64(str) {
+    return atob(str).split('').map(function(c) {
+        return c.charCodeAt(0)
+    })
 }
 
 run().catch(console.error)

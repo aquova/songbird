@@ -109,6 +109,52 @@ impl GB {
     }
 
     /// ```
+    /// Load save data
+    ///
+    /// Loads save data into external RAM
+    ///
+    /// Input:
+    ///     Battery RAM data (Uint8Array)
+    /// ```
+    #[wasm_bindgen]
+    pub fn load_save_data(&mut self, data: Uint8Array) {
+        self.cpu.write_ext_ram(&(data.to_vec()));
+    }
+
+    /// ```
+    /// Get save data
+    ///
+    /// Gets contents of external RAM to be saved
+    ///
+    /// Output:
+    ///     Battery-backed RAM contents (Uint8Array)
+    /// ```
+    #[wasm_bindgen]
+    pub fn get_save_data(&self) -> Uint8Array {
+        let data = self.cpu.get_ext_ram();
+        let data_len = data.len() as u32;
+        let output_array = Uint8Array::new_with_length(data_len);
+        for i in 0..data_len {
+            output_array.set_index(i, data[i as usize]);
+        }
+
+        output_array
+    }
+
+    /// ```
+    /// Is battery dirty?
+    ///
+    /// Has battery-backed RAM been modified?
+    ///
+    /// Output:
+    ///     Whether external RAM has been written to (bool)
+    /// ```
+    #[wasm_bindgen]
+    pub fn is_battery_dirty(&self) -> bool {
+        self.cpu.is_battery_dirty()
+    }
+
+    /// ```
     /// Handle key event
     ///
     /// Sends HTML keypresses to the emulator
