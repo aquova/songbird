@@ -1,6 +1,9 @@
 [package]
 name = "songbird_wasm"
 version = "0.1.0"
+description = "WebAssembly frontend for the Songbird Game Boy emulator"
+repository = "https://github.com/aquova/songbird"
+license = "GPL-3.0"
 authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
 
