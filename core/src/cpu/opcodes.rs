@@ -2,7 +2,6 @@ use crate::cpu::*;
 use crate::utils::*;
 
 // Set up opcode lookup table
-// May god have mercy on our souls
 const OPCODES: [fn(&mut Cpu) -> u8; 0x100] = [
 //  $00,     $01,     $02,    $03,     $04,     $05,     $06,     $07,     $08,     $09,     $0A,    $0B,       $0C,     $0D,     $0E,     $0F
     nop,     ld_01,   ld_02,  inc_03,  inc_04,  dec_05,  ld_06,   rlca_07, ld_08,   add_09,  ld_0a,  dec_0b,    inc_0c,  dec_0d,  ld_0e,   rrca_0f, // $00
@@ -23,32 +22,12 @@ const OPCODES: [fn(&mut Cpu) -> u8; 0x100] = [
     ldh_f0,  pop_f1,  ld_f2,  di_f3,   invalid, push_f5, or_f6,   rst_f7,  ld_f8,   ld_f9,   ld_fa,  ei_fb,     invalid, invalid, cp_fe,   rst_ff,  // $F0
 ];
 
-const CB_OPCODES: [fn(&mut Cpu) -> u8; 0x100] = [
-//  $00,     $01,     $02,     $03,     $04,     $05,     $06,     $07,     $08,    $09,    $0A,    $0B,    $0C,    $0D,    $0E,    $0F
-    rlc_00,  rlc_01,  rlc_02,  rlc_03,  rlc_04,  rlc_05,  rlc_06,  rlc_07,  rrc_08, rrc_09, rrc_0a, rrc_0b, rrc_0c, rrc_0d, rrc_0e, rrc_0f,  // $00
-    rl_10,   rl_11,   rl_12,   rl_13,   rl_14,   rl_15,   rl_16,   rl_17,   rr_18,  rr_19,  rr_1a,  rr_1b,  rr_1c,  rr_1d,  rr_1e,  rr_1f,   // $10
-    sla_20,  sla_21,  sla_22,  sla_23,  sla_24,  sla_25,  sla_26,  sla_27,  sra_28, sra_29, sra_2a, sra_2b, sra_2c, sra_2d, sra_2e, sra_2f,  // $20
-    swap_30, swap_31, swap_32, swap_33, swap_34, swap_35, swap_36, swap_37, srl_38, srl_39, srl_3a, srl_3b, srl_3c, srl_3d, srl_3e, srl_3f,  // $30
-    bit_40,  bit_41,  bit_42,  bit_43,  bit_44,  bit_45,  bit_46,  bit_47,  bit_48, bit_49, bit_4a, bit_4b, bit_4c, bit_4d, bit_4e, bit_4f,  // $40
-    bit_50,  bit_51,  bit_52,  bit_53,  bit_54,  bit_55,  bit_56,  bit_57,  bit_58, bit_59, bit_5a, bit_5b, bit_5c, bit_5d, bit_5e, bit_5f,  // $50
-    bit_60,  bit_61,  bit_62,  bit_63,  bit_64,  bit_65,  bit_66,  bit_67,  bit_68, bit_69, bit_6a, bit_6b, bit_6c, bit_6d, bit_6e, bit_6f,  // $60
-    bit_70,  bit_71,  bit_72,  bit_73,  bit_74,  bit_75,  bit_76,  bit_77,  bit_78, bit_79, bit_7a, bit_7b, bit_7c, bit_7d, bit_7e, bit_7f,  // $70
-    res_80,  res_81,  res_82,  res_83,  res_84,  res_85,  res_86,  res_87,  res_88, res_89, res_8a, res_8b, res_8c, res_8d, res_8e, res_8f,  // $80
-    res_90,  res_91,  res_92,  res_93,  res_94,  res_95,  res_96,  res_97,  res_98, res_99, res_9a, res_9b, res_9c, res_9d, res_9e, res_9f,  // $90
-    res_a0,  res_a1,  res_a2,  res_a3,  res_a4,  res_a5,  res_a6,  res_a7,  res_a8, res_a9, res_aa, res_ab, res_ac, res_ad, res_ae, res_af,  // $A0
-    res_b0,  res_b1,  res_b2,  res_b3,  res_b4,  res_b5,  res_b6,  res_b7,  res_b8, res_b9, res_ba, res_bb, res_bc, res_bd, res_be, res_bf,  // $B0
-    set_c0,  set_c1,  set_c2,  set_c3,  set_c4,  set_c5,  set_c6,  set_c7,  set_c8, set_c9, set_ca, set_cb, set_cc, set_cd, set_ce, set_cf,  // $C0
-    set_d0,  set_d1,  set_d2,  set_d3,  set_d4,  set_d5,  set_d6,  set_d7,  set_d8, set_d9, set_da, set_db, set_dc, set_dd, set_de, set_df,  // $D0
-    set_e0,  set_e1,  set_e2,  set_e3,  set_e4,  set_e5,  set_e6,  set_e7,  set_e8, set_e9, set_ea, set_eb, set_ec, set_ed, set_ee, set_ef,  // $E0
-    set_f0,  set_f1,  set_f2,  set_f3,  set_f4,  set_f5,  set_f6,  set_f7,  set_f8, set_f9, set_fa, set_fb, set_fc, set_fd, set_fe, set_ff,  // $F0
-];
-
 pub fn execute(cpu: &mut Cpu) -> u8 {
     let opcode = cpu.fetch();
     // If opcode is $CB, then use other opcode table
     if opcode == 0xCB {
         let cb_opcode = cpu.fetch();
-        CB_OPCODES[cb_opcode as usize](cpu)
+        execute_cb_op(cpu, cb_opcode)
     } else {
         OPCODES[opcode as usize](cpu)
     }
@@ -1993,1600 +1972,173 @@ fn rst_ff(cpu: &mut Cpu) -> u8 {
     4
 }
 
-/*
- * ----------------
- * $CB Opcode block
- * ----------------
- */
-
-/// RLC B
-fn rlc_00(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::B, false);
-    2
-}
-
-/// RLC C
-fn rlc_01(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::C, false);
-    2
-}
-
-/// RLC D
-fn rlc_02(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::D, false);
-    2
-}
-
-/// RLC E
-fn rlc_03(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::E, false);
-    2
-}
-
-/// RLC H
-fn rlc_04(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::H, false);
-    2
-}
-
-/// RLC L
-fn rlc_05(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::L, false);
-    2
-}
-
-/// RLC (HL)
-fn rlc_06(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let byte = cpu.read_ram(hl);
-    let rot = cpu.rot_left(byte, false);
-    cpu.write_ram(hl, rot);
-    2
-}
-
-/// RLC A
-fn rlc_07(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::A, false);
-    2
-}
-
-/// RRC B
-fn rrc_08(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::B, false);
-    2
-}
-
-/// RRC C
-fn rrc_09(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::C, false);
-    2
-}
-
-/// RRC D
-fn rrc_0a(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::D, false);
-    2
-}
-
-/// RRC E
-fn rrc_0b(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::E, false);
-    2
-}
-
-/// RRC H
-fn rrc_0c(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::H, false);
-    2
-}
-
-/// RRC L
-fn rrc_0d(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::L, false);
-    2
-}
-
-/// RRC (HL)
-fn rrc_0e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let byte = cpu.read_ram(hl);
-    let rot = cpu.rot_right(byte, false);
-    cpu.write_ram(hl, rot);
-    2
-}
-
-/// RRC A
-fn rrc_0f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::A, false);
-    2
-}
-
-/// RL B
-fn rl_10(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::B, true);
-    2
-}
-
-/// RL C
-fn rl_11(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::C, true);
-    2
-}
-
-/// RL D
-fn rl_12(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::D, true);
-    2
-}
-
-/// RL E
-fn rl_13(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::E, true);
-    2
-}
-
-/// RL H
-fn rl_14(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::H, true);
-    2
-}
-
-/// RL L
-fn rl_15(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::L, true);
-    2
-}
-
-/// RL (HL)
-fn rl_16(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let byte = cpu.read_ram(hl);
-    let rot = cpu.rot_left(byte, true);
-    cpu.write_ram(hl, rot);
-    2
-}
-
-/// RL A
-fn rl_17(cpu: &mut Cpu) -> u8 {
-    cpu.rot_left_reg(Regs::A, true);
-    2
-}
-
-/// RR B
-fn rr_18(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::B, true);
-    2
-}
-
-/// RR C
-fn rr_19(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::C, true);
-    2
-}
-
-/// RR D
-fn rr_1a(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::D, true);
-    2
-}
-
-/// RR E
-fn rr_1b(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::E, true);
-    2
-}
-
-/// RR H
-fn rr_1c(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::H, true);
-    2
-}
-
-/// RR L
-fn rr_1d(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::L, true);
-    2
-}
-
-/// RR (HL)
-fn rr_1e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let byte = cpu.read_ram(hl);
-    let rot = cpu.rot_right(byte, true);
-    cpu.write_ram(hl, rot);
-    2
-}
-
-/// RR A
-fn rr_1f(cpu: &mut Cpu) -> u8 {
-    cpu.rot_right_reg(Regs::A, true);
-    2
-}
-
-/// SLA B
-fn sla_20(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::B);
-    2
-}
-
-/// SLA C
-fn sla_21(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::C);
-    2
-}
-
-/// SLA D
-fn sla_22(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::D);
-    2
-}
-
-/// SLA E
-fn sla_23(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::E);
-    2
-}
-
-/// SLA H
-fn sla_24(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::H);
-    2
-}
-
-/// SLA L
-fn sla_25(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::L);
-    2
-}
-
-/// SLA (HL)
-fn sla_26(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.get_reg_16(Regs16::HL);
-    let byte = cpu.read_ram(addr);
-    let shifted = cpu.shift_left(byte);
-    cpu.write_ram(addr, shifted);
-    2
-}
-
-/// SLA A
-fn sla_27(cpu: &mut Cpu) -> u8 {
-    cpu.shift_left_reg(Regs::A);
-    2
-}
-
-/// SRA B
-fn sra_28(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::B, true);
-    2
-}
-
-/// SRA C
-fn sra_29(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::C, true);
-    2
-}
-
-/// SRA D
-fn sra_2a(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::D, true);
-    2
-}
-
-/// SRA E
-fn sra_2b(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::E, true);
-    2
-}
-
-/// SRA H
-fn sra_2c(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::H, true);
-    2
-}
-
-/// SRA L
-fn sra_2d(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::L, true);
-    2
-}
-
-/// SRA (HL)
-fn sra_2e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    let shifted = cpu.shift_right(val, true);
-    cpu.write_ram(hl, shifted);
-    2
-}
-
-/// SRA A
-fn sra_2f(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::A, true);
-    2
-}
-
-/// SWAP B
-fn swap_30(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::B);
-    2
-}
-
-/// SWAP C
-fn swap_31(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::C);
-    2
-}
-
-/// SWAP D
-fn swap_32(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::D);
-    2
-}
-
-/// SWAP E
-fn swap_33(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::E);
-    2
-}
-
-/// SWAP H
-fn swap_34(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::H);
-    2
-}
-
-/// SWAP L
-fn swap_35(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::L);
-    2
-}
-
-/// SWAP (HL)
-fn swap_36(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    let swapped = cpu.swap_bits(val);
-    cpu.write_ram(hl, swapped);
-    2
-}
-
-/// SWAP A
-fn swap_37(cpu: &mut Cpu) -> u8 {
-    cpu.swap_bits_reg(Regs::A);
-    2
-}
-
-/// SRL B
-fn srl_38(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::B, false);
-    2
-}
-
-/// SRL C
-fn srl_39(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::C, false);
-    2
-}
-
-/// SRL D
-fn srl_3a(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::D, false);
-    2
-}
-
-/// SRL E
-fn srl_3b(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::E, false);
-    2
-}
-
-/// SRL H
-fn srl_3c(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::H, false);
-    2
-}
-
-/// SRL L
-fn srl_3d(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::L, false);
-    2
-}
-
-/// SRL (HL)
-fn srl_3e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    let shifted = cpu.shift_right(val, false);
-    cpu.write_ram(hl, shifted);
-    2
-}
-
-/// SRL A
-fn srl_3f(cpu: &mut Cpu) -> u8 {
-    cpu.shift_right_reg(Regs::A, false);
-    2
-}
-
-/// BIT 0,B
-fn bit_40(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 0);
-    2
-}
-
-/// BIT 0,C
-fn bit_41(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 0);
-    2
-}
-
-/// BIT 0,D
-fn bit_42(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 0);
-    2
-}
-
-/// BIT 0,E
-fn bit_43(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 0);
-    2
-}
-
-/// BIT 0,H
-fn bit_44(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 0);
-    2
-}
-
-/// BIT 0,L
-fn bit_45(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 0);
-    2
-}
-
-/// BIT 0,(HL)
-fn bit_46(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 0);
-    2
-}
-
-/// BIT 0,A
-fn bit_47(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 0);
-    2
-}
-
-/// BIT 1,B
-fn bit_48(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 1);
-    2
-}
-
-/// BIT 1,C
-fn bit_49(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 1);
-    2
-}
-
-/// BIT 1,D
-fn bit_4a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 1);
-    2
-}
-
-/// BIT 1,E
-fn bit_4b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 1);
-    2
-}
-
-/// BIT 1,H
-fn bit_4c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 1);
-    2
-}
-
-/// BIT 1,L
-fn bit_4d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 1);
-    2
-}
-
-/// BIT 1,(HL)
-fn bit_4e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 1);
-    2
-}
-
-/// BIT 1,A
-fn bit_4f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 1);
-    2
-}
-
-/// BIT 2,B
-fn bit_50(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 2);
-    2
-}
-
-/// BIT 2,C
-fn bit_51(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 2);
-    2
-}
-
-/// BIT 2,D
-fn bit_52(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 2);
-    2
-}
-
-/// BIT 2,E
-fn bit_53(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 2);
-    2
-}
-
-/// BIT 2,H
-fn bit_54(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 2);
-    2
-}
-
-/// BIT 2,L
-fn bit_55(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 2);
-    2
-}
-
-/// BIT 2,(HL)
-fn bit_56(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 2);
-    2
-}
-
-/// BIT 2,A
-fn bit_57(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 2);
-    2
-}
-
-/// BIT 3,B
-fn bit_58(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 3);
-    2
-}
-
-/// BIT 3,C
-fn bit_59(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 3);
-    2
-}
-
-/// BIT 3,D
-fn bit_5a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 3);
-    2
-}
-
-/// BIT 3,E
-fn bit_5b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 3);
-    2
-}
-
-/// BIT 3,H
-fn bit_5c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 3);
-    2
-}
-
-/// BIT 3,L
-fn bit_5d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 3);
-    2
-}
-
-/// BIT 3,(HL)
-fn bit_5e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 3);
-    2
-}
-
-/// BIT 3,A
-fn bit_5f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 3);
-    2
-}
-
-/// BIT 4,B
-fn bit_60(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 4);
-    2
-}
-
-/// BIT 4,C
-fn bit_61(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 4);
-    2
-}
-
-/// BIT 4,D
-fn bit_62(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 4);
-    2
-}
-
-/// BIT 4,E
-fn bit_63(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 4);
-    2
-}
-
-/// BIT 4,H
-fn bit_64(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 4);
-    2
-}
-
-/// BIT 4,L
-fn bit_65(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 4);
-    2
-}
-
-/// BIT 4,(HL)
-fn bit_66(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 4);
-    2
-}
-
-/// BIT 4,A
-fn bit_67(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 4);
-    2
-}
-
-/// BIT 5,B
-fn bit_68(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 5);
-    2
-}
-
-/// BIT 5,C
-fn bit_69(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 5);
-    2
-}
-
-/// BIT 5,D
-fn bit_6a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 5);
-    2
-}
-
-/// BIT 5,E
-fn bit_6b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 5);
-    2
-}
-
-/// BIT 5,H
-fn bit_6c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 5);
-    2
-}
-
-/// BIT 5,L
-fn bit_6d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 5);
-    2
-}
-
-/// BIT 5,(HL)
-fn bit_6e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 5);
-    2
-}
-
-/// BIT 5,A
-fn bit_6f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 5);
-    2
-}
-
-/// BIT 6,B
-fn bit_70(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 6);
-    2
-}
-
-/// BIT 6,C
-fn bit_71(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 6);
-    2
-}
-
-/// BIT 6,D
-fn bit_72(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 6);
-    2
-}
-
-/// BIT 6,E
-fn bit_73(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 6);
-    2
-}
-
-/// BIT 6,H
-fn bit_74(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 6);
-    2
-}
-
-/// BIT 6,L
-fn bit_75(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 6);
-    2
-}
-
-/// BIT 6,(HL)
-fn bit_76(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 6);
-    2
-}
-
-/// BIT 6,A
-fn bit_77(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 6);
-    2
-}
-
-/// BIT 7,B
-fn bit_78(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::B, 7);
-    2
-}
-
-/// BIT 7,C
-fn bit_79(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::C, 7);
-    2
-}
-
-/// BIT 7,D
-fn bit_7a(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::D, 7);
-    2
-}
-
-/// BIT 7,E
-fn bit_7b(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::E, 7);
-    2
-}
-
-/// BIT 7,H
-fn bit_7c(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::H, 7);
-    2
-}
-
-/// BIT 7,L
-fn bit_7d(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::L, 7);
-    2
-}
-
-/// BIT 7,(HL)
-fn bit_7e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    let val = cpu.read_ram(hl);
-    cpu.test_bit(val, 7);
-    2
-}
-
-/// BIT 7,A
-fn bit_7f(cpu: &mut Cpu) -> u8 {
-    cpu.test_bit_reg(Regs::A, 7);
-    2
-}
-
-/// RES 0,B
-fn res_80(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 0, false);
-    2
-}
-
-/// RES 0,C
-fn res_81(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 0, false);
-    2
-}
-
-/// RES 0,D
-fn res_82(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 0, false);
-    2
-}
-
-/// RES 0,E
-fn res_83(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 0, false);
-    2
-}
-
-/// RES 0,H
-fn res_84(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 0, false);
-    2
-}
-
-/// RES 0,L
-fn res_85(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 0, false);
-    2
-}
-
-/// RES 0,(HL)
-fn res_86(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 0, false);
-    2
-}
-
-/// RES 0,A
-fn res_87(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 0, false);
-    2
-}
-
-/// RES 1,B
-fn res_88(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 1, false);
-    2
-}
-
-/// RES 1,C
-fn res_89(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 1, false);
-    2
-}
-
-/// RES 1,D
-fn res_8a(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 1, false);
-    2
-}
-
-/// RES 1,E
-fn res_8b(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 1, false);
-    2
-}
-
-/// RES 1,H
-fn res_8c(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 1, false);
-    2
-}
-
-/// RES 1,L
-fn res_8d(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 1, false);
-    2
-}
-
-/// RES 1,(HL)
-fn res_8e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 1, false);
-    2
-}
-
-/// RES 1,A
-fn res_8f(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 1, false);
-    2
-}
-
-/// RES 2,B
-fn res_90(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 2, false);
-    2
-}
-
-/// RES 2,C
-fn res_91(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 2, false);
-    2
-}
-
-/// RES 2,D
-fn res_92(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 2, false);
-    2
-}
-
-/// RES 2,E
-fn res_93(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 2, false);
-    2
-}
-
-/// RES 2,H
-fn res_94(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 2, false);
-    2
-}
-
-/// RES 2,L
-fn res_95(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 2, false);
-    2
-}
-
-/// RES 2,(HL)
-fn res_96(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 2, false);
-    2
-}
-
-/// RES 2,A
-fn res_97(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 2, false);
-    2
-}
-
-/// RES 3,B
-fn res_98(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 3, false);
-    2
-}
-
-/// RES 3,C
-fn res_99(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 3, false);
-    2
-}
-
-/// RES 3,D
-fn res_9a(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 3, false);
-    2
-}
-
-/// RES 3,E
-fn res_9b(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 3, false);
-    2
-}
-
-/// RES 3,H
-fn res_9c(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 3, false);
-    2
-}
-
-/// RES 3,L
-fn res_9d(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 3, false);
-    2
-}
-
-/// RES 3,(HL)
-fn res_9e(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 3, false);
-    2
-}
-
-/// RES 3,A
-fn res_9f(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 3, false);
-    2
-}
-
-/// RES 4,B
-fn res_a0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 4, false);
-    2
-}
-
-/// RES 4,C
-fn res_a1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 4, false);
-    2
-}
-
-/// RES 4,D
-fn res_a2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 4, false);
-    2
-}
-
-/// RES 4,E
-fn res_a3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 4, false);
-    2
-}
-
-/// RES 4,H
-fn res_a4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 4, false);
-    2
-}
-
-/// RES 4,L
-fn res_a5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 4, false);
-    2
-}
-
-/// RES 4,(HL)
-fn res_a6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 4, false);
-    2
-}
-
-/// RES 4,A
-fn res_a7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 4, false);
-    2
-}
-
-/// RES 5,B
-fn res_a8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 5, false);
-    2
-}
-
-/// RES 5,C
-fn res_a9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 5, false);
-    2
-}
-
-/// RES 5,D
-fn res_aa(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 5, false);
-    2
-}
-
-/// RES 5,E
-fn res_ab(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 5, false);
-    2
-}
-
-/// RES 5,H
-fn res_ac(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 5, false);
-    2
-}
-
-/// RES 5,L
-fn res_ad(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 5, false);
-    2
-}
-
-/// RES 5,(HL)
-fn res_ae(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 5, false);
-    2
-}
-
-/// RES 5,A
-fn res_af(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 5, false);
-    2
-}
-
-/// RES 6,B
-fn res_b0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 6, false);
-    2
-}
-
-/// RES 6,C
-fn res_b1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 6, false);
-    2
-}
-
-/// RES 6,D
-fn res_b2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 6, false);
-    2
-}
-
-/// RES 6,E
-fn res_b3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 6, false);
-    2
-}
-
-/// RES 6,H
-fn res_b4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 6, false);
-    2
-}
-
-/// RES 6,L
-fn res_b5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 6, false);
-    2
-}
-
-/// RES 6,(HL)
-fn res_b6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 6, false);
-    2
-}
-
-/// RES 6,A
-fn res_b7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 6, false);
-    2
-}
-
-/// RES 7,B
-fn res_b8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 7, false);
-    2
-}
-
-/// RES 7,C
-fn res_b9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 7, false);
-    2
-}
-
-/// RES 7,D
-fn res_ba(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 7, false);
-    2
-}
-
-/// RES 7,E
-fn res_bb(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 7, false);
-    2
-}
-
-/// RES 7,H
-fn res_bc(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 7, false);
-    2
-}
-
-/// RES 7,L
-fn res_bd(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 7, false);
-    2
-}
-
-/// RES 7,(HL)
-fn res_be(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 7, false);
-    2
-}
-
-/// RES 7,A
-fn res_bf(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 7, false);
-    2
-}
-
-/// SET 0,B
-fn set_c0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 0, true);
-    2
-}
-
-/// SET 0,C
-fn set_c1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 0, true);
-    2
-}
-
-/// SET 0,D
-fn set_c2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 0, true);
-    2
-}
-
-/// SET 0,E
-fn set_c3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 0, true);
-    2
-}
-
-/// SET 0,H
-fn set_c4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 0, true);
-    2
-}
-
-/// SET 0,L
-fn set_c5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 0, true);
-    2
-}
-
-/// SET 0,(HL)
-fn set_c6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 0, true);
-    2
-}
-
-/// SET 0,A
-fn set_c7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 0, true);
-    2
-}
-
-/// SET 1,B
-fn set_c8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 1, true);
-    2
-}
-
-/// SET 1,C
-fn set_c9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 1, true);
-    2
-}
-
-/// SET 1,D
-fn set_ca(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 1, true);
-    2
-}
-
-/// SET 1,E
-fn set_cb(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 1, true);
-    2
-}
-
-/// SET 1,H
-fn set_cc(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 1, true);
-    2
-}
-
-/// SET 1,L
-fn set_cd(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 1, true);
-    2
-}
-
-/// SET 1,(HL)
-fn set_ce(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 1, true);
-    2
-}
-
-/// SET 1,A
-fn set_cf(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 1, true);
-    2
-}
-
-/// SET 2,B
-fn set_d0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 2, true);
-    2
-}
-
-/// SET 2,C
-fn set_d1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 2, true);
-    2
-}
-
-/// SET 2,D
-fn set_d2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 2, true);
-    2
-}
-
-/// SET 2,E
-fn set_d3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 2, true);
-    2
-}
-
-/// SET 2,H
-fn set_d4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 2, true);
-    2
-}
-
-/// SET 2,L
-fn set_d5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 2, true);
-    2
-}
-
-/// SET 2,(HL)
-fn set_d6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 2, true);
-    2
-}
-
-/// SET 2,A
-fn set_d7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 2, true);
-    2
-}
-
-/// SET 3,B
-fn set_d8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 3, true);
-    2
-}
-
-/// SET 3,C
-fn set_d9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 3, true);
-    2
-}
-
-/// SET 3,D
-fn set_da(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 3, true);
-    2
-}
-
-/// SET 3,E
-fn set_db(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 3, true);
-    2
-}
-
-/// SET 3,H
-fn set_dc(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 3, true);
-    2
-}
-
-/// SET 3,L
-fn set_dd(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 3, true);
-    2
-}
-
-/// SET 3,(HL)
-fn set_de(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 3, true);
-    2
-}
-
-/// SET 3,A
-fn set_df(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 3, true);
-    2
-}
-
-/// SET 4,B
-fn set_e0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 4, true);
-    2
-}
-
-/// SET 4,C
-fn set_e1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 4, true);
-    2
-}
-
-/// SET 4,D
-fn set_e2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 4, true);
-    2
-}
-
-/// SET 4,E
-fn set_e3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 4, true);
-    2
-}
-
-/// SET 4,H
-fn set_e4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 4, true);
-    2
-}
-
-/// SET 4,L
-fn set_e5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 4, true);
-    2
-}
-
-/// SET 4,(HL)
-fn set_e6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 4, true);
-    2
-}
-
-/// SET 4,A
-fn set_e7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 4, true);
-    2
-}
-
-/// SET 5,B
-fn set_e8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 5, true);
-    2
-}
-
-/// SET 5,C
-fn set_e9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 5, true);
-    2
-}
-
-/// SET 5,D
-fn set_ea(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 5, true);
-    2
-}
-
-/// SET 5,E
-fn set_eb(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 5, true);
-    2
-}
-
-/// SET 5,H
-fn set_ec(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 5, true);
-    2
-}
-
-/// SET 5,L
-fn set_ed(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 5, true);
-    2
-}
-
-/// SET 5,(HL)
-fn set_ee(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 5, true);
-    2
-}
-
-/// SET 5,A
-fn set_ef(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 5, true);
-    2
-}
-
-/// SET 6,B
-fn set_f0(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 6, true);
-    2
-}
-
-/// SET 6,C
-fn set_f1(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 6, true);
-    2
-}
-
-/// SET 6,D
-fn set_f2(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 6, true);
-    2
-}
-
-/// SET 6,E
-fn set_f3(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 6, true);
-    2
-}
-
-/// SET 6,H
-fn set_f4(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 6, true);
-    2
-}
-
-/// SET 6,L
-fn set_f5(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 6, true);
-    2
-}
-
-/// SET 6,(HL)
-fn set_f6(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 6, true);
-    2
-}
-
-/// SET 6,A
-fn set_f7(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 6, true);
-    2
-}
-
-/// SET 7,B
-fn set_f8(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::B, 7, true);
-    2
-}
-
-/// SET 7,C
-fn set_f9(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::C, 7, true);
-    2
-}
-
-/// SET 7,D
-fn set_fa(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::D, 7, true);
-    2
-}
-
-/// SET 7,E
-fn set_fb(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::E, 7, true);
-    2
-}
-
-/// SET 7,H
-fn set_fc(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::H, 7, true);
-    2
-}
-
-/// SET 7,L
-fn set_fd(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::L, 7, true);
-    2
-}
-
-/// SET 7,(HL)
-fn set_fe(cpu: &mut Cpu) -> u8 {
-    let hl = cpu.get_reg_16(Regs16::HL);
-    cpu.write_bit_ram(hl, 7, true);
-    2
-}
-
-/// SET 7,A
-fn set_ff(cpu: &mut Cpu) -> u8 {
-    cpu.write_bit_n(Regs::A, 7, true);
-    2
+fn execute_cb_op(cpu: &mut Cpu, op: u8) -> u8 {
+    // $00-$07 -> RLC
+    // $08-$0F -> RRC
+    // $10-$17 -> RL
+    // $18-$1F -> RR
+    // $20-$27 -> SLA
+    // $28-$2F -> SRA
+    // $30-$37 -> SWAP
+    // $38-$3F -> SRL
+    // $40-$7F -> BIT
+    // $80-$BF -> RES
+    // $C0-$FF -> SET
+
+    // Operations involving (HL) have different functionality than the
+    // other registers, so those need to be handled separately
+    // (At least for now)
+    match op {
+        0x00..=0x07 => {
+            if op == 0x06 {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let byte = cpu.read_ram(hl);
+                let rot = cpu.rot_left(byte, false);
+                cpu.write_ram(hl, rot);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.rot_left_reg(reg, false);
+            }
+        },
+        0x08..=0x0F => {
+            if op == 0x0E {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let byte = cpu.read_ram(hl);
+                let rot = cpu.rot_right(byte, false);
+                cpu.write_ram(hl, rot);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.rot_right_reg(reg, false);
+            }
+        },
+        0x10..=0x17 => {
+            if op == 0x16 {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let byte = cpu.read_ram(hl);
+                let rot = cpu.rot_left(byte, true);
+                cpu.write_ram(hl, rot);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.rot_left_reg(reg, true);
+            }
+        },
+        0x18..=0x1F => {
+            if op == 0x1E {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let byte = cpu.read_ram(hl);
+                let rot = cpu.rot_right(byte, true);
+                cpu.write_ram(hl, rot);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.rot_right_reg(reg, true);
+            }
+        },
+        0x20..=0x27 => {
+            if op == 0x26 {
+                let addr = cpu.get_reg_16(Regs16::HL);
+                let byte = cpu.read_ram(addr);
+                let shifted = cpu.shift_left(byte);
+                cpu.write_ram(addr, shifted);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.shift_left_reg(reg);
+            }
+        },
+        0x28..=0x2F => {
+            if op == 0x2E {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let val = cpu.read_ram(hl);
+                let shifted = cpu.shift_right(val, true);
+                cpu.write_ram(hl, shifted);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.shift_right_reg(reg, true);
+            }
+        },
+        0x30..=0x37 => {
+            if op == 0x36 {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let val = cpu.read_ram(hl);
+                let swapped = cpu.swap_bits(val);
+                cpu.write_ram(hl, swapped);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.swap_bits_reg(reg);
+            }
+        },
+        0x38..=0x3F => {
+            if op == 0x3E {
+                let hl = cpu.get_reg_16(Regs16::HL);
+                let val = cpu.read_ram(hl);
+                let shifted = cpu.shift_right(val, false);
+                cpu.write_ram(hl, shifted);
+            } else {
+                let reg = decode_cb_reg(op);
+                cpu.shift_right_reg(reg, false);
+            }
+        },
+        0x40..=0x7F => {
+            let rel_offset = op - 0x40;
+            let digit = rel_offset / 0x08;
+
+            match op & 0x0F {
+                0x06 | 0x0E => {
+                    let hl = cpu.get_reg_16(Regs16::HL);
+                    let val = cpu.read_ram(hl);
+                    cpu.test_bit(val, digit);
+                },
+                _ => {
+                    let reg = decode_cb_reg(op);
+                    cpu.test_bit_reg(reg, digit);
+                }
+            }
+        },
+        0x80..=0xBF => {
+            let rel_offset = op - 0x40;
+            let digit = rel_offset / 0x08;
+
+            match op & 0x0F {
+                0x06 | 0x0E => {
+                    let hl = cpu.get_reg_16(Regs16::HL);
+                    cpu.write_bit_ram(hl, digit, false);
+                },
+                _ => {
+                    let reg = decode_cb_reg(op);
+                    cpu.write_bit_n(reg, digit, false);
+                }
+            }
+        },
+        0xC0..=0xFF => {
+            let rel_offset = op - 0x40;
+            let digit = rel_offset / 0x08;
+
+            match op & 0x0F {
+                0x06 | 0x0E => {
+                    let hl = cpu.get_reg_16(Regs16::HL);
+                    cpu.write_bit_ram(hl, digit, true);
+                },
+                _ => {
+                    let reg = decode_cb_reg(op);
+                    cpu.write_bit_n(reg, digit, true);
+                }
+            }
+        }
+    }
+
+    2
+}
+
+fn decode_cb_reg(op: u8) -> Regs {
+    let reg = match op & 0xF {
+        0x00 | 0x08 => { Regs::B },
+        0x01 | 0x09 => { Regs::C },
+        0x02 | 0x0A => { Regs::D },
+        0x03 | 0x0B => { Regs::E },
+        0x04 | 0x0C => { Regs::H },
+        0x05 | 0x0D => { Regs::L },
+        0x07 | 0x0F => { Regs::A },
+        _ => { unreachable!() }
+    };
+
+    reg
 }
