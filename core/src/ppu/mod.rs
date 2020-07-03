@@ -72,7 +72,7 @@ const COLORS: [[u8; COLOR_CHANNELS]; 4] = [
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
-    map_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
+    screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
 }
@@ -84,7 +84,7 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
-            map_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
+            screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
         }
@@ -167,42 +167,22 @@ impl PPU {
     /// Renders specified scanline to buffer
     /// ```
     pub fn render_scanline(&mut self) {
-        let line = self.vram[LY];
-
         // Render current scanline
+        let line = self.vram[LY];
         let mut pixel_row = [0; SCREEN_WIDTH];
 
-        // Limit scope to appease the Borrow Checker Gods
-        {
-            let tile_map = self.get_bkgd_tile_map();
-            let palette = self.get_bkgd_palette();
-            let screen_coords = self.get_scroll_coords();
-
-            // Get the row of tiles containing our scanline
-            let y = ((screen_coords.y as usize) + (line as usize)) % MAP_PIXELS;
-            let row = y % TILESIZE;
-            let start_x = screen_coords.x as usize;
-            for x in 0..SCREEN_WIDTH {
-                // Get coords for current tile
-                let map_x = ((start_x + x) % MAP_PIXELS) / TILESIZE;
-                let map_y = y / TILESIZE;
-                let index = map_y * MAP_SIZE + map_x;
-                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
-                    (256 + (tile_map[index] as i8 as isize)) as usize
-                } else {
-                    tile_map[index] as usize
-                };
-                let tile = &self.tiles[tile_index];
-                let col = (start_x + x) % TILESIZE;
-                let pixel = tile.get_row(row)[col];
-                let corrected_pixel = palette[pixel as usize];
-                pixel_row[x] = corrected_pixel;
-            }
+        if self.is_bkgd_dspl() {
+            self.render_background_line(&mut pixel_row, line);
         }
+
+        if self.is_wndw_dspl() {
+            self.render_wndw_line(&mut pixel_row, line);
+        }
+
+        // Copy this line of pixels into overall screen buffer
         let start_index = line as usize * SCREEN_WIDTH;
         let end_index = (line + 1) as usize * SCREEN_WIDTH;
-        self.map_buffer[start_index..end_index].copy_from_slice(&pixel_row);
+        self.screen_buffer[start_index..end_index].copy_from_slice(&pixel_row);
     }
 
     /// ```
@@ -228,14 +208,7 @@ impl PPU {
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; SCREEN_HEIGHT * SCREEN_WIDTH];
-
-        if self.is_bkgd_dspl() {
-            map_array.copy_from_slice(&self.map_buffer);
-        }
-
-        if self.is_wndw_dspl() {
-            self.render_window(&mut map_array);
-        }
+        map_array.copy_from_slice(&self.screen_buffer);
 
         if self.is_sprt_dspl() {
             self.render_sprites(&mut map_array);
@@ -251,43 +224,81 @@ impl PPU {
     // ===================
 
     /// ```
-    /// Render window
+    /// Render Background Line
     ///
-    /// Renders the window tiles onto the pixel array
+    /// Renders the given scanline of the background layer
     ///
-    /// Input:
-    ///     Array of pixels to modify (&[u8])
+    /// Inputs:
+    ///     Array to load pixel data into (&[u8])
+    ///     Scanline to render (u8)
     /// ```
-    fn render_window(&self, pixel_array: &mut [u8]) {
+    fn render_background_line(&self, pixel_row: &mut [u8], line: u8) {
+        let tile_map = self.get_bkgd_tile_map();
+        let palette = self.get_bkgd_palette();
+        let screen_coords = self.get_scroll_coords();
+
+        // Get the row of tiles containing our scanline
+        let y = ((screen_coords.y as usize) + (line as usize)) % MAP_PIXELS;
+        let row = y % TILESIZE;
+        let start_x = screen_coords.x as usize;
+        for x in 0..SCREEN_WIDTH {
+            // Get coords for current tile
+            let map_x = ((start_x + x) % MAP_PIXELS) / TILESIZE;
+            let map_y = y / TILESIZE;
+            let index = map_y * MAP_SIZE + map_x;
+            // The tile indexes in the second tile pattern table ($8800-97ff) are signed
+            let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+                (256 + (tile_map[index] as i8 as isize)) as usize
+            } else {
+                tile_map[index] as usize
+            };
+            let tile = &self.tiles[tile_index];
+            let col = (start_x + x) % TILESIZE;
+            let pixel = tile.get_row(row)[col];
+            let corrected_pixel = palette[pixel as usize];
+            pixel_row[x] = corrected_pixel;
+        }
+    }
+
+    /// ```
+    /// Render Window Line
+    ///
+    /// Renders the given scanline of the window layer
+    ///
+    /// Inputs:
+    ///     Array to load pixel data into (&[u8])
+    ///     Scanline to render (u8)
+    /// ```
+    fn render_wndw_line(&self, pixel_row: &mut [u8], line: u8) {
         let wndw_coords = self.get_wndw_coords();
+        // If window isn't drawn on this scanline, return
+        if wndw_coords.y > line {
+            return;
+        }
+
         let wndw_map = self.get_wndw_tile_map();
         let palette = self.get_bkgd_palette();
 
-        let origin_x = wndw_coords.x as usize;
-        let origin_y = wndw_coords.y as usize;
-
-        // Iterate thru visible pixels in window
-        for y in origin_y..SCREEN_HEIGHT {
-            for x in origin_x..SCREEN_WIDTH {
-                let tile_x = (x - origin_x) / TILESIZE;
-                let tile_y = (y - origin_y) / TILESIZE;
-                let index = tile_y * MAP_SIZE + tile_x;
-
-                // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-                let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
-                    (256 + (wndw_map[index] as i8 as isize)) as usize
-                } else {
-                    wndw_map[index] as usize
-                };
-                let tile = &self.tiles[tile_index];
-                let col = (x - origin_x) % TILESIZE;
-                let row = (y - origin_y) % TILESIZE;
-                let pixel = tile.get_row(row)[col];
-
-                let index = y * SCREEN_WIDTH + x;
-                let corrected_pixel = palette[pixel as usize];
-                pixel_array[index] = corrected_pixel;
-            }
+        // Get the row of tiles containing our scanline
+        let y = (line - wndw_coords.y) as usize;
+        let row = y % TILESIZE;
+        let map_y = y / TILESIZE;
+        let start_x = wndw_coords.x as usize;
+        for x in start_x..SCREEN_WIDTH {
+            // Get coords for current tile
+            let map_x = (x % MAP_PIXELS) / TILESIZE;
+            let index = map_y * MAP_SIZE + map_x;
+            // The tile indexes in the second tile pattern table ($8800-97ff) are signed
+            let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+                (256 + (wndw_map[index] as i8 as isize)) as usize
+            } else {
+                wndw_map[index] as usize
+            };
+            let tile = &self.tiles[tile_index];
+            let col = x % TILESIZE;
+            let pixel = tile.get_row(row)[col];
+            let corrected_pixel = palette[pixel as usize];
+            pixel_row[x] = corrected_pixel;
         }
     }
 
