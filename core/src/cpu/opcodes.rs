@@ -2094,7 +2094,7 @@ fn execute_cb_op(cpu: &mut Cpu, op: u8) -> u8 {
             }
         },
         0x80..=0xBF => {
-            let rel_offset = op - 0x40;
+            let rel_offset = op - 0x80;
             let digit = rel_offset / 0x08;
 
             match op & 0x0F {
@@ -2109,7 +2109,7 @@ fn execute_cb_op(cpu: &mut Cpu, op: u8) -> u8 {
             }
         },
         0xC0..=0xFF => {
-            let rel_offset = op - 0x40;
+            let rel_offset = op - 0xC0;
             let digit = rel_offset / 0x08;
 
             match op & 0x0F {

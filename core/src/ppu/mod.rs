@@ -337,7 +337,6 @@ impl PPU {
     ///     Y coordinate of sprite (i16)
     /// ```
     fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: &Sprite, x: i16, y: i16) {
-        // TODO: Needs to handle sprite priority
         let palette = self.get_spr_palette(spr.is_pal_0());
         let flip_x = spr.is_x_flip();
         let flip_y = spr.is_y_flip();
@@ -362,8 +361,8 @@ impl PPU {
                     col
                 };
 
-                let pixel_x = spr_x + x_offset;
-                let pixel_y = spr_y + row;
+                let pixel_x = spr_x.wrapping_add(x_offset);
+                let pixel_y = spr_y.wrapping_add(row);
                 // Stop if pixel is going to be drawn off-screen
                 if pixel_x >= SCREEN_WIDTH {
                     continue 'draw_col;
