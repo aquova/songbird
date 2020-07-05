@@ -13,8 +13,14 @@ use rtc::RTC;
 
 const ROM_BANK_SIZE: usize = 0x4000;
 const RAM_BANK_SIZE: usize = 0x2000;
-const MAX_RAM_SIZE: usize = 32 * 1024; // 32 KiB
-const MBC5_MAX_RAM_SIZE: usize = 128 * 1024; // 128 KiB
+const RAM_SIZES: [usize; 6] = [
+    0,          // 0 KiB
+    2 * 1024,   // 2 KiB
+    8 * 1024,   // 8 KiB
+    32 * 1024,  // 32 KiB
+    128 * 1024, // 128 KiB
+    64 * 1024   // 64 KiB
+];
 
 pub const ROM_START: u16        = 0x0000;
 pub const ROM_STOP: u16         = 0x7FFF;
@@ -34,6 +40,7 @@ const TITLE_ADDR: usize = 0x0134;
 const DMG_TITLE_ADDR_END: usize = 0x013F;
 const CGB_FLAG_ADDR: usize = 0x0143;
 const MBC_TYPE_ADDR: usize = 0x0147;
+const RAM_SIZE_ADDR: usize = 0x0149;
 
 const DMG_CGB_FLAG: u8  = 0x80;
 const CGB_ONLY_FLAG: u8 = 0xC0;
@@ -279,13 +286,16 @@ impl Cart {
     /// Sets RAM vector to be the correct size
     /// ```
     fn init_ext_ram(&mut self) {
-        // NOTE: This originally sized the RAM vector based on ROM header information
-        // However, some ROMs *cough Blargg tests cough* don't report correctly
-        // So now, simply assume we need maximum size
-        if self.mbc == MBC::MBC5 {
-            self.ram = vec![0; MBC5_MAX_RAM_SIZE];
+        let mut ram_size_index = self.rom[RAM_SIZE_ADDR] as usize;
+        if ram_size_index > RAM_SIZES.len() {
+            ram_size_index = 1;
+        }
+        let ram_size = RAM_SIZES[ram_size_index];
+        // MBC2 always has RAM of 512 x 4 bits, and doesn't mark that in the header
+        if self.mbc == MBC::MBC2 {
+            self.ram = vec![0; 512];
         } else {
-            self.ram = vec![0; MAX_RAM_SIZE];
+            self.ram = vec![0; ram_size];
         }
     }
 }
