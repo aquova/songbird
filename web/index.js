@@ -95,15 +95,17 @@ function update_canvas() {
 ///
 /// Loads save data from local storage, sends it to emulator
 function load_save(gb) {
-    let title = gb.get_title()
-    let save = my_storage.getItem(title)
-    if (save != null) {
-        console.log("Save data loaded")
-        let u8 = from_base64(save)
-        let data = new Uint8Array(u8)
-        gb.load_save_data(data)
-    } else {
-        console.log("No save data found for " + title)
+    if (gb.has_battery()) {
+        let title = gb.get_title()
+        let save = my_storage.getItem(title)
+        if (save != null) {
+            console.log("Save data loaded")
+            let u8 = from_base64(save)
+            let data = new Uint8Array(u8)
+            gb.load_save_data(data)
+        } else {
+            console.log("No save data found for " + title)
+        }
     }
 }
 
@@ -111,11 +113,13 @@ function load_save(gb) {
 ///
 /// Gets external RAM data from emulator, saves it to local storage as Base64 encoding
 function save_game(gb) {
-    let ram_data = gb.get_save_data()
-    let title = gb.get_title()
+    if (gb.has_battery()) {
+        let ram_data = gb.get_save_data()
+        let title = gb.get_title()
 
-    let b64 = to_base64(ram_data)
-    my_storage.setItem(title, b64)
+        let b64 = to_base64(ram_data)
+        my_storage.setItem(title, b64)
+    }
 }
 
 /// To Base64

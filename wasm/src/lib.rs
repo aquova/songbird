@@ -155,6 +155,19 @@ impl GB {
     }
 
     /// ```
+    /// Has battery
+    ///
+    /// Returns whether game has an external battery
+    ///
+    /// Output:
+    ///     Whether cartridge has a battery (bool)
+    /// ```
+    #[wasm_bindgen]
+    pub fn has_battery(&self) -> bool {
+        self.cpu.has_battery()
+    }
+
+    /// ```
     /// Handle key event
     ///
     /// Sends HTML keypresses to the emulator

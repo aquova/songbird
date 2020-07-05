@@ -195,6 +195,18 @@ impl Bus {
     }
 
     /// ```
+    /// Has battery
+    ///
+    /// Returns whether game has an external battery
+    ///
+    /// Output:
+    ///     Whether cartridge has a battery (bool)
+    /// ```
+    pub fn has_battery(&self) -> bool {
+        self.rom.has_battery()
+    }
+
+    /// ```
     /// Get Title
     ///
     /// Gets the title of the game

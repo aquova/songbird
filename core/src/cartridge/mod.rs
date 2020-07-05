@@ -103,6 +103,7 @@ pub struct Cart {
     rom_mode: bool,
     cgb: bool,
     rtc: RTC,
+    has_battery: bool,
 }
 
 // ==================
@@ -120,6 +121,7 @@ impl Cart {
             rom_mode: true,
             cgb: false,
             rtc: RTC::new(),
+            has_battery: false,
         }
     }
 
@@ -150,6 +152,7 @@ impl Cart {
         self.set_mbc();
         self.set_cgb();
         self.init_ext_ram();
+        self.detect_battery();
     }
 
     /// ```
@@ -245,6 +248,18 @@ impl Cart {
     pub fn get_rom_bank(&self) -> u16 {
         self.rom_bank
     }
+
+    /// ```
+    /// Has battery
+    ///
+    /// Returns whether game has an external battery
+    ///
+    /// Output:
+    ///     Whether cartridge has a battery (bool)
+    /// ```
+    pub fn has_battery(&self) -> bool {
+        self.has_battery
+    }
 }
 
 // ===================
@@ -296,6 +311,25 @@ impl Cart {
             self.ram = vec![0; 512];
         } else {
             self.ram = vec![0; ram_size];
+        }
+    }
+
+    /// ```
+    /// Detect battery
+    ///
+    /// Sets whether cartridge has battery save support
+    /// ```
+    fn detect_battery(&mut self) {
+        let cart_type = self.rom[MBC_TYPE_ADDR];
+
+        // According to the pandocs, these are the cart header values that define having a battery
+        self.has_battery = match cart_type {
+            0x03 | 0x06 | 0x09 | 0x0D | 0x0F | 0x10 | 0x13 | 0x1B | 0x1E | 0x22 | 0xFF => {
+                true
+            },
+            _ => {
+                false
+            }
         }
     }
 }

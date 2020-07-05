@@ -263,6 +263,18 @@ impl Cpu {
     }
 
     /// ```
+    /// Has battery
+    ///
+    /// Returns whether game has an external battery
+    ///
+    /// Output:
+    ///     Whether cartridge has a battery (bool)
+    /// ```
+    pub fn has_battery(&self) -> bool {
+        self.bus.has_battery()
+    }
+
+    /// ```
     /// Load game
     ///
     /// Wrapper for the load game functionality
