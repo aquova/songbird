@@ -1,4 +1,4 @@
-use crate::utils::ModifyBits;
+use crate::utils::{ModifyBits, TILESIZE};
 
 /*
  * Object Attribute Memory (OAM) Layout
@@ -92,6 +92,12 @@ impl Sprite {
         let y_visible = self.y > -Y_OFFSET && self.y < Y_OFFSCREEN;
 
         x_visible || y_visible
+    }
+
+    pub fn contains_scanline(&self, scanline: u8, is_8x16: bool) -> bool {
+        let line = scanline as i16;
+        let spr_height = (if is_8x16 { 2 * TILESIZE } else { TILESIZE }) as i16;
+        (self.y <= line) && (line < (self.y + spr_height))
     }
 
     /// ```

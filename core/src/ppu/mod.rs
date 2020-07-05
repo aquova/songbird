@@ -179,6 +179,10 @@ impl PPU {
             self.render_wndw_line(&mut pixel_row, line);
         }
 
+        if self.is_sprt_dspl() {
+            self.render_sprite_line(&mut pixel_row, line);
+        }
+
         // Copy this line of pixels into overall screen buffer
         let start_index = line as usize * SCREEN_WIDTH;
         let end_index = (line + 1) as usize * SCREEN_WIDTH;
@@ -209,14 +213,7 @@ impl PPU {
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; SCREEN_HEIGHT * SCREEN_WIDTH];
         map_array.copy_from_slice(&self.screen_buffer);
-
-        if self.is_sprt_dspl() {
-            self.render_sprites(&mut map_array);
-        }
-
-        let screen = self.get_color(&map_array);
-
-        screen
+        self.get_color(&map_array)
     }
 
     // ===================
@@ -303,93 +300,76 @@ impl PPU {
     }
 
     /// ```
-    /// Render sprites
+    /// Render Sprite Line
     ///
-    /// Renders the sprites onto the graphics array
+    /// Renders the given scanline of the sprite layer
     ///
-    /// Input:
-    ///     Graphics array to render upon (&[u8])
+    /// Inputs:
+    ///     Array to load pixel data into (&[u8])
+    ///     Scanline to render (u8)
     /// ```
-    fn render_sprites(&self, pixel_array: &mut [u8]) {
+    fn render_sprite_line(&self, pixel_row: &mut [u8], line: u8) {
         // Iterate through every sprite
         let sorted_sprites = self.sort_sprites();
+        let is_8x16 = self.spr_are_8x16();
         for i in 0..sorted_sprites.len() {
             let spr = sorted_sprites[i];
-            if !spr.is_onscreen() {
+            if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
                 continue;
             }
 
-            // If sprites are 8x8, just draw single tile
-            // If sprites are 8x16, need to draw tile and adjacent tile below it
-            // If sprites are 8x16 and Y-flipped, need to draw bottom tile on top
-            let num_spr = if self.spr_are_8x16() { 2 } else { 1 };
+            let palette = self.get_spr_palette(spr.is_pal_0());
+            let above_bg = spr.is_above_bkgd();
 
-            for i in 0..num_spr {
-                let (top_x, top_y) = spr.get_coords();
-                let spr_y = top_y + (TILESIZE as u8 * i) as i16;
-                let spr_offset = if spr.is_y_flip() { num_spr - i - 1 } else { i };
-                let spr_num = spr.get_tile_num() + spr_offset;
-                let tile = &self.tiles[spr_num as usize];
-                self.draw_spr(pixel_array, tile, &spr, top_x, spr_y);
-            }
-        }
-    }
-
-    /// ```
-    /// Draw sprite
-    ///
-    /// Draw sprite to screen
-    ///
-    /// Inputs:
-    ///     Graphics array to render upon (&[u8])
-    ///     Tile to render (&Tile)
-    ///     Sprite metadata (&Sprite)
-    ///     X coordinate of sprite (i16)
-    ///     Y coordinate of sprite (i16)
-    /// ```
-    fn draw_spr(&self, pixel_array: &mut [u8], tile: &Tile, spr: &Sprite, x: i16, y: i16) {
-        let palette = self.get_spr_palette(spr.is_pal_0());
-        let flip_x = spr.is_x_flip();
-        let flip_y = spr.is_y_flip();
-        let above_bg = spr.is_above_bkgd();
-
-        let spr_x = x as usize;
-        let spr_y = y as usize;
-
-        'draw_row: for row in 0..TILESIZE {
-            let pixels = if flip_y {
-                tile.get_row(TILESIZE - row - 1)
+            let (top_x, top_y) = spr.get_coords();
+            // Get which row in the sprite we're drawing
+            let row = ((line as i16) - top_y) as usize;
+            // If sprite is Y-flipped, adjust row
+            let row = if spr.is_y_flip() {
+                TILESIZE - row - 1
             } else {
-                tile.get_row(row)
+                row
+            };
+            // If we are 8x16 and Y-flipped, bottom tile is drawn on top
+            let spr_num = if is_8x16 && spr.is_y_flip() {
+                if row >= TILESIZE {
+                    spr.get_tile_num()
+                } else {
+                    spr.get_tile_num() + 1
+                }
+            } else {
+                if row >= TILESIZE {
+                    spr.get_tile_num() + 1
+                } else {
+                    spr.get_tile_num()
+                }
             };
 
-            // Iterate through each pixel in row, applying the palette
-            'draw_col: for col in 0..TILESIZE {
+            let tile = &self.tiles[spr_num as usize];
+            let pixels = tile.get_row(row % TILESIZE);
+            let spr_x = top_x as usize;
+            for col in 0..TILESIZE {
                 let pixel = pixels[col as usize];
-                let x_offset = if flip_x {
+                let x_offset = if spr.is_x_flip() {
                     TILESIZE - col - 1
                 } else {
                     col
                 };
 
                 let pixel_x = spr_x.wrapping_add(x_offset);
-                let pixel_y = spr_y.wrapping_add(row);
-                // Stop if pixel is going to be drawn off-screen
+                // Move on if pixel is going to be drawn off-screen
                 if pixel_x >= SCREEN_WIDTH {
-                    continue 'draw_col;
-                } else if pixel_y >= SCREEN_HEIGHT {
-                    continue 'draw_row;
+                    continue;
                 }
 
-                let pixel_index = pixel_x + SCREEN_WIDTH * pixel_y;
                 let corrected_pixel = palette[pixel as usize];
 
                 // Only draw pixel if
                 // - Sprite is above background, and the pixel being drawn isn't transparent
                 // - Sprite is below background, and background has transparent color here
-                let should_draw = (above_bg && pixel != 0) || (!above_bg && pixel_array[pixel_index] == 0);
+                let should_draw = (above_bg && pixel != 0) || (!above_bg && pixel_row[pixel_x] == 0);
                 if should_draw {
-                    pixel_array[pixel_index] = corrected_pixel;
+                    pixel_row[pixel_x] = corrected_pixel;
                 }
             }
         }
