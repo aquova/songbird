@@ -49,7 +49,7 @@ const BG_TILE_MAP_BIT: u8       = 3;
 const BG_WNDW_TILE_DATA_BIT: u8 = 4;
 const WNDW_DISP_BIT: u8         = 5;
 const WNDW_TILE_MAP_BIT: u8     = 6;
-// const LCD_DISP_BIT: u8          = 7;
+const LCD_DISP_BIT: u8          = 7;
 
 const LYC_LY_FLAG_BIT: u8 =         2;
 // const HBLANK_INTERRUPT_BIT: u8 =    3;
@@ -212,7 +212,9 @@ impl PPU {
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
         let mut map_array = [0; SCREEN_HEIGHT * SCREEN_WIDTH];
-        map_array.copy_from_slice(&self.screen_buffer);
+        if self.is_lcd_dspl() {
+            map_array.copy_from_slice(&self.screen_buffer);
+        }
         self.get_color(&map_array)
     }
 
@@ -493,6 +495,19 @@ impl PPU {
         let mut sprites = self.oam.to_vec();
         sprites.sort_by(|a, b| b.get_coords().0.cmp(&a.get_coords().0));
         sprites
+    }
+
+    /// ```
+    /// Is the LCD displayed
+    ///
+    /// Is the LCD screen enabled
+    ///
+    /// Output:
+    ///     Whether or not LCD screen is enabled (bool)
+    /// ```
+    fn is_lcd_dspl(&self) -> bool {
+        let lcd_control = self.vram[LCDC];
+        lcd_control.get_bit(LCD_DISP_BIT)
     }
 
     /// ```
