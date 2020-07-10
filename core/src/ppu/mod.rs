@@ -337,7 +337,11 @@ impl PPU {
             let row = ((line as i16) - top_y) as usize;
             // If sprite is Y-flipped, adjust row
             let row = if spr.is_y_flip() {
-                TILESIZE - row - 1
+                if is_8x16 {
+                    (2 * TILESIZE) - row - 1
+                } else {
+                    TILESIZE - row - 1
+                }
             } else {
                 row
             };
