@@ -16,6 +16,7 @@ const VRAM_SIZE: usize = 0x8000;
 const VRAM_OFFSET: usize = 0x8000;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
+const SPR_PER_LINE: usize = 10;
 
 // VRAM registers
 const LCDC: usize                    = 0xFF40 - VRAM_OFFSET;
@@ -314,10 +315,18 @@ impl PPU {
         // Iterate through every sprite
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
+        let mut sprites_drawn = 10;
         for i in 0..sorted_sprites.len() {
             let spr = sorted_sprites[i];
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
                 continue;
+            }
+
+            sprites_drawn += 1;
+            // System only allows finite number of sprites drawn per line
+            // If we hit threshold, no more sprites can be drawn on this line
+            if sprites_drawn == SPR_PER_LINE {
+                break;
             }
 
             let palette = self.get_spr_palette(spr.is_pal_0());
