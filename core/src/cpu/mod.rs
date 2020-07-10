@@ -145,49 +145,48 @@ impl Cpu {
     ///     Whether or not to render a frame (bool)
     /// ```
     pub fn tick(&mut self) -> bool {
+        let mut draw_time = false;
+
         // Check for interrupts
         let inter = self.interrupt_check();
-
         if inter.is_some() {
             let inter_type = inter.unwrap();
             self.trigger_interrupt(inter_type);
-            false
-        } else {
-            let mut draw_time = false;
-            // If halted, simply continue counting without executing opcodes
-            let cycles = if self.halted { 1 } else { opcodes::execute(self) };
-
-            let clock_result = self.clock.clock_step(cycles);
-            let lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
-            if lcd_interrupt {
-                self.enable_interrupt(Interrupts::LCD_STAT);
-            }
-            self.bus.set_status_reg(self.clock.get_mode());
-
-            // Tick timer
-            let timer_interrupt = self.timer.tick(cycles);
-            if timer_interrupt {
-                self.enable_interrupt(Interrupts::TIMER);
-            }
-
-            match clock_result {
-                ClockResults::RenderFrame => {
-                    // Render the final scanline before rendering frame
-                    self.bus.render_scanline();
-                    // If time to render frame, then VBLANK interrupt is toggled
-                    self.enable_interrupt(Interrupts::VBLANK);
-                    draw_time = true;
-                },
-                ClockResults::RenderScanline => {
-                    self.bus.render_scanline();
-                },
-                _ => {
-                    // Do nothing
-                }
-            };
-
-            draw_time
         }
+
+        // If halted, simply continue counting without executing opcodes
+        let cycles = if self.halted { 1 } else { opcodes::execute(self) };
+
+        let clock_result = self.clock.clock_step(cycles);
+        let lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
+        if lcd_interrupt {
+            self.enable_interrupt(Interrupts::LCD_STAT);
+        }
+        self.bus.set_status_reg(self.clock.get_mode());
+
+        // Tick timer
+        let timer_interrupt = self.timer.tick(cycles);
+        if timer_interrupt {
+            self.enable_interrupt(Interrupts::TIMER);
+        }
+
+        match clock_result {
+            ClockResults::RenderFrame => {
+                // Render the final scanline before rendering frame
+                self.bus.render_scanline();
+                // If time to render frame, then VBLANK interrupt is toggled
+                self.enable_interrupt(Interrupts::VBLANK);
+                draw_time = true;
+            },
+            ClockResults::RenderScanline => {
+                self.bus.render_scanline();
+            },
+            _ => {
+                // Do nothing
+            }
+        }
+
+        draw_time
     }
 
     /// ```
@@ -1200,9 +1199,9 @@ impl Cpu {
         // aka VBLANK is highest priority, and JOYPAD is the lowest
         for i in 0..INTER_PRIORITIES.len() {
             if valid_interrupt & mask != 0 {
-                return Some(INTER_PRIORITIES[i])
+                return Some(INTER_PRIORITIES[i]);
             }
-            mask <<= 1
+            mask <<= 1;
         }
 
         None
