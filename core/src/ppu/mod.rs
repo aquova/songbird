@@ -348,19 +348,19 @@ impl PPU {
             } else {
                 row
             };
-            // If we are 8x16 and Y-flipped, bottom tile is drawn on top
-            let spr_num = if is_8x16 && spr.is_y_flip() {
-                if row >= TILESIZE {
-                    spr.get_tile_num()
+
+            let spr_num = if is_8x16 {
+                // In 8x16 mode, lower bit of tile number is ignored
+                // Upper 8x8 tile is NN & $FE
+                // Lower 8x8 tile is NN | $01
+                if row < TILESIZE {
+                    spr.get_tile_num() & 0xFE
                 } else {
-                    spr.get_tile_num() + 1
+                    spr.get_tile_num() | 0x01
                 }
             } else {
-                if row >= TILESIZE {
-                    spr.get_tile_num() + 1
-                } else {
-                    spr.get_tile_num()
-                }
+                // If 8x8 sprite, simply get tile num
+                spr.get_tile_num()
             };
 
             let tile = &self.tiles[spr_num as usize];
