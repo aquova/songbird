@@ -149,17 +149,20 @@ impl PPU {
     ///     Whether values in LY and LYC registers are equal (bool)
     /// ```
     pub fn set_ly(&mut self, line: u8) -> bool {
-        self.vram[LY] = line;
+        let old_ly = self.vram[LY];
+        if old_ly != line {
+            self.vram[LY] = line;
 
-        if self.vram[LY] == self.vram[LYC] {
-            // If LY and LYC are equal:
-            // - Set coincidence bit in STAT register
-            // - Trigger LCDC status interrupt if enabled
-            self.vram[STAT].set_bit(LYC_LY_FLAG_BIT);
-            self.vram[STAT].get_bit(LYC_LY_INTERRUPT_BIT)
-        } else {
-            false
+            if self.vram[LY] == self.vram[LYC] {
+                // If LY and LYC are equal:
+                // - Set coincidence bit in STAT register
+                // - Trigger LCDC status interrupt if enabled
+                self.vram[STAT].set_bit(LYC_LY_FLAG_BIT);
+                return self.vram[STAT].get_bit(LYC_LY_INTERRUPT_BIT);
+            }
         }
+
+        false
     }
 
     /// ```
