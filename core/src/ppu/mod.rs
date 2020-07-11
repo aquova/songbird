@@ -275,7 +275,7 @@ impl PPU {
     fn render_wndw_line(&self, pixel_row: &mut [u8], line: u8) {
         let wndw_coords = self.get_wndw_coords();
         // If window isn't drawn on this scanline, return
-        if wndw_coords.y > line {
+        if (wndw_coords.y > line) || (wndw_coords.x > SCREEN_WIDTH as u8) {
             return;
         }
 
@@ -289,7 +289,7 @@ impl PPU {
         let start_x = wndw_coords.x as usize;
         for x in start_x..SCREEN_WIDTH {
             // Get coords for current tile
-            let map_x = (x % MAP_PIXELS) / TILESIZE;
+            let map_x = ((x - start_x) % MAP_PIXELS) / TILESIZE;
             let index = map_y * MAP_SIZE + map_x;
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
             let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
