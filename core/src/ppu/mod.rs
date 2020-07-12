@@ -76,6 +76,7 @@ pub struct PPU {
     screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
+    last_wndw_line: u8,
 }
 
 impl PPU {
@@ -88,6 +89,7 @@ impl PPU {
             screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
+            last_wndw_line: 0,
         }
     }
 
@@ -151,6 +153,11 @@ impl PPU {
     pub fn set_ly(&mut self, line: u8) -> bool {
         let old_ly = self.vram[LY];
         if old_ly != line {
+            // If we are in a new frame, reset window layer line
+            if line == 0 {
+                self.last_wndw_line = 0;
+            }
+
             self.vram[LY] = line;
 
             if self.vram[LY] == self.vram[LYC] {
@@ -272,8 +279,11 @@ impl PPU {
     ///     Array to load pixel data into (&[u8])
     ///     Scanline to render (u8)
     /// ```
-    fn render_wndw_line(&self, pixel_row: &mut [u8], line: u8) {
+    fn render_wndw_line(&mut self, pixel_row: &mut [u8], line: u8) {
         let wndw_coords = self.get_wndw_coords();
+        // See below for why this is needed
+        let line = if self.last_wndw_line == 0 { line } else { self.last_wndw_line + 1 };
+
         // If window isn't drawn on this scanline, return
         if (wndw_coords.y > line) || (wndw_coords.x > SCREEN_WIDTH as u8) {
             return;
@@ -303,6 +313,12 @@ impl PPU {
             let corrected_pixel = palette[pixel as usize];
             pixel_row[x] = corrected_pixel;
         }
+
+        // The window layer has an odd edge case
+        // If it is disabled mid-frame and then re-enabled, it continues rendering where it was
+        // Thus, we need to keep track of what scanline we finished rendering in case we are disabled
+        // And continue there if re-enabled this frame (and reset this value at start of next)
+        self.last_wndw_line = line;
     }
 
     /// ```
