@@ -525,6 +525,8 @@ impl PPU {
         // (on DMG) with the lowest x-coordinate on top.
         // If tie, lowest sprite number goes on top
         let mut sprites = self.oam.to_vec();
+        // Reverse the vector so that lower sprite number is earlier in a tie
+        sprites.reverse();
         sprites.sort_by(|a, b| b.get_coords().0.cmp(&a.get_coords().0));
         sprites
     }
