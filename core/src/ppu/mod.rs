@@ -76,7 +76,7 @@ pub struct PPU {
     screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
-    last_wndw_line: u8,
+    last_wndw_line: Option<u8>,
 }
 
 impl PPU {
@@ -89,7 +89,7 @@ impl PPU {
             screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
-            last_wndw_line: 0,
+            last_wndw_line: None,
         }
     }
 
@@ -155,7 +155,7 @@ impl PPU {
         if old_ly != line {
             // If we are in a new frame, reset window layer line
             if line == 0 {
-                self.last_wndw_line = 0;
+                self.last_wndw_line = None;
             }
 
             self.vram[LY] = line;
@@ -282,7 +282,7 @@ impl PPU {
     fn render_wndw_line(&mut self, pixel_row: &mut [u8], line: u8) {
         let wndw_coords = self.get_wndw_coords();
         // See below for why this is needed
-        let line = if self.last_wndw_line == 0 { line } else { self.last_wndw_line + 1 };
+        let line = if self.last_wndw_line.is_none() { line } else { self.last_wndw_line.unwrap() + 1 };
 
         // If window isn't drawn on this scanline, return
         if (wndw_coords.y > line) || (wndw_coords.x > SCREEN_WIDTH as u8) {
@@ -318,7 +318,7 @@ impl PPU {
         // If it is disabled mid-frame and then re-enabled, it continues rendering where it was
         // Thus, we need to keep track of what scanline we finished rendering in case we are disabled
         // And continue there if re-enabled this frame (and reset this value at start of next)
-        self.last_wndw_line = line;
+        self.last_wndw_line = Some(line);
     }
 
     /// ```
