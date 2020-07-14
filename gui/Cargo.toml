@@ -8,6 +8,7 @@ authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+songbird_core = { path = "../core" }
 imgui = "0.4.0"
 winit = "0.22"
 # imgui-winit-support = { version = "0.4.0", default-features = false, features = ["winit-22"] }
