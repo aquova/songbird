@@ -1,0 +1,13 @@
+[package]
+name = "songbird_gui"
+version = "0.1.0"
+description = "GUI wrapper for the Songbird Game Boy emulator"
+repository = "https://github.com/aquova/songbird"
+license = "GPL-3.0"
+authors = ["aquova <abrick912@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+imgui = "0.4.0"
+winit = "0.22"
+# imgui-winit-support = { version = "0.4.0", default-features = false, features = ["winit-22"] }
