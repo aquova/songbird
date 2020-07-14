@@ -32,6 +32,20 @@
             }
         },
         {
+            "label": "Run GUI release build",
+            "type": "shell",
+            "command": "cargo run --release ../games/${input:game}",
+            "options": {
+                "cwd": "${workspaceFolder}/gui"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+            }
+        },
+        {
             "label": "Run WASM build",
             "type": "shell",
             "command": "./run.sh",
@@ -96,6 +110,7 @@
             "options": [
                 "all",
                 "sdl",
+                "gui",
                 "debug",
                 "wasm",
                 "windows",

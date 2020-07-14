@@ -5,10 +5,14 @@ WIN_TARGET = x86_64-pc-windows-gnu
 REL_FLAGS = --release
 DEBUG_FLAGS = --features "debug"
 
-all: sdl wasm windows debug
+all: sdl gui wasm windows debug
 
 sdl:
 	cd sdl && \
+	$(CARGO) build $(REL_FLAGS)
+
+gui:
+	cd gui && \
 	$(CARGO) build $(REL_FLAGS)
 
 wasm:
@@ -25,7 +29,7 @@ debug:
 	cd sdl && \
 	$(CARGO) build $(DEBUG_FLAGS)
 
-clean: clean_core clean_sdl clean_wasm clean_windows
+clean: clean_core clean_sdl clean_gui clean_wasm clean_windows
 
 clean_core:
 	cd core && \
@@ -43,9 +47,13 @@ clean_windows:
 	$(CARGO) clean && \
 	rm -f songbird_sdl.exe
 
+clean_gui:
+	cd gui && \
+	$(CARGO) clean
+
 clean_sdl:
 	cd sdl && \
 	$(CARGO) clean && \
 	rm -f core
 
-.PHONY: all sdl wasm windows debug clean
+.PHONY: all sdl gui wasm windows debug clean
