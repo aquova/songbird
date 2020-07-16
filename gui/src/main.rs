@@ -60,12 +60,6 @@ fn main() {
     ).unwrap();
 
     event_loop.run(move |event, _, control_flow| {
-        let draw_time = gb.tick();
-        // Update save file if needed
-        if gb.is_battery_dirty() {
-            write_battery_save(&mut gb, &filename);
-        }
-
         match event {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                 // Exit program if specified
@@ -79,14 +73,33 @@ fn main() {
                     }
             },
             Event::MainEventsCleared => {
-                if draw_time {
-                    let disp_arr = gb.render();
-                    draw_screen(&disp_arr, &display, &dest_texture);
-                }
-            },
+                tick_until_draw(&mut gb, &filename);
+                let disp_arr = gb.render();
+                draw_screen(&disp_arr, &display, &dest_texture);
+            }
             _ => {}
         }
     });
+}
+
+/// ```
+/// Tick until draw
+///
+/// Repeatedly runs until it is time to render a frame
+///
+/// Inputs:
+///     Game Boy CPU (&Cpu)
+///     Filename of game ROM (&String)
+/// ```
+fn tick_until_draw(gb: &mut Cpu, filename: &String) {
+    let mut draw_time = false;
+    while !draw_time {
+        draw_time = gb.tick();
+
+        if gb.is_battery_dirty() {
+            write_battery_save(gb, &filename);
+        }
+    }
 }
 
 /// ```
