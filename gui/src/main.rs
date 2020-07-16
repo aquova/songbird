@@ -49,7 +49,7 @@ fn main() {
                     width: WINDOW_WIDTH,
                     height: WINDOW_HEIGHT,
                 }).with_title(title);
-    let cb = ContextBuilder::new();
+    let cb = ContextBuilder::new().with_vsync(true);
     let display = Display::new(wb, cb, &event_loop).unwrap();
     let dest_texture = Texture2d::empty_with_format(
         &display,
@@ -60,6 +60,12 @@ fn main() {
     ).unwrap();
 
     event_loop.run(move |event, _, control_flow| {
+        let draw_time = gb.tick();
+        // Update save file if needed
+        if gb.is_battery_dirty() {
+            write_battery_save(&mut gb, &filename);
+        }
+
         match event {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                 // Exit program if specified
@@ -72,17 +78,11 @@ fn main() {
                         gb.toggle_button(btn, state == ElementState::Pressed);
                     }
             },
-            Event::RedrawEventsCleared => {
-                if gb.tick() {
+            Event::MainEventsCleared => {
+                if draw_time {
                     let disp_arr = gb.render();
                     draw_screen(&disp_arr, &display, &dest_texture);
                 }
-
-                // Update save file if needed
-                if gb.is_battery_dirty() {
-                    write_battery_save(&mut gb, &filename);
-                }
-
             },
             _ => {}
         }
@@ -96,8 +96,11 @@ fn main() {
 ///
 /// Inputs:
 ///     Pixel data ([u8])
+///     Display to render to (&Display)
+///     Texture to place pixels on (&Texture2d)
 /// ```
 fn draw_screen(data: &[u8; DISP_SIZE], display: &Display, dest: &Texture2d) {
+    // Blitting implementation from here: https://github.com/avp/gb-rust/
     let image = RawImage2d::from_raw_rgba_reversed(&data.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
 
     let texture = Texture2d::new(display, image).unwrap();
