@@ -9,6 +9,6 @@ edition = "2018"
 
 [dependencies]
 songbird_core = { path = "../core" }
-imgui = "0.4.0"
-winit = "0.22"
-# imgui-winit-support = { version = "0.4.0", default-features = false, features = ["winit-22"] }
+glium = "0.27.0"
+# glutin = "0.24.1"
+# imgui = "0.4.0"

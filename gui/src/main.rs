@@ -6,11 +6,17 @@ use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
-use imgui::*;
-use winit::dpi::LogicalSize;
-use winit::event::{ElementState, Event, KeyboardInput, WindowEvent, VirtualKeyCode};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::Window;
+use glium::glutin::ContextBuilder;
+use glium::glutin::dpi::LogicalSize;
+use glium::glutin::event::{ElementState, Event, KeyboardInput, WindowEvent, VirtualKeyCode};
+use glium::glutin::event_loop::{ControlFlow, EventLoop};
+use glium::glutin::window::WindowBuilder;
+
+use glium::BlitTarget;
+use glium::Display;
+use glium::Surface;
+use glium::texture::{MipmapsOption, RawImage2d, Texture2d, UncompressedFloatFormat};
+use glium::uniforms::MagnifySamplerFilter;
 
 use std::{env, process};
 use std::fs::{File, OpenOptions};
@@ -19,6 +25,8 @@ use std::io::Read;
 
 // Constants
 const SCALE: usize = 5;
+const WINDOW_WIDTH: u32 = (SCREEN_WIDTH * SCALE) as u32;
+const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT * SCALE) as u32;
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -37,15 +45,19 @@ fn main() {
 
     // Setup window
     let event_loop = EventLoop::new();
-    let window = Window::new(&event_loop).unwrap();
-    window.set_inner_size(LogicalSize {
-        width: (SCREEN_WIDTH * SCALE) as f64,
-        height: (SCREEN_HEIGHT * SCALE) as f64,
-    });
-    window.set_title(title);
-
-    // Setup imgui
-    // let mut imgui = imgui::Context::create();
+    let wb = WindowBuilder::new().with_inner_size(LogicalSize {
+                    width: WINDOW_WIDTH,
+                    height: WINDOW_HEIGHT,
+                }).with_title(title);
+    let cb = ContextBuilder::new();
+    let display = Display::new(wb, cb, &event_loop).unwrap();
+    let dest_texture = Texture2d::empty_with_format(
+        &display,
+        UncompressedFloatFormat::U8U8U8U8,
+        MipmapsOption::NoMipmap,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT
+    ).unwrap();
 
     event_loop.run(move |event, _, control_flow| {
         match event {
@@ -61,11 +73,9 @@ fn main() {
                     }
             },
             Event::RedrawEventsCleared => {
-                // let ui = imgui.frame();
-
                 if gb.tick() {
                     let disp_arr = gb.render();
-                    // draw_screen(&disp_arr, &mut canvas);
+                    draw_screen(&disp_arr, &display, &dest_texture);
                 }
 
                 // Update save file if needed
@@ -82,27 +92,32 @@ fn main() {
 /// ```
 /// Draw screen
 ///
-/// Renders pixel data onto SDL2 canvas
+/// Renders pixel data onto window
 ///
 /// Inputs:
 ///     Pixel data ([u8])
-///     SDL2 Canvas (Canvas<Window>)
 /// ```
-// fn draw_screen(data: &[u8; DISP_SIZE], canvas: &mut Canvas<Window>) {
-//     canvas.set_scale(SCALE as f32, SCALE as f32).unwrap();
+fn draw_screen(data: &[u8; DISP_SIZE], display: &Display, dest: &Texture2d) {
+    let image = RawImage2d::from_raw_rgba_reversed(&data.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
 
-//     let texture_creator = canvas.texture_creator();
-//     let mut texture = texture_creator.create_texture_streaming(PixelFormatEnum::RGBA32, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32).unwrap();
-//     texture.with_lock(None, |buffer: &mut [u8], _: usize| {
-//         for i in 0..data.len() {
-//             buffer[i] = data[i];
-//         }
-//     }).unwrap();
+    let texture = Texture2d::new(display, image).unwrap();
+    let dest_rect = BlitTarget {
+        left: 0,
+        bottom: 0,
+        width: WINDOW_WIDTH as i32,
+        height: WINDOW_HEIGHT as i32,
+    };
 
-//     canvas.copy(&texture, None, None).unwrap();
-//     canvas.present();
-// }
+    texture.as_surface().blit_whole_color_to(
+        &dest.as_surface(),
+        &dest_rect,
+        MagnifySamplerFilter::Linear
+    );
 
+    let target = display.draw();
+    dest.as_surface().fill(&target, MagnifySamplerFilter::Linear);
+    target.finish().unwrap();
+}
 /// ```
 /// Key to Button
 ///
