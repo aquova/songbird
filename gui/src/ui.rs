@@ -2,7 +2,7 @@ use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-use imgui::{Condition, Context, Image, Window};
+use imgui::{Condition, Context, Image, TextureId, Window};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
@@ -20,6 +20,7 @@ use glium::uniforms::MagnifySamplerFilter;
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::rc::Rc;
 
 // Constants
 const SCALE: usize = 5;
@@ -63,8 +64,18 @@ impl ImguiSystem {
         }
     }
 
+    /// ```
+    /// Main event loop
+    ///
+    /// Passes control of emulation to the event loop, which runs forever
+    ///
+    /// Inputs:
+    ///     Game boy CPU (Cpu)
+    ///     Filename of ROM (String)
+    /// ```
     pub fn main_loop(self, mut gb: Cpu, filename: String) {
-        // This is an odd system, but it fixes issues with lifetimes
+        // After 'move', code cannot access self, but it can access individual variables
+        // Someday I might understand this well enough to make it cleaner
         let ImguiSystem {
             event_loop,
             display,
@@ -96,64 +107,91 @@ impl ImguiSystem {
                 Event::RedrawRequested(_) => {
                     tick_until_draw(&mut gb, &filename);
                     let disp_arr = gb.render();
-
-                    let ui = imgui.frame();
-
-                    let dest_texture = Texture2d::empty_with_format(
-                        &display,
-                        UncompressedFloatFormat::U8U8U8U8,
-                        MipmapsOption::NoMipmap,
-                        WINDOW_WIDTH,
-                        WINDOW_HEIGHT
-                    ).unwrap();
-
-                    let image = RawImage2d::from_raw_rgba(disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
-                    let source_texture = Texture2d::new(&display, image).unwrap();
-
-                    let dest_rect = BlitTarget {
-                        left: 0,
-                        bottom: 0,
-                        width: WINDOW_WIDTH as i32,
-                        height: WINDOW_HEIGHT as i32,
-                    };
-
-                    source_texture.as_surface().blit_whole_color_to(
-                        &dest_texture.as_surface(),
-                        &dest_rect,
-                        MagnifySamplerFilter::Nearest
-                    );
-
-                    if texture_id.is_some() {
-                        renderer.textures().replace(texture_id.unwrap(), std::rc::Rc::new(dest_texture));
-                    } else {
-                        texture_id = Some(renderer.textures().insert(std::rc::Rc::new(dest_texture)));
-                    }
-
-                    // This is the actual window that displays the emulation
-                    Window::new(im_str!("Songbird"))
-                        .size([WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32], Condition::Once)
-                        .position_pivot([0.5, 0.5])
-                        .title_bar(false)
-                        .resizable(false)
-                        .movable(false)
-                        .scroll_bar(false)
-                        .draw_background(false)
-                        .build(&ui, || {
-                        Image::new(texture_id.unwrap(), [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
-                    });
-
-                    let gl_window = display.gl_window();
-                    let mut target = display.draw();
-                    platform.prepare_render(&ui, gl_window.window());
-
-                    let draw_data = ui.render();
-                    renderer.render(&mut target, draw_data).unwrap();
-                    target.finish().unwrap();
-                }
+                    // I'd someday like to figure out how to not pass so many items in
+                    draw_screen(&disp_arr, &display, &mut imgui, &platform, &mut renderer, &mut texture_id);
+                },
                 _ => {}
             }
         });
     }
+}
+
+/// ```
+/// Draw screen
+///
+/// Takes RGBA pixels from a frame and renders them onto a window
+///
+/// Inputs:
+///     Array of RGBA pixel data (&[u8])
+///     Glium display (&Display)
+///     Imgui context (&Context)
+///     Winit platform (&WinitPlatform)
+///     Rendering context (&Renderer)
+///     Texture ID (&Option<TextureId>)
+/// ```
+fn draw_screen(
+    disp_arr: &[u8],
+    display: &Display,
+    imgui: &mut Context,
+    platform: &WinitPlatform,
+    renderer: &mut Renderer,
+    texture_id: &mut Option<TextureId>
+) {
+    let ui = imgui.frame();
+
+    let dest_texture = Texture2d::empty_with_format(
+        display,
+        UncompressedFloatFormat::U8U8U8U8,
+        MipmapsOption::NoMipmap,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT
+    ).unwrap();
+
+    // Copy our RGBA pixel data into openGL texture
+    let image = RawImage2d::from_raw_rgba(disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+    let source_texture = Texture2d::new(display, image).unwrap();
+
+    let dest_rect = BlitTarget {
+        left: 0,
+        bottom: 0,
+        width: WINDOW_WIDTH as i32,
+        height: WINDOW_HEIGHT as i32,
+    };
+
+    // Blit pixel data onto destination surface
+    source_texture.as_surface().blit_whole_color_to(
+        &dest_texture.as_surface(),
+        &dest_rect,
+        MagnifySamplerFilter::Nearest
+    );
+
+    // Keep track of texture ID, needed for imgui UI
+    if texture_id.is_some() {
+        renderer.textures().replace(texture_id.unwrap(), Rc::new(dest_texture));
+    } else {
+        *texture_id = Some(renderer.textures().insert(Rc::new(dest_texture)));
+    }
+
+    // This is the actual window that displays the emulation
+    Window::new(im_str!("Songbird"))
+        .size([WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32], Condition::Once)
+        .position_pivot([0.5, 0.5])
+        .title_bar(false)
+        .resizable(false)
+        .movable(false)
+        .scroll_bar(false)
+        .draw_background(false)
+        .build(&ui, || {
+        Image::new(texture_id.unwrap(), [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
+    });
+
+    let gl_window = display.gl_window();
+    let mut target = display.draw();
+    platform.prepare_render(&ui, gl_window.window());
+
+    let draw_data = ui.render();
+    renderer.render(&mut target, draw_data).unwrap();
+    target.finish().unwrap();
 }
 
 /// ```
