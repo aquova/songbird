@@ -8,12 +8,20 @@
             "name": "Launch songbird",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/sdl/target/debug/songbird_sdl",
+            "program": "${workspaceFolder}/gui/target/debug/songbird_gui",
             "args": [
-                "${workspaceFolder}/games/test_roms/opus5.gb"
+                "${workspaceFolder}/games/{$input:game}"
             ],
-            "cwd": "${workspaceFolder}/sdl",
+            "cwd": "${workspaceFolder}/gui",
             "sourceLanguages": ["rust"],
+        },
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "game",
+            "description": "Title of game",
+            "default": "Tetris.gb"
         },
     ]
 }

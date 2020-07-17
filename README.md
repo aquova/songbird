@@ -13,7 +13,7 @@ Latest builds can be downloaded [here](https://cirrus-ci.com/github/aquova/songb
 Run the desktop version via:
 
 ```
-$ cd sdl && cargo run --release "path/to/game.gb"
+$ cd gui && cargo run --release "path/to/game.gb"
 ```
 
 ## Resources

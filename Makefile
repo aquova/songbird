@@ -5,11 +5,7 @@ WIN_TARGET = x86_64-pc-windows-gnu
 REL_FLAGS = --release
 DEBUG_FLAGS = --features "debug"
 
-all: sdl gui wasm windows debug
-
-sdl:
-	cd sdl && \
-	$(CARGO) build $(REL_FLAGS)
+all: gui wasm windows debug
 
 gui:
 	cd gui && \
@@ -22,14 +18,14 @@ wasm:
 	mv pkg/songbird_wasm.js ../web
 
 windows:
-	cd sdl && \
+	cd gui && \
 	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS)
 
 debug:
-	cd sdl && \
+	cd gui && \
 	$(CARGO) build $(DEBUG_FLAGS)
 
-clean: clean_core clean_sdl clean_gui clean_wasm clean_windows
+clean: clean_core clean_gui clean_wasm clean_windows
 
 clean_core:
 	cd core && \
@@ -43,17 +39,12 @@ clean_wasm:
 	$(CARGO) clean
 
 clean_windows:
-	cd sdl && \
+	cd gui && \
 	$(CARGO) clean && \
-	rm -f songbird_sdl.exe
+	rm -f songbird_gui.exe
 
 clean_gui:
 	cd gui && \
 	$(CARGO) clean
 
-clean_sdl:
-	cd sdl && \
-	$(CARGO) clean && \
-	rm -f core
-
-.PHONY: all sdl gui wasm windows debug clean
+.PHONY: all gui wasm windows debug clean

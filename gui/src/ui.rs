@@ -182,7 +182,7 @@ fn tick_until_draw(gb: &mut Cpu, filename: &String) {
 /// Converts keycode into GameBoy button
 ///
 /// Input:
-///     SDL keybode keycode (VirtualKeyCode)
+///     Glium keybode keycode (VirtualKeyCode)
 ///
 /// Output:
 ///     Gameboy button (Option<Buttons>)

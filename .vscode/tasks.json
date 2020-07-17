@@ -4,34 +4,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run SDL debug build",
-            "type": "shell",
-            "command": "cargo run --features 'debug' ../games/${input:game}",
-            "options": {
-                "cwd": "${workspaceFolder}/sdl"
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-            }
-        },
-        {
-            "label": "Run SDL release build",
-            "type": "shell",
-            "command": "cargo run --release ../games/${input:game}",
-            "options": {
-                "cwd": "${workspaceFolder}/sdl"
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-            }
-        },
-        {
             "label": "Run GUI release build",
             "type": "shell",
             "command": "cargo run --release ../games/${input:game}",
@@ -86,7 +58,7 @@
             "type": "shell",
             "command": "./debug_coredump.sh",
             "options": {
-                "cwd": "${workspaceFolder}/sdl"
+                "cwd": "${workspaceFolder}/gui"
             },
             "presentation": {
                 "echo": true,
@@ -109,7 +81,6 @@
             "description": "Which build type to make",
             "options": [
                 "all",
-                "sdl",
                 "gui",
                 "debug",
                 "wasm",
