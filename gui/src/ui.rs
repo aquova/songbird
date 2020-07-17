@@ -26,6 +26,7 @@ use std::rc::Rc;
 const SCALE: usize = 5;
 const WINDOW_WIDTH: u32 = (SCREEN_WIDTH * SCALE) as u32;
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT * SCALE) as u32;
+const IMGUI_MARGIN: u32 = 16;
 
 // Imgui interface taken from here: https://gist.github.com/RainbowCookie32/7e5d76acf33d88f2145d5ebc047a5799
 pub struct ImguiSystem {
@@ -41,8 +42,8 @@ impl ImguiSystem {
         let event_loop = EventLoop::new();
         let cb = ContextBuilder::new().with_vsync(true);
         let wb = WindowBuilder::new().with_inner_size(LogicalSize {
-                        width: WINDOW_WIDTH,
-                        height: WINDOW_HEIGHT,
+                        width: WINDOW_WIDTH + IMGUI_MARGIN,
+                        height: WINDOW_HEIGHT + IMGUI_MARGIN,
                     }).with_title(title);
         let display = Display::new(wb, cb, &event_loop).unwrap();
         let mut imgui = Context::create();
@@ -174,8 +175,9 @@ fn draw_screen(
 
     // This is the actual window that displays the emulation
     Window::new(im_str!("Songbird"))
-        .size([WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32], Condition::Once)
-        .position_pivot([0.5, 0.5])
+        // The right/bottom parts of the window get cutoff, and require a somewhat arbitrary buffer so they show up correctly on screen, for some reason
+        .size([(WINDOW_WIDTH + 16) as f32, (WINDOW_HEIGHT + 16) as f32], Condition::Once)
+        .position([0.0, 0.0], Condition::Once)
         .title_bar(false)
         .resizable(false)
         .movable(false)
