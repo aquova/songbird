@@ -127,11 +127,11 @@ fn draw_screen(data: &[u8; DISP_SIZE], display: &Display, dest: &Texture2d) {
     texture.as_surface().blit_whole_color_to(
         &dest.as_surface(),
         &dest_rect,
-        MagnifySamplerFilter::Linear
+        MagnifySamplerFilter::Nearest
     );
 
     let target = display.draw();
-    dest.as_surface().fill(&target, MagnifySamplerFilter::Linear);
+    dest.as_surface().fill(&target, MagnifySamplerFilter::Nearest);
     target.finish().unwrap();
 }
 /// ```
