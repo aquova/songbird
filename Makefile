@@ -45,6 +45,7 @@ clean_windows:
 
 clean_gui:
 	cd gui && \
-	$(CARGO) clean
+	$(CARGO) clean && \
+	rm -f imgui.ini
 
 .PHONY: all gui wasm windows debug clean

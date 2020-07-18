@@ -1,8 +1,10 @@
+use crate::menu::MenuState;
+
 use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-use imgui::{Condition, Context, Image, TextureId, Window};
+use imgui::{Condition, Context, Image, Window};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
@@ -12,9 +14,7 @@ use glium::glutin::event::{ElementState, Event, KeyboardInput, WindowEvent, Virt
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
 
-use glium::BlitTarget;
-use glium::Display;
-use glium::Surface;
+use glium::{BlitTarget, Display, Surface};
 use glium::texture::{MipmapsOption, RawImage2d, Texture2d, UncompressedFloatFormat};
 use glium::uniforms::MagnifySamplerFilter;
 
@@ -27,6 +27,8 @@ const SCALE: usize = 5;
 const WINDOW_WIDTH: u32 = (SCREEN_WIDTH * SCALE) as u32;
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT * SCALE) as u32;
 const IMGUI_MARGIN: u32 = 16;
+const IMGUI_OFFSET: u32 = 8;
+const MENU_BAR_HEIGHT: u32 = 11;
 
 // Imgui interface taken from here: https://gist.github.com/RainbowCookie32/7e5d76acf33d88f2145d5ebc047a5799
 pub struct ImguiSystem {
@@ -42,9 +44,9 @@ impl ImguiSystem {
         let event_loop = EventLoop::new();
         let cb = ContextBuilder::new().with_vsync(true);
         let wb = WindowBuilder::new().with_inner_size(LogicalSize {
-                        width: WINDOW_WIDTH + IMGUI_MARGIN,
-                        height: WINDOW_HEIGHT + IMGUI_MARGIN,
-                    }).with_title(title);
+                    width: WINDOW_WIDTH,
+                    height: WINDOW_HEIGHT + MENU_BAR_HEIGHT + IMGUI_OFFSET,
+                }).with_title(title);
         let display = Display::new(wb, cb, &event_loop).unwrap();
         let mut imgui = Context::create();
         let mut platform = WinitPlatform::init(&mut imgui);
@@ -85,7 +87,7 @@ impl ImguiSystem {
             mut renderer
         } = self;
 
-        let mut texture_id = None;
+        let mut main_menu = MenuState::new();
 
         event_loop.run(move |event, _, control_flow| {
             match event {
@@ -108,8 +110,8 @@ impl ImguiSystem {
                 Event::RedrawRequested(_) => {
                     tick_until_draw(&mut gb, &filename);
                     let disp_arr = gb.render();
-                    // I'd someday like to figure out how to not pass so many items in
-                    draw_screen(&disp_arr, &display, &mut imgui, &platform, &mut renderer, &mut texture_id);
+                    // TODO: Someday figure out how to not pass so many items in
+                    draw_screen(&disp_arr, &display, &mut imgui, &platform, &mut renderer, &mut main_menu);
                 },
                 _ => {}
             }
@@ -128,7 +130,7 @@ impl ImguiSystem {
 ///     Imgui context (&Context)
 ///     Winit platform (&WinitPlatform)
 ///     Rendering context (&Renderer)
-///     Texture ID (&Option<TextureId>)
+///     State of top menu bar (&MenuState)
 /// ```
 fn draw_screen(
     disp_arr: &[u8],
@@ -136,9 +138,10 @@ fn draw_screen(
     imgui: &mut Context,
     platform: &WinitPlatform,
     renderer: &mut Renderer,
-    texture_id: &mut Option<TextureId>
+    main_menu: &mut MenuState,
 ) {
     let ui = imgui.frame();
+    main_menu.create_menu(&ui);
 
     let dest_texture = Texture2d::empty_with_format(
         display,
@@ -166,26 +169,22 @@ fn draw_screen(
         MagnifySamplerFilter::Nearest
     );
 
-    // Keep track of texture ID, needed for imgui UI
-    if texture_id.is_some() {
-        renderer.textures().replace(texture_id.unwrap(), Rc::new(dest_texture));
-    } else {
-        *texture_id = Some(renderer.textures().insert(Rc::new(dest_texture)));
-    }
+    let texture_id = renderer.textures().insert(Rc::new(dest_texture));
 
     // This is the actual window that displays the emulation
     Window::new(im_str!("Songbird"))
         // The right/bottom parts of the window get cutoff, and require a somewhat arbitrary buffer so they show up correctly on screen, for some reason
-        .size([(WINDOW_WIDTH + 16) as f32, (WINDOW_HEIGHT + 16) as f32], Condition::Once)
-        .position([0.0, 0.0], Condition::Once)
+        .size([(WINDOW_WIDTH + IMGUI_MARGIN) as f32, (WINDOW_HEIGHT + IMGUI_MARGIN) as f32], Condition::Once)
+        .position([-(IMGUI_OFFSET as f32), MENU_BAR_HEIGHT as f32], Condition::Once)
         .title_bar(false)
         .resizable(false)
         .movable(false)
         .scroll_bar(false)
         .draw_background(false)
         .build(&ui, || {
-        Image::new(texture_id.unwrap(), [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
-    });
+            Image::new(texture_id, [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
+        }
+    );
 
     let gl_window = display.gl_window();
     let mut target = display.draw();

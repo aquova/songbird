@@ -2,6 +2,7 @@
 // Austin Bricker 2019-2020
 
 // Includes
+mod menu;
 mod ui;
 
 #[macro_use]
