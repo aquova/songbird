@@ -77,13 +77,11 @@ impl ImguiSystem {
     ///     Filename of ROM (String)
     /// ```
     pub fn main_loop(self, mut gb: Cpu, filename: String) {
-        // After 'move', code cannot access self, but it can access individual variables
-        // Someday I might understand this well enough to make it cleaner
         let ImguiSystem {
             event_loop,
             display,
             mut imgui,
-            platform,
+            mut platform,
             mut renderer
         } = self;
 
@@ -113,7 +111,10 @@ impl ImguiSystem {
                     // TODO: Someday figure out how to not pass so many items in
                     draw_screen(&disp_arr, &display, &mut imgui, &platform, &mut renderer, &mut main_menu);
                 },
-                _ => {}
+                event => {
+                    let gl_window = display.gl_window();
+                    platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
+                }
             }
         });
     }
