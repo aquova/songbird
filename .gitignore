@@ -7,13 +7,13 @@
 *.wasm
 **/songbird_wasm.js
 *.exe
-**/sdl/core
+**/gui/core
 
 # Hide files that aren't ours
 **/games
 *.gb
-*.dll
 
 # Misc
 *.sav
 *.log
+*.ini

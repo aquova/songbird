@@ -3,10 +3,10 @@ linux_task:
     image: aquova/songbird:1.0
 
   build_script:
-    - make sdl
+    - make gui
 
   songbird_artifacts:
-    path: sdl/target/release/songbird_sdl
+    path: gui/target/release/songbird_gui
 
 osx_task:
   osx_instance:
@@ -17,10 +17,10 @@ osx_task:
     - brew install rust
 
   build_script:
-    - make sdl
+    - make gui
 
   songbird_artifacts:
-    path: sdl/target/release/songbird_sdl
+    path: gui/target/release/songbird_gui
 
 win_task:
   container:
@@ -30,7 +30,7 @@ win_task:
     - make windows
 
   songbird_artifacts:
-    path: sdl/target/x86_64-pc-windows-gnu/release/songbird_sdl.exe
+    path: gui/target/x86_64-pc-windows-gnu/release/songbird_gui.exe
 
 wasm_task:
   container:
