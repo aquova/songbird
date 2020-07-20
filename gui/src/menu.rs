@@ -58,7 +58,6 @@ impl MenuState {
                             Ok(f) => {
                                 // If user selected a file, close window and note filename
                                 new_file = Some(f);
-                                ui.close_current_popup();
                             },
                             Err(_) => {
                                 new_file = None;
