@@ -12,7 +12,6 @@
 # Hide files that aren't ours
 **/games
 *.gb
-*.dll
 
 # Misc
 *.sav

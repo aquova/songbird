@@ -6,7 +6,7 @@
         {
             "label": "Run GUI release build",
             "type": "shell",
-            "command": "cargo run --release ../games/${input:game}",
+            "command": "cargo run --release",
             "options": {
                 "cwd": "${workspaceFolder}/gui"
             },
@@ -69,12 +69,6 @@
         },
     ],
     "inputs": [
-        {
-            "type": "promptString",
-            "id": "game",
-            "description": "Title of game",
-            "default": "Tetris.gb"
-        },
         {
             "type": "pickString",
             "id": "build",

@@ -1,7 +1,7 @@
 [package]
 name = "songbird_gui"
 version = "0.1.0"
-description = "GUI wrapper for the Songbird Game Boy emulator"
+description = "Desktop frontend for the Songbird Game Boy emulator"
 repository = "https://github.com/aquova/songbird"
 license = "GPL-3.0"
 authors = ["aquova <abrick912@gmail.com>"]
@@ -13,3 +13,5 @@ glium = "0.27.0"
 imgui = "0.4.0"
 imgui-glium-renderer = "0.4.0"
 imgui-winit-support = "0.4.0"
+# This crate is not set up properly in crates.io, so I had to include it myself
+imgui_file_explorer = { version = "0.0.3", path = "lib/imgui_file_explorer" }

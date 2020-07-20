@@ -514,6 +514,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "imgui_file_explorer"
+version = "0.0.3"
+dependencies = [
+ "cfg-if",
+ "imgui",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1139,6 +1147,7 @@ dependencies = [
  "imgui",
  "imgui-glium-renderer",
  "imgui-winit-support",
+ "imgui_file_explorer",
  "songbird_core",
 ]
 
