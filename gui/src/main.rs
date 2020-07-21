@@ -228,13 +228,18 @@ fn draw_screen(
 ///     Filename of game ROM (&str)
 /// ```
 fn tick_until_draw(gb: &mut Cpu, filename: &str) {
-    let mut draw_time = false;
-    while !draw_time {
-        draw_time = gb.tick();
-
-        if gb.is_battery_dirty() {
-            write_battery_save(gb, &filename);
+    loop {
+        let draw_time = gb.tick();
+        if draw_time {
+            break;
         }
+    }
+
+    // Limiting saving battery state to only once per frame.
+    // Doing it every tick is both overkill and causes some unknown issue on
+    // Windows which traps us in an infinite loop on this frame
+    if gb.is_battery_dirty() {
+        write_battery_save(gb, &filename);
     }
 }
 
@@ -340,6 +345,7 @@ fn write_battery_save(gb: &mut Cpu, gamename: &str) {
 
         let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
         file.write(ram_data).unwrap();
+        file.flush().unwrap();
         gb.clean_battery_flag();
     }
 }

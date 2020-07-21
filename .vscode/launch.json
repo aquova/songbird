@@ -5,7 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch songbird",
+            "name": "Launch (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/gui/target/debug/songbird_gui.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/gui",
+            "environment": [],
+            "externalConsole": false,
+        },
+        {
+            "name": "Launch (OS X/Linux)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/gui/target/debug/songbird_gui",
@@ -14,14 +25,6 @@
             ],
             "cwd": "${workspaceFolder}/gui",
             "sourceLanguages": ["rust"],
-        },
-    ],
-    "inputs": [
-        {
-            "type": "promptString",
-            "id": "game",
-            "description": "Title of game",
-            "default": "Tetris.gb"
         },
     ]
 }
