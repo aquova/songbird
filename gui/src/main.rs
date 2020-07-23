@@ -12,7 +12,7 @@ use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-use imgui::{Condition, Context, Image, Window, Ui};
+use imgui::{Condition, Context, Image, TextureId, Window};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
@@ -99,8 +99,20 @@ impl ImguiSystem {
         let mut main_menu = MenuState::new();
         let mut gb = Cpu::new();
         let mut running = false;
+        let mut texture_id = None;
 
         event_loop.run(move |event, _, control_flow| {
+            // This is the actual window that displays the emulation
+            let emu_window = Window::new(im_str!("Songbird"))
+                // The right/bottom parts of the window get cutoff, and require a somewhat arbitrary buffer so they show up correctly on screen, for some reason
+                .size([(WINDOW_WIDTH + IMGUI_MARGIN) as f32, (WINDOW_HEIGHT + IMGUI_MARGIN) as f32], Condition::Once)
+                .position([-(IMGUI_OFFSET as f32), MENU_BAR_HEIGHT as f32], Condition::Once)
+                .title_bar(false)
+                .resizable(false)
+                .movable(false)
+                .scroll_bar(false)
+                .draw_background(false);
+
             match event {
                 Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                     // Exit program if specified
@@ -136,7 +148,10 @@ impl ImguiSystem {
                         let filename = main_menu.get_rom_filename();
                         tick_until_draw(&mut gb, filename);
                         let disp_arr = gb.render();
-                        draw_screen(&disp_arr, &ui, &display, &mut renderer);
+                        render_texture(&disp_arr, &display, &mut renderer, &mut texture_id);
+                        emu_window.build(&ui, || {
+                            Image::new(texture_id.unwrap(), [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
+                        });
                     }
 
                     let gl_window = display.gl_window();
@@ -158,22 +173,17 @@ impl ImguiSystem {
 }
 
 /// ```
-/// Draw screen
+/// Render texture
 ///
-/// Takes RGBA pixels from a frame and renders them onto a window
+/// Takes RGBA pixels from a frame and renders the latest texture frame
 ///
 /// Inputs:
 ///     Array of RGBA pixel data (&[u8])
-///     Imgui frame object (&Ui)
 ///     Glium display (&Display)
 ///     Rendering context (&Renderer)
+///     Texture ID of the newly rendered texture (Option<TextureId>)
 /// ```
-fn draw_screen(
-    disp_arr: &[u8],
-    ui: &Ui,
-    display: &Display,
-    renderer: &mut Renderer,
-) {
+fn render_texture(disp_arr: &[u8], display: &Display, renderer: &mut Renderer, texture_id: &mut Option<TextureId>) {
     let dest_texture = Texture2d::empty_with_format(
         display,
         UncompressedFloatFormat::U8U8U8U8,
@@ -200,22 +210,13 @@ fn draw_screen(
         MagnifySamplerFilter::Nearest
     );
 
-    let texture_id = renderer.textures().insert(Rc::new(dest_texture));
-
-    // This is the actual window that displays the emulation
-    Window::new(im_str!("Songbird"))
-        // The right/bottom parts of the window get cutoff, and require a somewhat arbitrary buffer so they show up correctly on screen, for some reason
-        .size([(WINDOW_WIDTH + IMGUI_MARGIN) as f32, (WINDOW_HEIGHT + IMGUI_MARGIN) as f32], Condition::Once)
-        .position([-(IMGUI_OFFSET as f32), MENU_BAR_HEIGHT as f32], Condition::Once)
-        .title_bar(false)
-        .resizable(false)
-        .movable(false)
-        .scroll_bar(false)
-        .draw_background(false)
-        .build(&ui, || {
-            Image::new(texture_id, [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
-        }
-    );
+    // Need to replace texture if they exist to avoid massive memory usage
+    if texture_id.is_some() {
+        renderer.textures().replace(texture_id.unwrap(), Rc::new(dest_texture));
+    } else {
+        let new_id = renderer.textures().insert(Rc::new(dest_texture));
+        *texture_id = Some(new_id);
+    }
 }
 
 /// ```
