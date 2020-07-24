@@ -308,7 +308,7 @@ impl PPU {
                 wndw_map[index] as usize
             };
             let tile = &self.tiles[tile_index];
-            let col = x % TILESIZE;
+            let col = (x - start_x) % TILESIZE;
             let pixel = tile.get_row(row)[col];
             let corrected_pixel = palette[pixel as usize];
             pixel_row[x] = corrected_pixel;
