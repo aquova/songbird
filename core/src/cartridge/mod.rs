@@ -305,6 +305,13 @@ impl Cart {
         if ram_size_index > RAM_SIZES.len() {
             ram_size_index = 1;
         }
+
+        // Some ROMs (cough Blargg tests) don't report their external RAM capacity
+        // correctly in the RAM size header section, but do report it existing here
+        if self.should_have_ext_ram() && ram_size_index == 0 {
+            ram_size_index = 1;
+        }
+
         let ram_size = RAM_SIZES[ram_size_index];
         // MBC2 always has RAM of 512 x 4 bits, and doesn't mark that in the header
         if self.mbc == MBC::MBC2 {
@@ -325,6 +332,28 @@ impl Cart {
         // According to the pandocs, these are the cart header values that define having a battery
         self.has_battery = match cart_type {
             0x03 | 0x06 | 0x09 | 0x0D | 0x0F | 0x10 | 0x13 | 0x1B | 0x1E | 0x22 | 0xFF => {
+                true
+            },
+            _ => {
+                false
+            }
+        }
+    }
+
+    /// ```
+    /// Should have external RAM
+    ///
+    /// Does this cart's header define having external RAM?
+    ///
+    /// Output:
+    ///     Whether cartridge has external RAM
+    /// ```
+    fn should_have_ext_ram(&self) -> bool {
+        let cart_type = self.rom[MBC_TYPE_ADDR];
+
+        // According to the pandocs, these are the cart header values that define having external cart RAM
+        match cart_type {
+            0x02 | 0x03 | 0x08 | 0x09 | 0x0C | 0x0D | 0x10 | 0x12 | 0x13 | 0x16 | 0x17 | 0x1A | 0x1B | 0x1D | 0x1E | 0xFF => {
                 true
             },
             _ => {
