@@ -19,6 +19,12 @@ pub struct Timer {
     tma: u8, // $FF06
 }
 
+impl Default for Timer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Timer {
     pub fn new() -> Timer {
         Timer {
@@ -65,19 +71,16 @@ impl Timer {
     }
 
     pub fn read_timer(&self, addr: u16) -> u8 {
-        let val = match addr {
+        match addr {
             DIV => { self.div },
             TIMA => { self.tima },
             TMA => { self.tma },
             TAC => {
                 let running_val = if self.running { 0b100 } else { 0 };
-                let output = running_val | (self.tima_index as u8);
-                output
+                running_val | (self.tima_index as u8)
             },
             _ => { panic!("Trying to read a non-timer register") }
-        };
-
-        val
+        }
     }
 
     pub fn write_timer(&mut self, addr: u16, val: u8) {

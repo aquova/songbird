@@ -52,6 +52,12 @@ pub struct IO {
     get_dir_keys: bool
 }
 
+impl Default for IO {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IO {
     pub fn new() -> IO {
         IO {

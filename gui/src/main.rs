@@ -53,6 +53,12 @@ pub struct ImguiSystem {
     pub renderer: Renderer,
 }
 
+impl Default for ImguiSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImguiSystem {
     pub fn new() -> ImguiSystem {
         let event_loop = EventLoop::new();
@@ -321,9 +327,8 @@ fn load_battery_save(gb: &mut Cpu, gamename: &str) {
         let mut filename = gamename.to_owned();
         filename.push_str(".sav");
 
-        let f = OpenOptions::new().read(true).open(filename);
-        if f.is_ok() {
-            f.unwrap().read_to_end(&mut battery_ram).expect("Error reading external RAM");
+        if let Ok(mut f) = OpenOptions::new().read(true).open(filename) {
+            f.read_to_end(&mut battery_ram).expect("Error reading external RAM");
             gb.write_ext_ram(&battery_ram);
         }
     }
@@ -345,7 +350,7 @@ fn write_battery_save(gb: &mut Cpu, gamename: &str) {
         filename.push_str(".sav");
 
         let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
-        file.write(ram_data).unwrap();
+        file.write_all(ram_data).unwrap();
         file.flush().unwrap();
         gb.clean_battery_flag();
     }

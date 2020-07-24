@@ -65,6 +65,12 @@ pub struct debugger {
     watchpoints: Vec<u16>
 }
 
+impl Default for debugger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl debugger {
     pub fn new() -> debugger {
         debugger {
@@ -91,7 +97,7 @@ impl debugger {
             }
         }
 
-        return false;
+        false
     }
 
     /// ```
@@ -102,7 +108,7 @@ impl debugger {
     pub fn print_info(&self, pc: u16) {
         println!("agbd - The songbird debugger");
         println!("Execution paused at {:#06x}", pc);
-        println!("");
+        println!();
     }
 
     /// ```
@@ -122,7 +128,7 @@ impl debugger {
         println!("'q' to quit program");
         println!("'reg' to list register contents");
         println!("'watch #' to add (write) watchpoint at that address");
-        println!("");
+        println!();
     }
 
     /// ```
@@ -150,8 +156,8 @@ impl debugger {
     /// Prints the currently set break/watchpoints
     /// ```
     pub fn list_points(&self) {
-        if self.breakpoints.len() > 0 {
-            let mut breakstring = format!("Breakpoints:");
+        if !self.breakpoints.is_empty() {
+            let mut breakstring = "Breakpoints:".to_string();
             for bp in &self.breakpoints {
                 breakstring = format!("{} ${:04x}", breakstring, bp);
             }
@@ -160,8 +166,8 @@ impl debugger {
             println!("You have no breakpoints set");
         }
 
-        if self.watchpoints.len() > 0 {
-            let mut watchstring = format!("Watchpoints:");
+        if !self.watchpoints.is_empty() {
+            let mut watchstring = "Watchpoints:".to_string();
             for wp in &self.watchpoints {
                 watchstring = format!("{} ${:04x}", watchstring, wp);
             }
@@ -170,7 +176,7 @@ impl debugger {
             println!("You have no watchpoints set");
         }
 
-        println!("");
+        println!();
     }
 
     /// ```
@@ -261,16 +267,13 @@ impl debugger {
 
     pub fn check_watch(&self, gb: &Cpu, prev_map: HashMap<u16, u8>) -> bool {
         for wp in &self.watchpoints {
-            match prev_map.get(wp) {
-                Some(old) => {
-                    if *old != gb.read_ram(*wp) {
-                        return true;
-                    }
-                },
-                None => {}
+            if let Some(old) = prev_map.get(wp) {
+                if *old != gb.read_ram(*wp) {
+                    return true;
+                }
             }
         }
 
-        return false;
+        false
     }
 }

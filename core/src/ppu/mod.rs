@@ -79,6 +79,12 @@ pub struct PPU {
     last_wndw_line: Option<u8>,
 }
 
+impl Default for PPU {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PPU {
     // ==================
     // = Public methods =
@@ -335,8 +341,7 @@ impl PPU {
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
         let mut sprites_drawn = 10;
-        for i in 0..sorted_sprites.len() {
-            let spr = sorted_sprites[i];
+        for spr in sorted_sprites {
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
                 continue;
             }
@@ -430,9 +435,7 @@ impl PPU {
 
                 let view_index = index * COLOR_CHANNELS;
                 let color = COLORS[pixel as usize];
-                for i in 0..color.len() {
-                    rgb_screen[view_index + i] = color[i];
-                }
+                rgb_screen[view_index..(color.len() + view_index)].clone_from_slice(&color[..]);
             }
         }
 
@@ -450,13 +453,11 @@ impl PPU {
     fn get_bkgd_tile_map(&self) -> &[u8] {
         // $00 for $9800-$9BFF
         // $01 for $9C00-$9FFF
-        let tile_map = if self.get_bkgd_tile_map_index() == 0 {
+        if self.get_bkgd_tile_map_index() == 0 {
             &self.vram[TILE_MAP_0_RANGE]
         } else {
             &self.vram[TILE_MAP_1_RANGE]
-        };
-
-        tile_map
+        }
     }
 
     /// ```
@@ -470,13 +471,11 @@ impl PPU {
     fn get_wndw_tile_map(&self) -> &[u8] {
         // $00 for $9800-$9BFF
         // $01 for $9C00-$9FFF
-        let wndw_map = if self.get_wndw_tile_map_index() == 0 {
+        if self.get_wndw_tile_map_index() == 0 {
             &self.vram[TILE_MAP_0_RANGE]
         } else {
             &self.vram[TILE_MAP_1_RANGE]
-        };
-
-        wndw_map
+        }
     }
 
     /// ```
@@ -503,13 +502,11 @@ impl PPU {
     ///     Palette indices ([u8])
     /// ```
     fn get_spr_palette(&self, pal_0: bool) -> [u8; 4] {
-        let pal = if pal_0 {
+        if pal_0 {
             unpack_u8(self.vram[OBP0])
         } else {
             unpack_u8(self.vram[OBP1])
-        };
-
-        pal
+        }
     }
 
     /// ```
@@ -593,7 +590,7 @@ impl PPU {
     /// ```
     fn get_bkgd_wndw_tile_set_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(BG_WNDW_TILE_DATA_BIT) { return 1 } else { return 0 }
+        if lcd_control.get_bit(BG_WNDW_TILE_DATA_BIT) { 1 } else { 0 }
     }
 
     /// ```
@@ -606,7 +603,7 @@ impl PPU {
     /// ```
     fn get_bkgd_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(BG_TILE_MAP_BIT) { return 1 } else { return 0 }
+        if lcd_control.get_bit(BG_TILE_MAP_BIT) { 1 } else { 0 }
     }
 
     /// ```
@@ -619,7 +616,7 @@ impl PPU {
     /// ```
     fn get_wndw_tile_map_index(&self) -> u8 {
         let lcd_control = self.vram[LCDC];
-        if lcd_control.get_bit(WNDW_TILE_MAP_BIT) { return 1 } else { return 0 }
+        if lcd_control.get_bit(WNDW_TILE_MAP_BIT) { 1 } else { 0 }
     }
 
     /// ```
@@ -740,5 +737,5 @@ fn is_in_oam(addr: u16) -> bool {
 ///     Whether address is in tile set memory (bool)
 /// ```
 fn is_in_tile_set(addr: u16) -> bool {
-    addr >= TILE_SET && addr <= TILE_SET_END
+    addr <= TILE_SET_END
 }

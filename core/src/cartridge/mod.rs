@@ -109,6 +109,12 @@ pub struct Cart {
 // ==================
 // = Public Methods =
 // ==================
+impl Default for Cart {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Cart {
     pub fn new() -> Cart {
         Cart {
@@ -146,8 +152,8 @@ impl Cart {
     ///     Array of game data
     /// ```
     pub fn load_cart(&mut self, rom: &[u8]) {
-        for i in 0..rom.len() {
-            self.rom.push(rom[i]);
+        for byte in rom {
+            self.rom.push(*byte);
         }
         self.set_mbc();
         self.set_cgb();

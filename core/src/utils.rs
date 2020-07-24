@@ -13,10 +13,7 @@ pub struct Point {
 
 impl Point {
     pub fn new(x: u8, y: u8) -> Point {
-        Point {
-            x: x,
-            y: y
-        }
+        Point { x, y }
     }
 
     pub fn to_str(&self) -> String {

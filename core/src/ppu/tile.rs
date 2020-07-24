@@ -94,6 +94,5 @@ fn get_pixel_row(low: u8, high: u8) -> [u8; TILESIZE] {
 fn concat_bits(low: bool, high: bool) -> u8 {
     let low_bit = if low { 1 } else { 0 };
     let high_bit = if high { 1 } else { 0 };
-    let concat = (high_bit << 1) | low_bit;
-    concat
+    (high_bit << 1) | low_bit
 }

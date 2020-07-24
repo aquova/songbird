@@ -2129,7 +2129,7 @@ fn execute_cb_op(cpu: &mut Cpu, op: u8) -> u8 {
 }
 
 fn decode_cb_reg(op: u8) -> Regs {
-    let reg = match op & 0xF {
+    match op & 0xF {
         0x00 | 0x08 => { Regs::B },
         0x01 | 0x09 => { Regs::C },
         0x02 | 0x0A => { Regs::D },
@@ -2138,7 +2138,5 @@ fn decode_cb_reg(op: u8) -> Regs {
         0x05 | 0x0D => { Regs::L },
         0x07 | 0x0F => { Regs::A },
         _ => { unreachable!() }
-    };
-
-    reg
+    }
 }

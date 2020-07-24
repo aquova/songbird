@@ -61,8 +61,7 @@ impl RTC {
                 let bit_6 = if self.halted { 0 } else { 1 };
                 let bit_7 = ((self.days >> 9) & 0b1) as u8;
 
-                let output = (bit_7 << 7) | (bit_6 << 6) | bit_0;
-                output
+                (bit_7 << 7) | (bit_6 << 6) | bit_0
             },
             _ => { unreachable!() }
         }
@@ -71,11 +70,9 @@ impl RTC {
     pub fn write_byte(&mut self, val: u8) {
         if val == 0x00 {
             self.enabled = false;
-        } else if val == 0x01 {
-            if !self.enabled {
-                self.enabled = true;
-                self.latch_time();
-            }
+        } else if val == 0x01 && !self.enabled {
+            self.enabled = true;
+            self.latch_time();
         }
     }
 

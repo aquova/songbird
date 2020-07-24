@@ -74,6 +74,12 @@ pub struct Bus {
 // ==================
 // = Public methods =
 // ==================
+impl Default for Bus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Bus {
     pub fn new() -> Bus {
         Bus {
@@ -119,7 +125,7 @@ impl Bus {
     ///     Value at address (u8)
     /// ```
     pub fn read_ram(&self, addr: u16) -> u8 {
-        let val = match addr {
+        match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.read_cart(addr)
             },
@@ -130,9 +136,7 @@ impl Bus {
                     self.ppu.read_vram(addr)
                 }
             }
-        };
-
-        val
+        }
     }
 
     /// ```
@@ -217,8 +221,7 @@ impl Bus {
     pub fn get_title(&self) -> &str {
         // Strip trailing null characters, if any
         let raw_title = self.rom.get_title();
-        let title = raw_title.trim_end_matches(char::from(0));
-        title
+        raw_title.trim_end_matches(char::from(0))
     }
 
     /// ```

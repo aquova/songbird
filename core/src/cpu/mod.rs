@@ -78,6 +78,12 @@ pub struct Cpu {
     dirty_battery_ram: bool,
 }
 
+impl Default for Cpu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Cpu {
     pub fn new() -> Cpu {
         // Magic values from pandocs
@@ -146,11 +152,9 @@ impl Cpu {
     /// ```
     pub fn tick(&mut self) -> bool {
         let mut draw_time = false;
-        // Check for interrupts
-        let inter = self.interrupt_check();
 
-        if inter.is_some() {
-            let inter_type = inter.unwrap();
+        // Check for interrupts
+        if let Some(inter_type) = self.interrupt_check() {
             self.trigger_interrupt(inter_type);
         }
         // If halted, simply continue counting without executing opcodes
@@ -499,10 +503,10 @@ impl Cpu {
     /// ```
     pub fn get_flag(&self, f: Flags) -> bool {
         match f {
-            Flags::Z => { return (self.f & 0b1000_0000) != 0 },
-            Flags::N => { return (self.f & 0b0100_0000) != 0 },
-            Flags::H => { return (self.f & 0b0010_0000) != 0 },
-            Flags::C => { return (self.f & 0b0001_0000) != 0 },
+            Flags::Z => { (self.f & 0b1000_0000) != 0 },
+            Flags::N => { (self.f & 0b0100_0000) != 0 },
+            Flags::H => { (self.f & 0b0010_0000) != 0 },
+            Flags::C => { (self.f & 0b0001_0000) != 0 },
         }
     }
 
@@ -1196,9 +1200,9 @@ impl Cpu {
 
         // If more than one interrupt is waiting, then the lower bit has higher priority
         // aka VBLANK is highest priority, and JOYPAD is the lowest
-        for i in 0..INTER_PRIORITIES.len() {
+        for p in &INTER_PRIORITIES {
             if valid_interrupt & mask != 0 {
-                return Some(INTER_PRIORITIES[i])
+                return Some(*p)
             }
             mask <<= 1
         }
