@@ -61,7 +61,7 @@ pub fn mbc2_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
             }
         }
         _ => {
-            panic!("Writing to undefined address!");
+            // Do nothing
         }
     }
 
