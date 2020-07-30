@@ -26,6 +26,7 @@ use glium::{BlitTarget, Display, Surface};
 use glium::texture::{MipmapsOption, RawImage2d, Texture2d, UncompressedFloatFormat};
 use glium::uniforms::MagnifySamplerFilter;
 
+use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::Read;
@@ -40,8 +41,15 @@ const IMGUI_OFFSET: u32 = 8;
 const MENU_BAR_HEIGHT: u32 = 11;
 
 fn main() {
+    let args: Vec<_> = env::args().collect();
+    let filename = if args.len() > 1 {
+        Some(args[1].clone())
+    } else {
+        None
+    };
+
     let is = ImguiSystem::new();
-    is.main_loop();
+    is.main_loop(filename);
 }
 
 // Imgui interface taken from here: https://gist.github.com/RainbowCookie32/7e5d76acf33d88f2145d5ebc047a5799
@@ -93,7 +101,7 @@ impl ImguiSystem {
     ///
     /// Passes control of emulation to the event loop, which runs forever
     /// ```
-    pub fn main_loop(self) {
+    pub fn main_loop(self, filename: Option<String>) {
         let ImguiSystem {
             event_loop,
             display,
@@ -103,6 +111,9 @@ impl ImguiSystem {
         } = self;
 
         let mut main_menu = MenuState::new();
+        if let Some(f) = filename {
+            main_menu.set_rom_filename(f);
+        }
         let mut gb = Cpu::new();
         let mut running = false;
         let mut texture_id = None;

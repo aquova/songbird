@@ -88,6 +88,19 @@ impl MenuState {
     }
 
     /// ```
+    /// Set ROM filename
+    ///
+    /// Manually set the name of the ROM to open, indicate load required
+    ///
+    /// Input:
+    ///     Filepath of ROM to open
+    /// ```
+    pub fn set_rom_filename(&mut self, filename: String) {
+        self.filename = Some(filename);
+        self.load_required = true;
+    }
+
+    /// ```
     /// Is load time?
     ///
     /// Is it time to load a new ROM?
