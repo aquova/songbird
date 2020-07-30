@@ -4,9 +4,11 @@ linux_task:
 
   build_script:
     - make gui
+    - mv gui/target/release/songbird_gui .
+    - songbird_gui songbird_linux
 
   songbird_artifacts:
-    path: gui/target/release/songbird_gui
+    path: songbird_linux
 
 osx_task:
   osx_instance:
@@ -18,9 +20,11 @@ osx_task:
 
   build_script:
     - make gui
+    - mv gui/target/release/songbird_gui .
+    - mv songbird_gui songbird_mac
 
   songbird_artifacts:
-    path: gui/target/release/songbird_gui
+    path: songbird_mac
 
 win_task:
   container:
@@ -28,9 +32,11 @@ win_task:
 
   build_script:
     - make windows
+    - mv gui/target/x86_64-pc-windows-gnu/release/songbird_gui.exe .
+    - mv songbird_gui.exe songbird_win.exe
 
   songbird_artifacts:
-    path: gui/target/x86_64-pc-windows-gnu/release/songbird_gui.exe
+    path: songbird_win.exe
 
 wasm_task:
   container:
