@@ -178,13 +178,13 @@ impl Cpu {
         match clock_result {
             ClockResults::RenderFrame => {
                 // Render the final scanline before rendering frame
-                self.bus.render_scanline();
+                self.bus.render_scanline(self.mode);
                 // If time to render frame, then VBLANK interrupt is toggled
                 self.enable_interrupt(Interrupts::VBLANK);
                 draw_time = true;
             },
             ClockResults::RenderScanline => {
-                self.bus.render_scanline();
+                self.bus.render_scanline(self.mode);
             },
             _ => {
                 // Do nothing

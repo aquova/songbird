@@ -182,8 +182,11 @@ impl PPU {
     /// Render scanline
     ///
     /// Renders specified scanline to buffer
+    ///
+    /// Input:
+    ///     GB hardware type
     /// ```
-    pub fn render_scanline(&mut self) {
+    pub fn render_scanline(&mut self, mode: GB) {
         // Render current scanline
         let line = self.vram[LY];
         let mut pixel_row = [0; SCREEN_WIDTH];
@@ -192,12 +195,12 @@ impl PPU {
             self.render_background_line(&mut pixel_row, line);
         }
 
-        if self.is_wndw_dspl() {
+        if self.is_wndw_dspl(mode) {
             self.render_wndw_line(&mut pixel_row, line);
         }
 
         if self.is_sprt_dspl() {
-            self.render_sprite_line(&mut pixel_row, line);
+            self.render_sprite_line(&mut pixel_row, line, mode);
         }
 
         // Copy this line of pixels into overall screen buffer
@@ -335,8 +338,9 @@ impl PPU {
     /// Inputs:
     ///     Array to load pixel data into (&[u8])
     ///     Scanline to render (u8)
+    ///     GB hardware type
     /// ```
-    fn render_sprite_line(&self, pixel_row: &mut [u8], line: u8) {
+    fn render_sprite_line(&self, pixel_row: &mut [u8], line: u8, mode: GB) {
         // Iterate through every sprite
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
@@ -354,7 +358,11 @@ impl PPU {
             }
 
             let palette = self.get_spr_palette(spr.is_pal_0());
-            let above_bg = spr.is_above_bkgd();
+            let mut above_bg = spr.is_above_bkgd();
+            if mode == GB::CGB {
+                let lcd_control = self.vram[LCDC];
+                above_bg |= lcd_control.get_bit(BG_DISP_BIT);
+            }
 
             let (top_x, top_y) = spr.get_coords();
             // Get which row in the sprite we're drawing
@@ -562,9 +570,15 @@ impl PPU {
     /// Output:
     ///     Whether window layer is visible (bool)
     /// ```
-    fn is_wndw_dspl(&self) -> bool {
+    fn is_wndw_dspl(&self, mode: GB) -> bool {
         let lcd_control = self.vram[LCDC];
-        lcd_control.get_bit(WNDW_DISP_BIT)
+        let mut is_dspl = lcd_control.get_bit(WNDW_DISP_BIT);
+        if mode == GB::CGB_DMG {
+            // For CGB running in DMG mode, the BG bit can also disable the background
+            is_dspl &= lcd_control.get_bit(BG_DISP_BIT);
+        }
+
+        is_dspl
     }
 
     /// ```

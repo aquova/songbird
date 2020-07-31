@@ -246,9 +246,12 @@ impl Bus {
     /// Render scanline
     ///
     /// Renders the current scanline into the screen buffer
+    ///
+    /// Input:
+    ///     GB hardware type
     /// ```
-    pub fn render_scanline(&mut self) {
-        self.ppu.render_scanline();
+    pub fn render_scanline(&mut self, mode: GB) {
+        self.ppu.render_scanline(mode);
     }
 
     /// ```
