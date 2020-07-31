@@ -5,7 +5,7 @@ linux_task:
   build_script:
     - make gui
     - mv gui/target/release/songbird_gui .
-    - songbird_gui songbird_linux
+    - mv songbird_gui songbird_linux
 
   songbird_artifacts:
     path: songbird_linux
