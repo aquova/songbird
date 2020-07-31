@@ -6,6 +6,15 @@ pub const SCREEN_HEIGHT: usize = 144;
 pub const COLOR_CHANNELS: usize = 4;
 pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT * COLOR_CHANNELS;
 
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone, PartialEq)]
+pub enum GB {
+    DMG,
+    CGB_DMG,
+    CGB,
+    SGB
+}
+
 pub struct Point {
     pub x: u8,
     pub y: u8

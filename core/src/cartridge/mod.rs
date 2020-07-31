@@ -4,6 +4,7 @@ mod mbc3;
 mod mbc5;
 mod rtc;
 
+use crate::utils::GB;
 use std::str::from_utf8;
 use mbc1::{mbc1_read_byte, mbc1_write_byte};
 use mbc2::{mbc2_read_byte, mbc2_write_byte};
@@ -101,7 +102,6 @@ pub struct Cart {
     ram: Vec<u8>,
     ext_ram_enable: bool,
     rom_mode: bool,
-    cgb: bool,
     rtc: RTC,
     has_battery: bool,
 }
@@ -125,7 +125,6 @@ impl Cart {
             ram: Vec::new(),
             ext_ram_enable: false,
             rom_mode: true,
-            cgb: false,
             rtc: RTC::new(),
             has_battery: false,
         }
@@ -150,15 +149,19 @@ impl Cart {
     ///
     /// Input:
     ///     Array of game data
+    ///
+    /// Output:
+    ///     Type of cart
     /// ```
-    pub fn load_cart(&mut self, rom: &[u8]) {
+    pub fn load_cart(&mut self, rom: &[u8]) -> GB {
         for byte in rom {
             self.rom.push(*byte);
         }
         self.set_mbc();
-        self.set_cgb();
         self.init_ext_ram();
         self.detect_battery();
+
+        self.get_cgb()
     }
 
     /// ```
@@ -231,11 +234,14 @@ impl Cart {
     ///
     /// Returns the title of the game
     ///
+    /// Input:
+    ///     Whether game is GBC game
+    ///
     /// Output:
     ///     Title of the game, from ROM (&str)
     /// ```
-    pub fn get_title(&self) -> &str {
-        let data = if self.cgb {
+    pub fn get_title(&self, is_cgb: bool) -> &str {
+        let data = if is_cgb {
             &self.rom[TITLE_ADDR..DMG_TITLE_ADDR_END]
         } else {
             &self.rom[TITLE_ADDR..CGB_FLAG_ADDR]
@@ -296,9 +302,19 @@ impl Cart {
     ///
     /// Sets whether the game has Game Boy Color support
     /// ```
-    fn set_cgb(&mut self) {
+    fn get_cgb(&self) -> GB {
         let val = self.rom[CGB_FLAG_ADDR];
-        self.cgb = (val == DMG_CGB_FLAG) || (val == CGB_ONLY_FLAG);
+        match val {
+            DMG_CGB_FLAG => {
+                GB::CGB_DMG
+            },
+            CGB_ONLY_FLAG => {
+                GB::CGB
+            },
+            _ => {
+                GB::DMG
+            }
+        }
     }
 
     /// ```

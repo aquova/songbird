@@ -70,6 +70,7 @@ pub struct Cpu {
     f: u8,
     h: u8,
     l: u8,
+    mode: GB,
     clock: Clock,
     timer: Timer,
     interrupt_enabled: bool,
@@ -98,6 +99,7 @@ impl Cpu {
             f: 0xB0,
             h: 0x01,
             l: 0x4D,
+            mode: GB::DMG,
             clock: Clock::new(),
             timer: Timer::new(),
             interrupt_enabled: false,
@@ -222,7 +224,8 @@ impl Cpu {
     ///     Game name (&str)
     /// ```
     pub fn get_title(&self) -> &str {
-        self.bus.get_title()
+        let is_cgb = self.mode == GB::CGB_DMG || self.mode == GB::CGB;
+        self.bus.get_title(is_cgb)
     }
 
     /// ```
@@ -285,7 +288,7 @@ impl Cpu {
     ///     Game data (&[u8])
     /// ```
     pub fn load_game(&mut self, rom: &[u8]) {
-        self.bus.load_game(rom);
+        self.mode = self.bus.load_game(rom);
     }
 
     /// ```

@@ -1,7 +1,7 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
-use crate::utils::{BYTE, DISP_SIZE};
+use crate::utils::{BYTE, DISP_SIZE, GB};
 
 /*
  * RAM Map
@@ -96,9 +96,12 @@ impl Bus {
     ///
     /// Input:
     ///     ROM data (&[u8])
+    ///
+    /// Output:
+    ///     Which type of system this cart requires
     /// ```
-    pub fn load_game(&mut self, rom: &[u8]) {
-        self.rom.load_cart(&rom);
+    pub fn load_game(&mut self, rom: &[u8]) -> GB {
+        self.rom.load_cart(&rom)
     }
 
     /// ```
@@ -218,9 +221,9 @@ impl Bus {
     /// Output:
     ///     Game title from ROM (&str)
     /// ```
-    pub fn get_title(&self) -> &str {
+    pub fn get_title(&self, is_cgb: bool) -> &str {
         // Strip trailing null characters, if any
-        let raw_title = self.rom.get_title();
+        let raw_title = self.rom.get_title(is_cgb);
         raw_title.trim_end_matches(char::from(0))
     }
 
