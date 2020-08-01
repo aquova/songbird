@@ -17,6 +17,8 @@ const VRAM_OFFSET: usize = 0x8000;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
 const SPR_PER_LINE: usize = 10;
+const CGB_BG_PAL_DATA_SIZE: usize = 0x40 * 2;
+const CGB_SPR_PAL_DATA_SIZE: usize = 64;
 
 // VRAM registers
 const LCDC: usize                    = 0xFF40 - VRAM_OFFSET;
@@ -31,6 +33,12 @@ const OBP0: usize                    = 0xFF48 - VRAM_OFFSET;
 const OBP1: usize                    = 0xFF49 - VRAM_OFFSET;
 const WY: usize                      = 0xFF4A - VRAM_OFFSET;
 const WX: usize                      = 0xFF4B - VRAM_OFFSET;
+
+// CGB Palette registers
+const BGPI: usize                    = 0xFF68 - VRAM_OFFSET;
+const BGPD: usize                    = 0xFF69 - VRAM_OFFSET;
+const OBPI: usize                    = 0xFF6A - VRAM_OFFSET;
+const OBPD: usize                    = 0xFF6B - VRAM_OFFSET;
 
 // VRAM ranges
 const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
@@ -77,6 +85,8 @@ pub struct PPU {
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
     last_wndw_line: Option<u8>,
+    cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
+    cgb_spr_pal_data: [u8; CGB_SPR_PAL_DATA_SIZE],
 }
 
 impl Default for PPU {
@@ -96,6 +106,8 @@ impl PPU {
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
             last_wndw_line: None,
+            cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
+            cgb_spr_pal_data: [0; CGB_SPR_PAL_DATA_SIZE],
         }
     }
 
@@ -136,13 +148,24 @@ impl PPU {
     ///
     /// Input:
     ///     Address to read from (u16)
+    ///     System mode (GB)
     ///
     /// Output:
     ///     Value at given address (u8)
     /// ```
-    pub fn read_vram(&self, raw_addr: u16) -> u8 {
+    pub fn read_vram(&self, raw_addr: u16, mode: GB) -> u8 {
         let addr = raw_addr - VRAM_OFFSET as u16;
-        self.vram[addr as usize]
+        if mode == GB::CGB || mode == GB::CGB {
+            if (addr as usize) == BGPD {
+                self.read_cgb_bg_color()
+            } else if (addr as usize) == OBPD {
+                self.read_cgb_spr_color()
+            } else {
+                self.vram[addr as usize]
+            }
+        } else {
+            self.vram[addr as usize]
+        }
     }
 
     /// ```
@@ -722,6 +745,31 @@ impl PPU {
         }
     }
 
+    /// ```
+    /// Read CGB Background color data
+    ///
+    /// Gets the color data from the specified index
+    ///
+    /// Output:
+    ///     Partial color data loaded into the palette data RAM register
+    /// ```
+    fn read_cgb_bg_color(&self) -> u8 {
+        let ind = self.vram[BGPI] & 0x3F;
+        self.cgb_bg_pal_data[ind as usize]
+    }
+
+    /// ```
+    /// Read CGB sprite color data
+    ///
+    /// Gets the color data from the specified index
+    ///
+    /// Output:
+    ///     Partial color data loaded into the palette data RAM register
+    /// ```
+    fn read_cgb_spr_color(&self) -> u8 {
+        let ind = self.vram[OBPI];
+        self.cgb_spr_pal_data[ind as usize]
+    }
 }
 
 /// ```

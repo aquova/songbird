@@ -123,11 +123,12 @@ impl Bus {
     ///
     /// Input:
     ///     RAM address (u16)
+    ///     System mode (GB)
     ///
     /// Output:
     ///     Value at address (u8)
     /// ```
-    pub fn read_ram(&self, addr: u16) -> u8 {
+    pub fn read_ram(&self, addr: u16, mode: GB) -> u8 {
         match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.read_cart(addr)
@@ -136,7 +137,7 @@ impl Bus {
                 if addr == JOYPAD_REG {
                     self.io.read_btns()
                 } else {
-                    self.ppu.read_vram(addr)
+                    self.ppu.read_vram(addr, mode)
                 }
             }
         }
@@ -150,11 +151,12 @@ impl Bus {
     /// Input:
     ///     RAM address (u16)
     ///     Value to write (u8)
+    ///     System mode (GB)
     ///
     /// Output:
     ///     Whether data was written to battery-saved RAM
     /// ```
-    pub fn write_ram(&mut self, addr: u16, val: u8) -> bool {
+    pub fn write_ram(&mut self, addr: u16, val: u8, mode: GB) -> bool {
         match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.write_cart(addr, val)
@@ -165,7 +167,7 @@ impl Bus {
                         self.io.poll_btns(val);
                     },
                     DMA_REG => {
-                        self.oam_dma(val);
+                        self.oam_dma(val, mode);
                     },
                     _ => {
                         self.ppu.write_vram(addr, val);
@@ -289,15 +291,16 @@ impl Bus {
     ///
     /// Input:
     ///     Upper byte of source memory location (u8)
+    ///     System mode (GB)
     /// ```
-    fn oam_dma(&mut self, val: u8) {
+    fn oam_dma(&mut self, val: u8, mode: GB) {
         // If value is $XX, then copy $XX00-$XX9F into OAM RAM
         let source_addr = (val as u16).wrapping_shl(BYTE as u32);
         let dest_addr = OAM;
 
         for i in 0..0xA0 {
-            let byte = self.read_ram(source_addr + i);
-            self.write_ram(dest_addr + i, byte);
+            let byte = self.read_ram(source_addr + i, mode);
+            self.write_ram(dest_addr + i, byte, mode);
         }
     }
 }

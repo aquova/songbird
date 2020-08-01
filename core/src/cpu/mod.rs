@@ -726,7 +726,7 @@ impl Cpu {
     pub fn read_ram(&self, addr: u16) -> u8 {
         match addr {
             DIV..=TAC => { self.timer.read_timer(addr) },
-            _ => { self.bus.read_ram(addr) }
+            _ => { self.bus.read_ram(addr, self.mode) }
         }
     }
 
@@ -1154,7 +1154,7 @@ impl Cpu {
                 self.timer.write_timer(addr, val);
             },
             _ => {
-                self.dirty_battery_ram |= self.bus.write_ram(addr, val);
+                self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
             }
         }
     }
