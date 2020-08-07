@@ -170,7 +170,7 @@ impl Bus {
                         self.oam_dma(val, mode);
                     },
                     _ => {
-                        self.ppu.write_vram(addr, val);
+                        self.ppu.write_vram(addr, val, mode);
                     }
                 }
                 false

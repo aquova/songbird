@@ -119,8 +119,9 @@ impl PPU {
     /// Inputs:
     ///     Address to write to (u16)
     ///     Value to write (u8)
+    ///     System mode (GB)
     /// ```
-    pub fn write_vram(&mut self, raw_addr: u16, val: u8) {
+    pub fn write_vram(&mut self, raw_addr: u16, val: u8, mode: GB) {
         let addr = raw_addr - VRAM_OFFSET as u16;
 
         if self.is_valid_status(raw_addr) {
@@ -138,6 +139,17 @@ impl PPU {
             }
 
             self.vram[addr as usize] = val;
+            if mode == GB::CGB || mode == GB::CGB {
+                if (addr as usize) == BGPD {
+                    self.write_cgb_bg_color(val);
+                } else if (addr as usize) == OBPD {
+                    self.write_cgb_spr_color(val);
+                } else {
+                    self.vram[addr as usize] = val;
+                }
+            } else {
+                self.vram[addr as usize] = val;
+            }
         }
     }
 
@@ -759,6 +771,19 @@ impl PPU {
     }
 
     /// ```
+    /// Write CGB Background color data
+    ///
+    /// Sets the color data from the specified index
+    ///
+    /// Input:
+    ///     New value for the index set in BGPI
+    /// ```
+    fn write_cgb_bg_color(&mut self, val: u8) {
+        let ind = self.vram[BGPI] & 0x3F;
+        self.cgb_bg_pal_data[ind as usize] = val;
+    }
+
+    /// ```
     /// Read CGB sprite color data
     ///
     /// Gets the color data from the specified index
@@ -769,6 +794,19 @@ impl PPU {
     fn read_cgb_spr_color(&self) -> u8 {
         let ind = self.vram[OBPI];
         self.cgb_spr_pal_data[ind as usize]
+    }
+
+    /// ```
+    /// Write CGB sprite color data
+    ///
+    /// Sets the color data from the specified index
+    ///
+    /// Input:
+    ///     New value for the index set in OBPI
+    /// ```
+    fn write_cgb_spr_color(&mut self, val: u8) {
+        let ind = self.vram[OBPI];
+        self.cgb_spr_pal_data[ind as usize] = val;
     }
 }
 
