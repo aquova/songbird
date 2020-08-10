@@ -5,6 +5,9 @@
 mod menu;
 
 #[macro_use]
+extern crate glium;
+
+#[macro_use]
 extern crate imgui;
 
 use crate::menu::MenuState;
@@ -12,7 +15,7 @@ use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-use imgui::{Condition, Context, Image, TextureId, Window};
+use imgui::Context;
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
@@ -22,23 +25,28 @@ use glium::glutin::event::{ElementState, Event, KeyboardInput, WindowEvent, Virt
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
 
-use glium::{BlitTarget, Display, Surface};
-use glium::texture::{MipmapsOption, RawImage2d, Texture2d, UncompressedFloatFormat};
-use glium::uniforms::MagnifySamplerFilter;
+use glium::{Display, Program, Surface, VertexBuffer};
+use glium::index::{NoIndices, PrimitiveType};
+use glium::texture::{RawImage2d, Texture2d};
 
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::Read;
-use std::rc::Rc;
 
 // Constants
 const SCALE: usize = 5;
 const WINDOW_WIDTH: u32 = (SCREEN_WIDTH * SCALE) as u32;
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT * SCALE) as u32;
-const IMGUI_MARGIN: u32 = 16;
 const IMGUI_OFFSET: u32 = 8;
 const MENU_BAR_HEIGHT: u32 = 11;
+
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2],
+}
+
+implement_vertex!(Vertex, position);
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -116,19 +124,29 @@ impl ImguiSystem {
         }
         let mut gb = Cpu::new();
         let mut running = false;
-        let mut texture_id = None;
 
         event_loop.run(move |event, _, control_flow| {
-            // This is the actual window that displays the emulation
-            let emu_window = Window::new(im_str!("Songbird"))
-                // The right/bottom parts of the window get cutoff, and require a somewhat arbitrary buffer so they show up correctly on screen, for some reason
-                .size([(WINDOW_WIDTH + IMGUI_MARGIN) as f32, (WINDOW_HEIGHT + IMGUI_MARGIN) as f32], Condition::Once)
-                .position([-(IMGUI_OFFSET as f32), MENU_BAR_HEIGHT as f32], Condition::Once)
-                .title_bar(false)
-                .resizable(false)
-                .movable(false)
-                .scroll_bar(false)
-                .draw_background(false);
+            let program = Program::from_source(
+                &display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/none.frag"),
+                None
+            ).unwrap();
+
+            // Render 2 triangles covering whole screen
+            let vertices = [
+                // Top left
+                Vertex{position: [-1.0, 1.0]},
+                Vertex{position: [1.0, 1.0]},
+                Vertex{position: [-1.0, -1.0]},
+
+                // Bottom right
+                Vertex{position: [-1.0, -1.0]},
+                Vertex{position: [1.0, 1.0]},
+                Vertex{position: [1.0, -1.0]},
+            ];
+
+            let vertex_buffer = VertexBuffer::new(&display, &vertices).unwrap();
 
             match event {
                 Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
@@ -160,20 +178,28 @@ impl ImguiSystem {
                     main_menu.create_menu(&ui);
                     main_menu.handle_file_dialog(&ui);
 
+                    let gl_window = display.gl_window();
+                    let mut target = display.draw();
+                    target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+
                     // Only run emulator and draw screen if ROM has actually been selected and loaded
                     if running {
                         let filename = main_menu.get_rom_filename();
                         tick_until_draw(&mut gb, filename);
                         let disp_arr = gb.render();
-                        render_texture(&disp_arr, &display, &mut renderer, &mut texture_id);
-                        emu_window.build(&ui, || {
-                            Image::new(texture_id.unwrap(), [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32]).build(&ui);
-                        });
+
+                        let image = RawImage2d::from_raw_rgba_reversed(&disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+                        let texture = Texture2d::new(&display, image).unwrap();
+
+                        target.draw(
+                            &vertex_buffer,
+                            &NoIndices(PrimitiveType::TrianglesList),
+                            &program,
+                            &uniform! {tex: &texture, scale: SCALE as i32},
+                            &Default::default()
+                        ).unwrap();
                     }
 
-                    let gl_window = display.gl_window();
-                    let mut target = display.draw();
-                    target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
                     platform.prepare_render(&ui, gl_window.window());
 
                     let draw_data = ui.render();
@@ -186,53 +212,6 @@ impl ImguiSystem {
                 }
             }
         });
-    }
-}
-
-/// ```
-/// Render texture
-///
-/// Takes RGBA pixels from a frame and renders the latest texture frame
-///
-/// Inputs:
-///     Array of RGBA pixel data (&[u8])
-///     Glium display (&Display)
-///     Rendering context (&Renderer)
-///     Texture ID of the newly rendered texture (Option<TextureId>)
-/// ```
-fn render_texture(disp_arr: &[u8], display: &Display, renderer: &mut Renderer, texture_id: &mut Option<TextureId>) {
-    let dest_texture = Texture2d::empty_with_format(
-        display,
-        UncompressedFloatFormat::U8U8U8U8,
-        MipmapsOption::NoMipmap,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT
-    ).unwrap();
-
-    // Copy our RGBA pixel data into openGL texture
-    let image = RawImage2d::from_raw_rgba(disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
-    let source_texture = Texture2d::new(display, image).unwrap();
-
-    let dest_rect = BlitTarget {
-        left: 0,
-        bottom: 0,
-        width: WINDOW_WIDTH as i32,
-        height: WINDOW_HEIGHT as i32,
-    };
-
-    // Blit pixel data onto destination surface
-    source_texture.as_surface().blit_whole_color_to(
-        &dest_texture.as_surface(),
-        &dest_rect,
-        MagnifySamplerFilter::Nearest
-    );
-
-    // Need to replace texture if they exist to avoid massive memory usage
-    if texture_id.is_some() {
-        renderer.textures().replace(texture_id.unwrap(), Rc::new(dest_texture));
-    } else {
-        let new_id = renderer.textures().insert(Rc::new(dest_texture));
-        *texture_id = Some(new_id);
     }
 }
 
