@@ -10,7 +10,7 @@ extern crate glium;
 #[macro_use]
 extern crate imgui;
 
-use crate::menu::MenuState;
+use crate::menu::{MenuState, Shaders};
 use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -123,16 +123,11 @@ impl ImguiSystem {
             main_menu.set_rom_filename(f);
         }
         let mut gb = Cpu::new();
+        let mut curr_shader = Shaders::None;
         let mut running = false;
 
         event_loop.run(move |event, _, control_flow| {
-            let program = Program::from_source(
-                &display,
-                include_str!("shaders/base.vert"),
-                include_str!("shaders/none.frag"),
-                None
-            ).unwrap();
-
+            let mut program = load_shader(&display, curr_shader);
             // Render 2 triangles covering whole screen
             let vertices = [
                 // Top left
@@ -177,6 +172,11 @@ impl ImguiSystem {
                     // Always draw menu bar, regardless if running game or not
                     main_menu.create_menu(&ui);
                     main_menu.handle_file_dialog(&ui);
+                    let new_shader = main_menu.handle_display_dialog(&ui);
+                    if new_shader != curr_shader {
+                        program = load_shader(&display, new_shader);
+                        curr_shader = new_shader;
+                    }
 
                     let gl_window = display.gl_window();
                     let mut target = display.draw();
@@ -212,6 +212,27 @@ impl ImguiSystem {
                 }
             }
         });
+    }
+}
+
+fn load_shader(display: &Display, shad: Shaders) -> Program {
+    match shad {
+        Shaders::None => {
+            Program::from_source(
+                display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/none.frag"),
+                None
+            ).unwrap()
+        },
+        Shaders::Greenscale => {
+            Program::from_source(
+                display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/greenscale.frag"),
+                None
+            ).unwrap()
+        },
     }
 }
 

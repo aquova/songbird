@@ -1,10 +1,17 @@
 extern crate imgui_file_explorer;
 
-use imgui::{MenuItem, Ui, Window};
+use imgui::{ComboBox, MenuItem, Ui, Window};
 use imgui_file_explorer::UiFileExplorer;
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum Shaders {
+    None,
+    Greenscale,
+}
 
 pub struct MenuState {
     show_rom_dialog: bool,
+    shader_index: usize,
     filename: Option<String>,
     load_required: bool,
 }
@@ -13,6 +20,7 @@ impl MenuState {
     pub fn new() -> MenuState {
         MenuState {
             show_rom_dialog: false,
+            shader_index: 0,
             filename: None,
             load_required: false,
         }
@@ -28,9 +36,19 @@ impl MenuState {
     /// ```
     pub fn create_menu(&mut self, ui: &Ui) {
         if let Some(menu_bar) = ui.begin_main_menu_bar() {
+            // Main menu
             if let Some(menu) = ui.begin_menu(im_str!("Menu"), true) {
                 MenuItem::new(im_str!("Open ROM"))
                     .build_with_ref(ui, &mut self.show_rom_dialog);
+                menu.end(ui);
+            }
+            // Appearance menu
+            if let Some(menu) = ui.begin_menu(im_str!("Display"), true) {
+                let items = [
+                    im_str!("None"),
+                    im_str!("Greenscale"),
+                ];
+                ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &items);
                 menu.end(ui);
             }
             menu_bar.end(ui);
@@ -73,6 +91,14 @@ impl MenuState {
                 self.load_required = true;
             }
         }
+    }
+
+    pub fn handle_display_dialog(&self, _ui: &Ui) -> Shaders {
+        let shaders = [
+            Shaders::None,
+            Shaders::Greenscale,
+        ];
+        shaders[self.shader_index]
     }
 
     /// ```
