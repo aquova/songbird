@@ -233,6 +233,14 @@ fn load_shader(display: &Display, shad: Shaders) -> Program {
                 None
             ).unwrap()
         },
+        Shaders::CRT => {
+            Program::from_source(
+                display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/crt.frag"),
+                None
+            ).unwrap()
+        },
     }
 }
 

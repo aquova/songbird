@@ -7,6 +7,7 @@ use imgui_file_explorer::UiFileExplorer;
 pub enum Shaders {
     None,
     Greenscale,
+    CRT,
 }
 
 pub struct MenuState {
@@ -47,6 +48,7 @@ impl MenuState {
                 let items = [
                     im_str!("None"),
                     im_str!("Greenscale"),
+                    im_str!("CRT"),
                 ];
                 ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &items);
                 menu.end(ui);
@@ -97,6 +99,7 @@ impl MenuState {
         let shaders = [
             Shaders::None,
             Shaders::Greenscale,
+            Shaders::CRT,
         ];
         shaders[self.shader_index]
     }

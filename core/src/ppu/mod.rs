@@ -60,8 +60,8 @@ const LYC_LY_INTERRUPT_BIT: u8 =    6;
 
 // Colors
 const BLACK: [u8; COLOR_CHANNELS]            = [0,   0,   0,   255];
-const LIGHT_GRAY: [u8; COLOR_CHANNELS]       = [148, 148, 165, 255];
-const DARK_GRAY: [u8; COLOR_CHANNELS]        = [107, 107, 90,  255];
+const DARK_GRAY: [u8; COLOR_CHANNELS]        = [64, 64, 64, 255];
+const LIGHT_GRAY: [u8; COLOR_CHANNELS]       = [128, 128, 128, 255];
 const WHITE: [u8; COLOR_CHANNELS]            = [255, 255, 255, 255];
 
 const COLORS: [[u8; COLOR_CHANNELS]; 4] = [
