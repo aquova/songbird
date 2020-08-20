@@ -8,6 +8,8 @@ pub enum Shaders {
     None,
     Greenscale,
     CRT,
+    AsciiMono,
+    AsciiColor,
 }
 
 pub struct MenuState {
@@ -49,6 +51,8 @@ impl MenuState {
                     im_str!("None"),
                     im_str!("Greenscale"),
                     im_str!("CRT"),
+                    im_str!("ASCII 1-Bit"),
+                    im_str!("ASCII Color"),
                 ];
                 ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &items);
                 menu.end(ui);
@@ -100,6 +104,8 @@ impl MenuState {
             Shaders::None,
             Shaders::Greenscale,
             Shaders::CRT,
+            Shaders::AsciiMono,
+            Shaders::AsciiColor,
         ];
         shaders[self.shader_index]
     }

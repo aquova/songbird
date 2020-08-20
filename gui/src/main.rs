@@ -241,6 +241,22 @@ fn load_shader(display: &Display, shad: Shaders) -> Program {
                 None
             ).unwrap()
         },
+        Shaders::AsciiMono => {
+            Program::from_source(
+                display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/ascii-1bit.frag"),
+                None
+            ).unwrap()
+        },
+        Shaders::AsciiColor => {
+            Program::from_source(
+                display,
+                include_str!("shaders/base.vert"),
+                include_str!("shaders/ascii-color.frag"),
+                None
+            ).unwrap()
+        },
     }
 }
 
