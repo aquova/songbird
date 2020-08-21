@@ -7,7 +7,6 @@ use songbird_core::ppu::palette::Palettes;
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Shaders {
     None,
-    Greenscale,
     CRT,
     AsciiMono,
     AsciiColor,
@@ -71,7 +70,6 @@ impl MenuState {
 
                 let shader_items = [
                     im_str!("None"),
-                    im_str!("Greenscale"),
                     im_str!("CRT"),
                     im_str!("ASCII 1-Bit"),
                     im_str!("ASCII Color"),
@@ -130,7 +128,6 @@ impl MenuState {
 
         let shaders = [
             Shaders::None,
-            Shaders::Greenscale,
             Shaders::CRT,
             Shaders::AsciiMono,
             Shaders::AsciiColor,
