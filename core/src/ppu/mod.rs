@@ -1,6 +1,8 @@
+pub mod palette;
 mod sprite;
 mod tile;
 
+use palette::*;
 use sprite::{OAM_BYTE_SIZE, Sprite};
 use tile::{Tile, TILE_BYTES};
 use crate::cpu::clock::ModeTypes;
@@ -66,19 +68,6 @@ const LYC_LY_FLAG_BIT: u8 =         2;
 // const OAM_INTERRUPT_BIT: u8 =       5;
 const LYC_LY_INTERRUPT_BIT: u8 =    6;
 
-// Colors
-const BLACK: [u8; COLOR_CHANNELS]            = [0,   0,   0,   255];
-const LIGHT_GRAY: [u8; COLOR_CHANNELS]       = [148, 148, 165, 255];
-const DARK_GRAY: [u8; COLOR_CHANNELS]        = [107, 107, 90,  255];
-const WHITE: [u8; COLOR_CHANNELS]            = [255, 255, 255, 255];
-
-const COLORS: [[u8; COLOR_CHANNELS]; 4] = [
-    WHITE,
-    LIGHT_GRAY,
-    DARK_GRAY,
-    BLACK,
-];
-
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
     screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
@@ -87,6 +76,7 @@ pub struct PPU {
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
     cgb_spr_pal_data: [u8; CGB_SPR_PAL_DATA_SIZE],
+    sys_pal: Palettes,
 }
 
 impl Default for PPU {
@@ -108,6 +98,7 @@ impl PPU {
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
             cgb_spr_pal_data: [0; CGB_SPR_PAL_DATA_SIZE],
+            sys_pal: Palettes::GRAYSCALE,
         }
     }
 
@@ -271,6 +262,10 @@ impl PPU {
             map_array.copy_from_slice(&self.screen_buffer);
         }
         self.get_color(&map_array)
+    }
+
+    pub fn set_sys_pal(&mut self, pal: Palettes) {
+        self.sys_pal = pal;
     }
 
     // ===================
@@ -470,6 +465,7 @@ impl PPU {
     /// ```
     fn get_color(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
         let mut rgb_screen = [0; DISP_SIZE];
+        let pal = get_sys_pal(self.sys_pal);
         // Iterate through every visible pixel
         for y in 0..SCREEN_HEIGHT {
             for x in 0..SCREEN_WIDTH {
@@ -477,7 +473,7 @@ impl PPU {
                 let pixel = pixel_array[index];
 
                 let view_index = index * COLOR_CHANNELS;
-                let color = COLORS[pixel as usize];
+                let color = pal[pixel as usize];
                 rgb_screen[view_index..(color.len() + view_index)].clone_from_slice(&color[..]);
             }
         }
@@ -529,7 +525,7 @@ impl PPU {
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_bkgd_palette(&self) -> [u8; 4] {
+    fn get_bkgd_palette(&self) -> [u8; PAL_SIZE] {
         unpack_u8(self.vram[BGP])
     }
 
@@ -544,7 +540,7 @@ impl PPU {
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_spr_palette(&self, pal_0: bool) -> [u8; 4] {
+    fn get_spr_palette(&self, pal_0: bool) -> [u8; PAL_SIZE] {
         if pal_0 {
             unpack_u8(self.vram[OBP0])
         } else {

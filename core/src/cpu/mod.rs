@@ -5,6 +5,7 @@ pub mod timer;
 use clock::{Clock, ClockResults};
 use crate::bus::Bus;
 use crate::io::Buttons;
+use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use timer::*;
 
@@ -289,6 +290,10 @@ impl Cpu {
     /// ```
     pub fn load_game(&mut self, rom: &[u8]) {
         self.mode = self.bus.load_game(rom);
+    }
+
+    pub fn set_sys_pal(&mut self, pal: Palettes) {
+        self.bus.set_sys_pal(pal);
     }
 
     /// ```
