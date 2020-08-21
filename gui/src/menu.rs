@@ -2,8 +2,9 @@ extern crate imgui_file_explorer;
 
 use imgui::{ComboBox, MenuItem, Ui, Window};
 use imgui_file_explorer::UiFileExplorer;
+use songbird_core::ppu::palette::Palettes;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Shaders {
     None,
     Greenscale,
@@ -12,8 +13,24 @@ pub enum Shaders {
     AsciiColor,
 }
 
+#[derive(Eq, PartialEq)]
+pub struct DisplayOptions {
+    pub palette: Palettes,
+    pub shader: Shaders,
+}
+
+impl DisplayOptions {
+    pub fn new(pal: Palettes, shad: Shaders) -> DisplayOptions {
+        DisplayOptions {
+            palette: pal,
+            shader: shad
+        }
+    }
+}
+
 pub struct MenuState {
     show_rom_dialog: bool,
+    pal_index: usize,
     shader_index: usize,
     filename: Option<String>,
     load_required: bool,
@@ -23,6 +40,7 @@ impl MenuState {
     pub fn new() -> MenuState {
         MenuState {
             show_rom_dialog: false,
+            pal_index: 0,
             shader_index: 0,
             filename: None,
             load_required: false,
@@ -47,14 +65,19 @@ impl MenuState {
             }
             // Appearance menu
             if let Some(menu) = ui.begin_menu(im_str!("Display"), true) {
-                let items = [
+                let pal_items = [
+                    im_str!("Grayscale"),
+                ];
+
+                let shader_items = [
                     im_str!("None"),
                     im_str!("Greenscale"),
                     im_str!("CRT"),
                     im_str!("ASCII 1-Bit"),
                     im_str!("ASCII Color"),
                 ];
-                ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &items);
+                ComboBox::new(im_str!("Palette")).build_simple_string(ui, &mut self.pal_index, &pal_items);
+                ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &shader_items);
                 menu.end(ui);
             }
             menu_bar.end(ui);
@@ -99,7 +122,12 @@ impl MenuState {
         }
     }
 
-    pub fn handle_display_dialog(&self, _ui: &Ui) -> Shaders {
+    pub fn handle_display_dialog(&self, _ui: &Ui) -> DisplayOptions {
+        let palettes = [
+            Palettes::GRAYSCALE,
+        ];
+        let pal = palettes[self.pal_index];
+
         let shaders = [
             Shaders::None,
             Shaders::Greenscale,
@@ -107,7 +135,9 @@ impl MenuState {
             Shaders::AsciiMono,
             Shaders::AsciiColor,
         ];
-        shaders[self.shader_index]
+        let shad = shaders[self.shader_index];
+
+        DisplayOptions::new(pal, shad)
     }
 
     /// ```

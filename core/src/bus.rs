@@ -1,6 +1,7 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
+use crate::ppu::palette::Palettes;
 use crate::utils::{BYTE, DISP_SIZE};
 
 /*
@@ -259,6 +260,10 @@ impl Bus {
     pub fn set_status_reg(&mut self, mode: u8) {
         let mode = mode & 0b0000_0011;
         self.ppu.set_status(mode);
+    }
+
+    pub fn set_sys_pal(&mut self, pal: Palettes) {
+        self.ppu.set_sys_pal(pal);
     }
 
     /// ```

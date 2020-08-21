@@ -10,9 +10,10 @@ extern crate glium;
 #[macro_use]
 extern crate imgui;
 
-use crate::menu::{MenuState, Shaders};
+use crate::menu::{MenuState, DisplayOptions, Shaders};
 use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
+use songbird_core::ppu::palette::Palettes;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use imgui::Context;
@@ -123,11 +124,11 @@ impl ImguiSystem {
             main_menu.set_rom_filename(f);
         }
         let mut gb = Cpu::new();
-        let mut curr_shader = Shaders::None;
+        let mut curr_disp_opts = DisplayOptions::new(Palettes::GRAYSCALE, Shaders::None);
         let mut running = false;
 
         event_loop.run(move |event, _, control_flow| {
-            let mut program = load_shader(&display, curr_shader);
+            let mut program = load_shader(&display, curr_disp_opts.shader);
             // Render 2 triangles covering whole screen
             let vertices = [
                 // Top left
@@ -172,10 +173,11 @@ impl ImguiSystem {
                     // Always draw menu bar, regardless if running game or not
                     main_menu.create_menu(&ui);
                     main_menu.handle_file_dialog(&ui);
-                    let new_shader = main_menu.handle_display_dialog(&ui);
-                    if new_shader != curr_shader {
-                        program = load_shader(&display, new_shader);
-                        curr_shader = new_shader;
+                    let new_opts = main_menu.handle_display_dialog(&ui);
+                    if new_opts != curr_disp_opts {
+                        gb.set_sys_pal(curr_disp_opts.palette);
+                        program = load_shader(&display, curr_disp_opts.shader);
+                        curr_disp_opts = new_opts;
                     }
 
                     let gl_window = display.gl_window();
