@@ -19,6 +19,7 @@
  * Buttons will be LOW if pressed
  */
 
+#[derive(Copy, Clone, PartialEq)]
 pub enum Buttons {
     A,
     B,
