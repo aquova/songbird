@@ -7,6 +7,7 @@ let scale = 1
 let scale_elem = document.getElementById("scale")
 
 let my_storage = window.localStorage
+let anim_frame = 0
 
 let canvas = document.getElementById("canvas")
 update_canvas()
@@ -28,6 +29,11 @@ async function run() {
     })
 
     document.getElementById('fileinput').addEventListener("change", function (e) {
+        // Stop previous game from rendering, if one exists
+        if (anim_frame != 0) {
+            window.cancelAnimationFrame(anim_frame)
+        }
+
         let file = e.target.files[0]
         if (!file) {
             alert("Failed to read file")
@@ -69,7 +75,7 @@ function mainloop(gb) {
                 save_game(gb)
             }
 
-            window.requestAnimationFrame(() => {
+            anim_frame = window.requestAnimationFrame(() => {
                 mainloop(gb)
             })
 

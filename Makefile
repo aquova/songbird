@@ -5,7 +5,7 @@ WIN_TARGET = x86_64-pc-windows-gnu
 REL_FLAGS = --release
 DEBUG_FLAGS = --features "debug"
 
-all: gui wasm windows debug
+all: gui wasm windows term debug
 
 gui:
 	cd gui && \
@@ -21,11 +21,15 @@ windows:
 	cd gui && \
 	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS)
 
+term:
+	cd term && \
+	$(CARGO) build $(REL_FLAGS)
+
 debug:
 	cd gui && \
 	$(CARGO) build $(DEBUG_FLAGS)
 
-clean: clean_core clean_gui clean_wasm clean_windows
+clean: clean_core clean_gui clean_wasm clean_term clean_windows
 
 clean_core:
 	cd core && \
@@ -48,4 +52,8 @@ clean_gui:
 	$(CARGO) clean && \
 	rm -f imgui.ini
 
-.PHONY: all gui wasm windows debug clean
+clean_term:
+	cd term && \
+	$(CARGO) clean
+
+.PHONY: all gui wasm windows term debug clean
