@@ -1,14 +1,15 @@
-#version 460
+#version 150 core
 
 // Details on implementation from here:
 // https://www.gamasutra.com/blogs/SvyatoslavCherkasov/20140531/218753/Shader_tutorial_CRT_emulation.php
 
+in vec2 tex_coord;
 uniform sampler2D tex;
 uniform int scale;
 out vec4 color;
 
 void main() {
-    vec4 orig = texelFetch(tex, ivec2(gl_FragCoord.xy) / scale, 0);
+    vec4 orig = texture(tex, tex_coord);
     color = vec4(0.0, 0.0, 0.0, 1.0);
     int pp = int(gl_FragCoord.x) % 3;
     color[pp] = orig[pp];

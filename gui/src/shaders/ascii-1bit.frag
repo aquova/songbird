@@ -1,5 +1,6 @@
-#version 460
+#version 150 core
 
+in vec2 tex_coord;
 uniform sampler2D tex;
 uniform int scale;
 out vec4 color;
@@ -34,7 +35,7 @@ float character(int n, vec2 p) {
 }
 
 void main() {
-    vec4 orig = texelFetch(tex, ivec2(gl_FragCoord.xy) / scale, 0);
+    vec4 orig = texture(tex, tex_coord);
     float gray = 0.3 * orig.x + 0.59 * orig.y + 0.11 * orig.z;
 
     int char_ind = int(gray * 10);
