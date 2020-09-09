@@ -29,6 +29,7 @@ use glium::glutin::window::WindowBuilder;
 use glium::{Display, Program, Surface, VertexBuffer};
 use glium::index::{NoIndices, PrimitiveType};
 use glium::texture::{RawImage2d, Texture2d};
+use glium::uniforms::{MinifySamplerFilter, MagnifySamplerFilter};
 
 use std::env;
 use std::fs::{File, OpenOptions};
@@ -192,12 +193,18 @@ impl ImguiSystem {
 
                         let image = RawImage2d::from_raw_rgba_reversed(&disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
                         let texture = Texture2d::new(&display, image).unwrap();
+                        let uniform = uniform! {
+                            tex: texture.sampled()
+                                .minify_filter(MinifySamplerFilter::Nearest)
+                                .magnify_filter(MagnifySamplerFilter::Nearest),
+                            scale: SCALE as i32
+                        };
 
                         target.draw(
                             &vertex_buffer,
                             &NoIndices(PrimitiveType::TrianglesList),
                             &program,
-                            &uniform! {tex: &texture, scale: SCALE as i32},
+                            &uniform,
                             &Default::default()
                         ).unwrap();
                     }
