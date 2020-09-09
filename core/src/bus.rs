@@ -3,6 +3,7 @@ use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::ppu::palette::Palettes;
 use crate::utils::{BYTE, DISP_SIZE, GB};
+use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG};
 
 /*
  * RAM Map
@@ -57,19 +58,11 @@ const JOYPAD_REG: u16 = 0xFF00;
 const DMA_REG: u16 = 0xFF46;
 const OAM: u16 = 0xFE00;
 
-// RAM ranges
-// NOTE: Rust *still* doesn't allow exclusive ranges in match statements
-// So we have to define both start and end values
-const VRAM_START: u16           = ROM_STOP + 1;
-const VRAM_STOP: u16            = 0x9FFF;
-const WORK_RAM_START: u16       = EXT_RAM_STOP + 1;
-// const WORK_RAM_END: u16 = 0xDFFF;
-const RAM_END: u16              = 0xFFFF;
-
 pub struct Bus {
     rom: Cart,
     io: IO,
-    ppu: PPU
+    ppu: PPU,
+    wram: WRAM,
 }
 
 // ==================
@@ -86,7 +79,8 @@ impl Bus {
         Bus {
             rom: Cart::new(),
             io: IO::new(),
-            ppu: PPU::new()
+            ppu: PPU::new(),
+            wram: WRAM::new(),
         }
     }
 
@@ -134,12 +128,14 @@ impl Bus {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.read_cart(addr)
             },
-            VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
-                if addr == JOYPAD_REG {
-                    self.io.read_btns()
-                } else {
-                    self.ppu.read_vram(addr, mode)
-                }
+            WRAM_START..=WRAM_END => {
+                self.wram.read_wram(addr)
+            },
+            JOYPAD_REG => {
+                self.io.read_btns()
+            },
+            _ => {
+                self.ppu.read_vram(addr, mode)
             }
         }
     }
@@ -162,18 +158,24 @@ impl Bus {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.write_cart(addr, val)
             },
-            VRAM_START..=VRAM_STOP | WORK_RAM_START..=RAM_END => {
-                match addr {
-                    JOYPAD_REG => {
-                        self.io.poll_btns(val);
-                    },
-                    DMA_REG => {
-                        self.oam_dma(val, mode);
-                    },
-                    _ => {
-                        self.ppu.write_vram(addr, val, mode);
-                    }
-                }
+            WRAM_START..=WRAM_END => {
+                self.wram.write_wram(addr, val);
+                false
+            },
+            JOYPAD_REG => {
+                self.io.poll_btns(val);
+                false
+            },
+            DMA_REG => {
+                self.oam_dma(val, mode);
+                false
+            },
+            SVBK_REG => {
+                self.wram.set_wram_bank(val, mode);
+                false
+            },
+            _ => {
+                self.ppu.write_vram(addr, val, mode);
                 false
             }
         }

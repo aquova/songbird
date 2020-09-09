@@ -5,3 +5,4 @@ pub mod debug;
 pub mod io;
 pub mod ppu;
 pub mod utils;
+pub mod wram;
