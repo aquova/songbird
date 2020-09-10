@@ -96,7 +96,7 @@ impl MenuState {
 
             Window::new(im_str!("Open ROM.."))
                 .build(ui, || {
-                    let file = ui.file_explorer("/", &["gb"]);
+                    let file = ui.file_explorer("/", &["gb", "gbc"]);
                     if let Ok(Some(file)) = file {
                         let str = file.into_os_string().into_string();
                         match str {

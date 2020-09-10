@@ -107,7 +107,7 @@ impl WRAM {
     /// ```
     pub fn set_wram_bank(&mut self, val: u8, mode: GB) {
         // Bank switching only in CGB mode
-        if mode == GB::CGB {
+        if mode == GB::CGB || mode == GB::CGB_DMG {
             if val >= NUM_WRAM_BANKS as u8 || val == 0 {
                 self.wram_bank = 1;
             } else {

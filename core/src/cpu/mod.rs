@@ -290,6 +290,10 @@ impl Cpu {
     /// ```
     pub fn load_game(&mut self, rom: &[u8]) {
         self.mode = self.bus.load_game(rom);
+        // System determines if hardware is CGB if accumulator is $11 at start
+        if self.mode == GB::CGB_DMG || self.mode == GB::CGB {
+            self.set_reg(Regs::A, 0x11);
+        }
     }
 
     pub fn set_sys_pal(&mut self, pal: Palettes) {

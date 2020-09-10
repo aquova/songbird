@@ -142,7 +142,7 @@ impl PPU {
                     self.vram[vram_addr as usize] = val;
                 },
                 IO_START..=IO_END => {
-                    if mode == GB::CGB {
+                    if mode == GB::CGB || mode == GB::CGB_DMG {
                         match addr {
                             BGPD => {
                                 self.write_cgb_bg_color(val);
