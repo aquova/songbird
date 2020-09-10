@@ -44,7 +44,7 @@ use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
  * +----------------------+ $FF4C
  * |        Empty         |
  * +----------------------+ $FF80
- * |     Internal RAM     |
+ * |      High RAM        |
  * +----------------------+ $FFFE
  * | Interrupt Enable Reg |
  * +----------------------+ $FFFF
@@ -58,11 +58,16 @@ const JOYPAD_REG: u16 = 0xFF00;
 const DMA_REG: u16 = 0xFF46;
 const OAM: u16 = 0xFE00;
 
+const HRAM_START: u16 = 0xFF80;
+const HRAM_END: u16 = 0xFFFE;
+const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
+
 pub struct Bus {
     rom: Cart,
     io: IO,
     ppu: PPU,
     wram: WRAM,
+    hram: [u8; HRAM_SIZE],
 }
 
 // ==================
@@ -81,6 +86,7 @@ impl Bus {
             io: IO::new(),
             ppu: PPU::new(),
             wram: WRAM::new(),
+            hram: [0; HRAM_SIZE],
         }
     }
 
@@ -137,7 +143,11 @@ impl Bus {
             JOYPAD_REG => {
                 self.io.read_btns()
             },
-            _ => {
+            HRAM_START..=HRAM_END => {
+                let hram_index = addr - HRAM_START;
+                self.hram[hram_index as usize]
+            },
+            _ => { // $8000-$9FFF, $FE00-$FE9F, $FF00-$FF7F
                 self.ppu.read_vram(addr, mode)
             }
         }
@@ -157,31 +167,34 @@ impl Bus {
     ///     Whether data was written to battery-saved RAM
     /// ```
     pub fn write_ram(&mut self, addr: u16, val: u8, mode: GB) -> bool {
+        let mut battery_write = false;
         match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
-                self.rom.write_cart(addr, val)
+                self.rom.write_cart(addr, val);
+                battery_write = true;
             },
             WRAM_START..=WRAM_END => {
                 self.wram.write_wram(addr, val);
-                false
+            },
+            HRAM_START..=HRAM_END => {
+                let hram_addr = addr - HRAM_START;
+                self.hram[hram_addr as usize] = val;
             },
             JOYPAD_REG => {
                 self.io.poll_btns(val);
-                false
             },
             DMA_REG => {
                 self.oam_dma(val, mode);
-                false
             },
             SVBK_REG => {
                 self.wram.set_wram_bank(val, mode);
-                false
             },
-            _ => {
+            _ => { // $8000-$9FFF, $FE00-$FE9F, $FF00-$FF7F
                 self.ppu.write_vram(addr, val, mode);
-                false
             }
         }
+
+        battery_write
     }
 
     /// ```
