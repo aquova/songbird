@@ -3,7 +3,7 @@ use crate::io::{Buttons, IO};
 use crate::ppu::PPU;
 use crate::ppu::palette::Palettes;
 use crate::utils::{BYTE, DISP_SIZE, GB};
-use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG};
+use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
 
 /*
  * RAM Map
@@ -130,6 +130,9 @@ impl Bus {
             },
             WRAM_START..=WRAM_END => {
                 self.wram.read_wram(addr)
+            },
+            ECHO_START..=ECHO_END => {
+                self.wram.read_echo(addr)
             },
             JOYPAD_REG => {
                 self.io.read_btns()
