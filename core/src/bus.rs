@@ -59,7 +59,7 @@ const DMA_REG: u16 = 0xFF46;
 const OAM: u16 = 0xFE00;
 
 const HRAM_START: u16 = 0xFF80;
-const HRAM_END: u16 = 0xFFFE;
+const HRAM_END: u16 = 0xFFFF; // Include $FFFF as part of HRAM
 const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
 pub struct Bus {

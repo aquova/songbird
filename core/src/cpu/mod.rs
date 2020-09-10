@@ -12,8 +12,8 @@ use timer::*;
 // =============
 // = Constants =
 // =============
-const IF: u16 = 0xFF0F; // Interrupt Flag
-const IE: u16 = 0xFFFF; // Interrupt Enable
+const IF_REG: u16 = 0xFF0F; // Interrupt Flag
+const IE_REG: u16 = 0xFFFF; // Interrupt Enable
 const INTER_PRIORITIES: [Interrupts; 5] = [
     Interrupts::VBLANK,
     Interrupts::LCD_STAT,
@@ -1201,8 +1201,8 @@ impl Cpu {
         }
 
         // Interrupt must be requesting to occur
-        let if_reg = self.read_ram(IF);
-        let ie_reg = self.read_ram(IE);
+        let if_reg = self.read_ram(IF_REG);
+        let ie_reg = self.read_ram(IE_REG);
         let valid_interrupt = (if_reg & ie_reg) & 0x1F;
         let mut mask = 0b1;
 
@@ -1248,7 +1248,7 @@ impl Cpu {
     ///     Interrupt type (Interrupts)
     /// ```
     fn trigger_interrupt(&mut self, inter: Interrupts) {
-        let mut if_reg = self.read_ram(IF);
+        let mut if_reg = self.read_ram(IF_REG);
         let vector = self.get_inter_vector(inter);
         self.halted = false;
 
@@ -1267,7 +1267,7 @@ impl Cpu {
                 Interrupts::JOYPAD =>   { if_reg.clear_bit(4) },
             }
 
-            self.write_ram(IF, if_reg);
+            self.write_ram(IF_REG, if_reg);
             self.clock.clock_step(3);
         }
     }
@@ -1281,7 +1281,7 @@ impl Cpu {
     ///     Interrupt type (Interrupts)
     /// ```
     fn enable_interrupt(&mut self, inter: Interrupts) {
-        let mut if_reg = self.read_ram(IF);
+        let mut if_reg = self.read_ram(IF_REG);
 
         match inter {
             Interrupts::VBLANK =>   { if_reg.set_bit(0) },
@@ -1291,6 +1291,6 @@ impl Cpu {
             Interrupts::JOYPAD =>   { if_reg.set_bit(4) },
         }
 
-        self.write_ram(IF, if_reg);
+        self.write_ram(IF_REG, if_reg);
     }
 }

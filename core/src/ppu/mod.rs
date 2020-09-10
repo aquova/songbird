@@ -12,45 +12,50 @@ use std::ops::Range;
 // =============
 // = Constants =
 // =============
+
+// VRAM registers
+const LCDC: u16                    = 0xFF40;
+const STAT: u16                    = 0xFF41;
+const SCY: u16                     = 0xFF42;
+const SCX: u16                     = 0xFF43;
+const LY: u16                      = 0xFF44;
+const LYC: u16                     = 0xFF45;
+// 0xFF46 is DMA transfer, handled by Bus
+const BGP: u16                     = 0xFF47;
+const OBP0: u16                    = 0xFF48;
+const OBP1: u16                    = 0xFF49;
+const WY: u16                      = 0xFF4A;
+const WX: u16                      = 0xFF4B;
+
+// CGB Palette registers
+const BGPI: u16                    = 0xFF68;
+const BGPD: u16                    = 0xFF69;
+const OBPI: u16                    = 0xFF6A;
+const OBPD: u16                    = 0xFF6B;
+
+// VRAM ranges
+const VRAM_START: u16              = 0x8000;
+const VRAM_END: u16                = 0x9FFF;
+const OAM_START: u16               = 0xFE00;
+const OAM_END: u16                 = 0xFE9F;
+const IO_START: u16                = 0xFF00;
+const IO_END: u16                  = 0xFF7F;
+const TILE_SET: u16                = VRAM_START;
+const TILE_SET_END: u16            = 0x97FF;
+
+const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_START as usize)..(0x9C00 - VRAM_START as usize);
+const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_START as usize)..(0xA000 - VRAM_START as usize);
+
+// General constants
 const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
-const VRAM_SIZE: usize = 0x8000;
-const VRAM_OFFSET: usize = 0x8000;
+const VRAM_SIZE: usize = (VRAM_END - VRAM_START + 1) as usize;
+const IO_SIZE: usize = (IO_END - IO_START + 1) as usize;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
 const SPR_PER_LINE: usize = 10;
 const CGB_BG_PAL_DATA_SIZE: usize = 0x40 * 2;
 const CGB_SPR_PAL_DATA_SIZE: usize = 64;
-
-// VRAM registers
-const LCDC: usize                    = 0xFF40 - VRAM_OFFSET;
-const STAT: usize                    = 0xFF41 - VRAM_OFFSET;
-const SCY: usize                     = 0xFF42 - VRAM_OFFSET;
-const SCX: usize                     = 0xFF43 - VRAM_OFFSET;
-const LY: usize                      = 0xFF44 - VRAM_OFFSET;
-const LYC: usize                     = 0xFF45 - VRAM_OFFSET;
-// 0xFF46 is DMA transfer, handled by Bus
-const BGP: usize                     = 0xFF47 - VRAM_OFFSET;
-const OBP0: usize                    = 0xFF48 - VRAM_OFFSET;
-const OBP1: usize                    = 0xFF49 - VRAM_OFFSET;
-const WY: usize                      = 0xFF4A - VRAM_OFFSET;
-const WX: usize                      = 0xFF4B - VRAM_OFFSET;
-
-// CGB Palette registers
-const BGPI: usize                    = 0xFF68 - VRAM_OFFSET;
-const BGPD: usize                    = 0xFF69 - VRAM_OFFSET;
-const OBPI: usize                    = 0xFF6A - VRAM_OFFSET;
-const OBPD: usize                    = 0xFF6B - VRAM_OFFSET;
-
-// VRAM ranges
-const DISPLAY_RAM_RANGE: Range<usize> = (0x8000 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
-const OAM_MEM: u16                    = 0xFE00 - (VRAM_OFFSET as u16);
-const OAM_MEM_END: u16                = 0xFE9F - (VRAM_OFFSET as u16); // Inclusive
-const TILE_SET: u16                   = 0x8000 - (VRAM_OFFSET as u16);
-const TILE_SET_END: u16               = 0x97FF - (VRAM_OFFSET as u16);
-
-const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_OFFSET)..(0x9C00 - VRAM_OFFSET);
-const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_OFFSET)..(0xA000 - VRAM_OFFSET);
 
 // Register bit constants
 const BG_DISP_BIT: u8           = 0;
@@ -62,14 +67,15 @@ const WNDW_DISP_BIT: u8         = 5;
 const WNDW_TILE_MAP_BIT: u8     = 6;
 const LCD_DISP_BIT: u8          = 7;
 
-const LYC_LY_FLAG_BIT: u8 =         2;
+const LYC_LY_FLAG_BIT: u8       = 2;
 // const HBLANK_INTERRUPT_BIT: u8 =    3;
 // const VBLANK_INTERRUPT_BIT: u8 =    4;
 // const OAM_INTERRUPT_BIT: u8 =       5;
-const LYC_LY_INTERRUPT_BIT: u8 =    6;
+const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
+    io: [u8; IO_SIZE],
     screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
     tiles: [Tile; TILE_NUM],
     oam: [Sprite; OAM_SPR_NUM],
@@ -92,6 +98,7 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
+            io: [0; IO_SIZE],
             screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
             tiles: [Tile::new(); TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
@@ -112,34 +119,45 @@ impl PPU {
     ///     Value to write (u8)
     ///     System mode (GB)
     /// ```
-    pub fn write_vram(&mut self, raw_addr: u16, val: u8, mode: GB) {
-        let addr = raw_addr - VRAM_OFFSET as u16;
-
-        if self.is_valid_status(raw_addr) {
-            // Update OAM objects if needed
-            if is_in_oam(addr) {
-                let relative_addr = addr - OAM_MEM;
-                let spr_num = relative_addr / OAM_BYTE_SIZE;
-                let byte_num = relative_addr % OAM_BYTE_SIZE;
-                self.oam[spr_num as usize].update_byte(byte_num, val);
-            } else if is_in_tile_set(addr) {
-                let offset = addr - TILE_SET;
-                let tile_num = offset / TILE_BYTES;
-                let byte_num = offset % TILE_BYTES;
-                self.tiles[tile_num as usize].update_byte(byte_num, val);
-            }
-
-            self.vram[addr as usize] = val;
-            if mode == GB::CGB || mode == GB::CGB {
-                if (addr as usize) == BGPD {
-                    self.write_cgb_bg_color(val);
-                } else if (addr as usize) == OBPD {
-                    self.write_cgb_spr_color(val);
-                } else {
-                    self.vram[addr as usize] = val;
+    pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
+        if self.is_valid_status(addr) {
+            match addr {
+                OAM_START..=OAM_END => {
+                    let relative_addr = addr - OAM_START;
+                    let spr_num = relative_addr / OAM_BYTE_SIZE;
+                    let byte_num = relative_addr % OAM_BYTE_SIZE;
+                    self.oam[spr_num as usize].update_byte(byte_num, val);
+                },
+                TILE_SET..=TILE_SET_END => {
+                    let offset = addr - TILE_SET;
+                    let tile_num = offset / TILE_BYTES;
+                    let byte_num = offset % TILE_BYTES;
+                    self.tiles[tile_num as usize].update_byte(byte_num, val);
+                },
+                VRAM_START..=VRAM_END => {
+                    let vram_addr = addr - VRAM_START;
+                    self.vram[vram_addr as usize] = val;
+                },
+                IO_START..=IO_END => {
+                    if mode == GB::CGB || mode == GB::CGB_DMG {
+                        match addr {
+                            BGPD => {
+                                self.write_cgb_bg_color(val);
+                            },
+                            OBPD => {
+                                self.write_cgb_spr_color(val);
+                            },
+                            _ => {
+                                self.write_io(addr, val);
+                            }
+                        }
+                    } else {
+                        self.write_io(addr, val);
+                    }
+                },
+                _ => {
+                    // Unused, do nothing
                 }
-            } else {
-                self.vram[addr as usize] = val;
             }
         }
     }
@@ -156,18 +174,33 @@ impl PPU {
     /// Output:
     ///     Value at given address (u8)
     /// ```
-    pub fn read_vram(&self, raw_addr: u16, mode: GB) -> u8 {
-        let addr = raw_addr - VRAM_OFFSET as u16;
-        if mode == GB::CGB || mode == GB::CGB {
-            if (addr as usize) == BGPD {
-                self.read_cgb_bg_color()
-            } else if (addr as usize) == OBPD {
-                self.read_cgb_spr_color()
-            } else {
-                self.vram[addr as usize]
+    pub fn read_vram(&self, addr: u16, mode: GB) -> u8 {
+        match addr {
+            VRAM_START..=VRAM_END => {
+                let vram_addr = addr - VRAM_START;
+                self.vram[vram_addr as usize]
+            },
+            IO_START..=IO_END => {
+                if mode == GB::CGB_DMG || mode == GB::CGB {
+                    match addr {
+                        BGPD => {
+                            self.read_cgb_bg_color()
+                        },
+                        OBPD => {
+                            self.read_cgb_spr_color()
+                        },
+                        _ => {
+                            self.read_io(addr)
+                        }
+                    }
+                } else {
+                    self.read_io(addr)
+                }
+            },
+            _ => {
+                // Unused, do nothing
+                0
             }
-        } else {
-            self.vram[addr as usize]
         }
     }
 
@@ -183,21 +216,23 @@ impl PPU {
     ///     Whether values in LY and LYC registers are equal (bool)
     /// ```
     pub fn set_ly(&mut self, line: u8) -> bool {
-        let old_ly = self.vram[LY];
+        let old_ly = self.read_io(LY);
         if old_ly != line {
             // If we are in a new frame, reset window layer line
             if line == 0 {
                 self.last_wndw_line = None;
             }
 
-            self.vram[LY] = line;
+            self.write_io(LY, line);
 
-            if self.vram[LY] == self.vram[LYC] {
+            if self.read_io(LY) == self.read_io(LYC) {
                 // If LY and LYC are equal:
                 // - Set coincidence bit in STAT register
                 // - Trigger LCDC status interrupt if enabled
-                self.vram[STAT].set_bit(LYC_LY_FLAG_BIT);
-                return self.vram[STAT].get_bit(LYC_LY_INTERRUPT_BIT);
+                let mut stat = self.read_io(STAT);
+                stat.set_bit(LYC_LY_FLAG_BIT);
+                self.write_io(STAT, stat);
+                return stat.get_bit(LYC_LY_INTERRUPT_BIT);
             }
         }
 
@@ -214,7 +249,7 @@ impl PPU {
     /// ```
     pub fn render_scanline(&mut self, mode: GB) {
         // Render current scanline
-        let line = self.vram[LY];
+        let line = self.read_io(LY);
         let mut pixel_row = [0; SCREEN_WIDTH];
 
         if self.is_bkgd_dspl() {
@@ -244,8 +279,10 @@ impl PPU {
     ///     Current clock mode (u8)
     /// ```
     pub fn set_status(&mut self, mode: u8) {
-        self.vram[STAT] &= 0b1111_1100;
-        self.vram[STAT] |= mode;
+        let mut stat = self.read_io(STAT);
+        stat &= 0b1111_1100;
+        stat |= mode;
+        self.write_io(STAT, stat);
     }
 
     /// ```
@@ -264,6 +301,14 @@ impl PPU {
         self.get_color(&map_array)
     }
 
+    /// ```
+    /// Set system palette
+    ///
+    /// Set which color palette we want to use
+    ///
+    /// Input:
+    ///     Palette (Palettes)
+    /// ```
     pub fn set_sys_pal(&mut self, pal: Palettes) {
         self.sys_pal = pal;
     }
@@ -390,7 +435,7 @@ impl PPU {
             let palette = self.get_spr_palette(spr.is_pal_0());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
-                let lcd_control = self.vram[LCDC];
+                let lcd_control = self.read_io(LCDC);
                 above_bg |= lcd_control.get_bit(BG_DISP_BIT);
             }
 
@@ -482,6 +527,36 @@ impl PPU {
     }
 
     /// ```
+    /// Write IO
+    ///
+    /// Writes byte to I/O register space ($FF00-$FF7F)
+    ///
+    /// Inputs:
+    ///     Address to write to (u16)
+    ///     Value to write (u8)
+    /// ```
+    fn write_io(&mut self, addr: u16, val: u8) {
+        let io_addr = addr - IO_START;
+        self.io[io_addr as usize] = val;
+    }
+
+    /// ```
+    /// Read IO
+    ///
+    /// Reads byte from I/O register space ($FF00-$FF7F)
+    ///
+    /// Input:
+    ///     Address to read from (u16)
+    ///
+    /// Output:
+    ///     Value at address (u8)
+    /// ```
+    fn read_io(&self, addr: u16) -> u8 {
+        let io_addr = addr - IO_START;
+        self.io[io_addr as usize]
+    }
+
+    /// ```
     /// Get background tile map
     ///
     /// Gets the pixel data for the background tiles
@@ -526,7 +601,7 @@ impl PPU {
     ///     Palette indices ([u8])
     /// ```
     fn get_bkgd_palette(&self) -> [u8; PAL_SIZE] {
-        unpack_u8(self.vram[BGP])
+        unpack_u8(self.read_io(BGP))
     }
 
     /// ```
@@ -542,9 +617,9 @@ impl PPU {
     /// ```
     fn get_spr_palette(&self, pal_0: bool) -> [u8; PAL_SIZE] {
         if pal_0 {
-            unpack_u8(self.vram[OBP0])
+            unpack_u8(self.read_io(OBP0))
         } else {
-            unpack_u8(self.vram[OBP1])
+            unpack_u8(self.read_io(OBP1))
         }
     }
 
@@ -576,7 +651,7 @@ impl PPU {
     ///     Whether or not LCD screen is enabled (bool)
     /// ```
     fn is_lcd_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         lcd_control.get_bit(LCD_DISP_BIT)
     }
 
@@ -589,7 +664,7 @@ impl PPU {
     ///     Whether or not background is displayed (bool)
     /// ```
     fn is_bkgd_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         lcd_control.get_bit(BG_DISP_BIT)
     }
 
@@ -602,7 +677,7 @@ impl PPU {
     ///     Whether window layer is visible (bool)
     /// ```
     fn is_wndw_dspl(&self, mode: GB) -> bool {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         let mut is_dspl = lcd_control.get_bit(WNDW_DISP_BIT);
         if mode == GB::CGB_DMG {
             // For CGB running in DMG mode, the BG bit can also disable the background
@@ -621,7 +696,7 @@ impl PPU {
     ///     Whether the sprite layer is visible (bool)
     /// ```
     fn is_sprt_dspl(&self) -> bool {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         lcd_control.get_bit(SPR_DISP_BIT)
     }
 
@@ -634,7 +709,7 @@ impl PPU {
     ///     Tileset index (u8)
     /// ```
     fn get_bkgd_wndw_tile_set_index(&self) -> u8 {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         if lcd_control.get_bit(BG_WNDW_TILE_DATA_BIT) { 1 } else { 0 }
     }
 
@@ -647,7 +722,7 @@ impl PPU {
     ///     Tilemap index (u8)
     /// ```
     fn get_bkgd_tile_map_index(&self) -> u8 {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         if lcd_control.get_bit(BG_TILE_MAP_BIT) { 1 } else { 0 }
     }
 
@@ -660,7 +735,7 @@ impl PPU {
     ///     Tilemap index (u8)
     /// ```
     fn get_wndw_tile_map_index(&self) -> u8 {
-        let lcd_control = self.vram[LCDC];
+        let lcd_control = self.read_io(LCDC);
         if lcd_control.get_bit(WNDW_TILE_MAP_BIT) { 1 } else { 0 }
     }
 
@@ -673,7 +748,7 @@ impl PPU {
     ///     Whether spries are 8x16 (vs 8x8) (bool)
     /// ```
     fn spr_are_8x16(&self) -> bool {
-        self.vram[LCDC].get_bit(SPR_SIZE_BIT)
+        self.read_io(LCDC).get_bit(SPR_SIZE_BIT)
     }
 
     /// ```
@@ -685,8 +760,8 @@ impl PPU {
     ///     SCX, SCY point (Point)
     /// ```
     fn get_scroll_coords(&self) -> Point {
-        let scroll_x = self.vram[SCX];
-        let scroll_y = self.vram[SCY];
+        let scroll_x = self.read_io(SCX);
+        let scroll_y = self.read_io(SCY);
 
         Point::new(scroll_x, scroll_y)
     }
@@ -700,8 +775,8 @@ impl PPU {
     ///     Location of the window (Point)
     /// ```
     fn get_wndw_coords(&self) -> Point {
-        let wndw_x = self.vram[WX].saturating_sub(7);
-        let wndw_y = self.vram[WY];
+        let wndw_x = self.read_io(WX).saturating_sub(7);
+        let wndw_y = self.read_io(WY);
 
         Point::new(wndw_x, wndw_y)
     }
@@ -715,7 +790,7 @@ impl PPU {
     ///     Current clock mode (ModeTypes)
     /// ```
     fn get_lcdc_status(&self) -> ModeTypes {
-        let lcd_stat = self.vram[STAT];
+        let lcd_stat = self.read_io(STAT);
         let mode = lcd_stat & 0b0000_0011;
         match mode {
             0 => { ModeTypes::HBLANK },
@@ -745,7 +820,10 @@ impl PPU {
                 !is_in_oam(addr)
             },
             ModeTypes::VRAMReadMode => {
-                !is_in_oam(addr) && !DISPLAY_RAM_RANGE.contains(&(addr as usize))
+                // TODO: This function should also not allow writes to VRAM
+                // However, this blocks needed GFX writes, and causes corrupted graphics
+                // Likely an issue with timing, probably fixed when mem_timing passes
+                !is_in_oam(addr) // && !is_in_vram(addr)
             },
             _ => {
                 true
@@ -762,7 +840,7 @@ impl PPU {
     ///     Partial color data loaded into the palette data RAM register
     /// ```
     fn read_cgb_bg_color(&self) -> u8 {
-        let ind = self.vram[BGPI] & 0x3F;
+        let ind = self.read_io(BGPI) & 0x3F;
         self.cgb_bg_pal_data[ind as usize]
     }
 
@@ -775,7 +853,7 @@ impl PPU {
     ///     New value for the index set in BGPI
     /// ```
     fn write_cgb_bg_color(&mut self, val: u8) {
-        let ind = self.vram[BGPI] & 0x3F;
+        let ind = self.read_io(BGPI) & 0x3F;
         self.cgb_bg_pal_data[ind as usize] = val;
     }
 
@@ -788,7 +866,7 @@ impl PPU {
     ///     Partial color data loaded into the palette data RAM register
     /// ```
     fn read_cgb_spr_color(&self) -> u8 {
-        let ind = self.vram[OBPI];
+        let ind = self.read_io(OBPI);
         self.cgb_spr_pal_data[ind as usize]
     }
 
@@ -801,7 +879,7 @@ impl PPU {
     ///     New value for the index set in OBPI
     /// ```
     fn write_cgb_spr_color(&mut self, val: u8) {
-        let ind = self.vram[OBPI];
+        let ind = self.read_io(OBPI);
         self.cgb_spr_pal_data[ind as usize] = val;
     }
 }
@@ -818,20 +896,20 @@ impl PPU {
 ///     Whether the address is in OAM memory (bool)
 /// ```
 fn is_in_oam(addr: u16) -> bool {
-    addr >= OAM_MEM && addr <= OAM_MEM_END
+    addr >= OAM_START && addr <= OAM_END
 }
 
 /// ```
-/// Is in tile set?
+/// Is in VRAM?
 ///
-/// Helper function to determine if address is in tile set memory
+/// Helper function to determine if address being written to is in VRAM memory
 ///
-/// Input:
-///     Address in question (u16)
+/// Inputs:
+///     Address to write to (u16)
 ///
-/// Output:
-///     Whether address is in tile set memory (bool)
+/// Outputs:
+///     Whether the address is in VRAM memory (bool)
 /// ```
-fn is_in_tile_set(addr: u16) -> bool {
-    addr <= TILE_SET_END
+fn is_in_vram(addr: u16) -> bool {
+    addr >= VRAM_START && addr <= VRAM_END
 }
