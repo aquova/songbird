@@ -26,6 +26,7 @@ const OBP0: u16                    = 0xFF48;
 const OBP1: u16                    = 0xFF49;
 const WY: u16                      = 0xFF4A;
 const WX: u16                      = 0xFF4B;
+const VBK: u16                     = 0xFF4F;
 
 // CGB Palette registers
 const BGPI: u16                    = 0xFF68;
@@ -75,9 +76,10 @@ const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
+    vram_bank: usize,
     io: [u8; IO_SIZE],
     screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
-    tiles: [Tile; TILE_NUM],
+    tiles: [Tile; 2 * TILE_NUM], // CGB can have two banks of tiles
     oam: [Sprite; OAM_SPR_NUM],
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
@@ -98,9 +100,10 @@ impl PPU {
     pub fn new() -> PPU {
         PPU {
             vram: [0; VRAM_SIZE],
+            vram_bank: 0,
             io: [0; IO_SIZE],
             screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
-            tiles: [Tile::new(); TILE_NUM],
+            tiles: [Tile::new(); 2 * TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
@@ -130,7 +133,7 @@ impl PPU {
                 },
                 TILE_SET..=TILE_SET_END => {
                     let offset = addr - TILE_SET;
-                    let tile_num = offset / TILE_BYTES;
+                    let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
                     let byte_num = offset % TILE_BYTES;
                     self.tiles[tile_num as usize].update_byte(byte_num, val);
                 },
@@ -139,13 +142,16 @@ impl PPU {
                     self.vram[vram_addr as usize] = val;
                 },
                 IO_START..=IO_END => {
-                    if mode == GB::CGB || mode == GB::CGB_DMG {
+                    if mode == GB::CGB {
                         match addr {
                             BGPD => {
                                 self.write_cgb_bg_color(val);
                             },
                             OBPD => {
                                 self.write_cgb_spr_color(val);
+                            },
+                            VBK => {
+                                self.set_vram_bank(val);
                             },
                             _ => {
                                 self.write_io(addr, val);
@@ -341,11 +347,13 @@ impl PPU {
             let map_y = y / TILESIZE;
             let index = map_y * MAP_SIZE + map_x;
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-            let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+            let mut tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
                 (256 + (tile_map[index] as i8 as isize)) as usize
             } else {
                 tile_map[index] as usize
             };
+            tile_index += self.vram_bank * TILE_NUM;
+
             let tile = &self.tiles[tile_index];
             let col = (start_x + x) % TILESIZE;
             let pixel = tile.get_row(row)[col];
@@ -386,11 +394,12 @@ impl PPU {
             let map_x = ((x - start_x) % MAP_PIXELS) / TILESIZE;
             let index = map_y * MAP_SIZE + map_x;
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-            let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+            let mut tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
                 (256 + (wndw_map[index] as i8 as isize)) as usize
             } else {
                 wndw_map[index] as usize
             };
+            tile_index += self.vram_bank * TILE_NUM;
             let tile = &self.tiles[tile_index];
             let col = (x - start_x) % TILESIZE;
             let pixel = tile.get_row(row)[col];
@@ -466,8 +475,9 @@ impl PPU {
                 // If 8x8 sprite, simply get tile num
                 spr.get_tile_num()
             };
+            let spr_bank = spr_num as usize + (self.vram_bank * TILE_NUM);
 
-            let tile = &self.tiles[spr_num as usize];
+            let tile = &self.tiles[spr_bank];
             let pixels = tile.get_row(row % TILESIZE);
             let spr_x = top_x as usize;
             for col in 0..TILESIZE {
@@ -749,6 +759,18 @@ impl PPU {
     /// ```
     fn spr_are_8x16(&self) -> bool {
         self.read_io(LCDC).get_bit(SPR_SIZE_BIT)
+    }
+
+    /// ```
+    /// Set VRAM bank
+    ///
+    /// Sets which VRAM tile bank should be used (either 0 or 1)
+    ///
+    /// Input:
+    ///     Which bank to use (u8)
+    /// ```
+    fn set_vram_bank(&mut self, val: u8) {
+        self.vram_bank = if val.get_bit(0) { 1 } else { 0 };
     }
 
     /// ```
