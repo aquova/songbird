@@ -285,17 +285,30 @@ impl Cpu {
     ///
     /// Wrapper for the load game functionality
     ///
-    /// Input:
+    /// Inputs:
     ///     Game data (&[u8])
+    ///     Whether to force DMG mode (bool)
     /// ```
-    pub fn load_game(&mut self, rom: &[u8]) {
+    pub fn load_game(&mut self, rom: &[u8], dmg: bool) {
         self.mode = self.bus.load_game(rom);
+        if dmg {
+            self.mode = GB::DMG;
+        }
+
         // System determines if hardware is CGB if accumulator is $11 at start
         if self.mode == GB::CGB_DMG || self.mode == GB::CGB {
             self.set_reg(Regs::A, 0x11);
         }
     }
 
+    /// ```
+    /// Set system palette
+    ///
+    /// Set which color palette to use for DMG games running on GBC
+    ///
+    /// Input:
+    ///     Which palette to use (Palettes)
+    /// ```
     pub fn set_sys_pal(&mut self, pal: Palettes) {
         self.bus.set_sys_pal(pal);
     }

@@ -52,14 +52,28 @@ implement_vertex!(Vertex, position);
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    let filename = if args.len() > 1 {
-        Some(args[1].clone())
-    } else {
-        None
-    };
+    let mut filename = None;
+    let mut dmg = false;
+
+    // Running my own argparse, because I don't care for how most of the crates work
+    for i in 1..args.len() {
+        match args[i].as_str() {
+            "--dmg" => {
+                dmg = true;
+            },
+            "-" => {
+                // Needed to send flags to debug builds, do nothing
+            },
+            _ => {
+                if filename.is_none() {
+                    filename = Some(args[i].clone());
+                }
+            }
+        }
+    }
 
     let is = ImguiSystem::new();
-    is.main_loop(filename);
+    is.main_loop(filename, dmg);
 }
 
 // Imgui interface taken from here: https://gist.github.com/RainbowCookie32/7e5d76acf33d88f2145d5ebc047a5799
@@ -111,7 +125,7 @@ impl ImguiSystem {
     ///
     /// Passes control of emulation to the event loop, which runs forever
     /// ```
-    pub fn main_loop(self, filename: Option<String>) {
+    pub fn main_loop(self, filename: Option<String>, force_dmg: bool) {
         let ImguiSystem {
             event_loop,
             display,
@@ -124,8 +138,9 @@ impl ImguiSystem {
         if let Some(f) = filename {
             main_menu.set_rom_filename(f);
         }
+        main_menu.set_force_dmg(force_dmg);
         let mut gb = Cpu::new();
-        let mut curr_disp_opts = DisplayOptions::new(Palettes::GRAYSCALE, Shaders::None);
+        let mut curr_disp_opts = DisplayOptions::new(Palettes::GRAYSCALE, Shaders::None, force_dmg);
         let mut running = false;
 
         event_loop.run(move |event, _, control_flow| {
@@ -166,7 +181,7 @@ impl ImguiSystem {
                     // If new file has been selected in menu, load that ROM into emulator
                     if main_menu.is_load_time() {
                         let filename = main_menu.get_rom_filename();
-                        setup_emu(&mut gb, filename);
+                        setup_emu(&mut gb, filename, curr_disp_opts.force_dmg);
                         running = true;
                     }
 
@@ -319,12 +334,13 @@ fn key2btn(key: VirtualKeyCode) -> Option<Buttons> {
 /// Inputs:
 ///     Game Boy CPU object (&Cpu)
 ///     ROM file path (&str)
+///     Whether to force DMG (bool)
 /// ```
-fn setup_emu(gb: &mut Cpu, filename: &str) {
+fn setup_emu(gb: &mut Cpu, filename: &str, force_dmg: bool) {
     // In case anything is currently running, simply make a new Cpu instance
     *gb = Cpu::new();
     let rom = load_rom(filename);
-    gb.load_game(&rom);
+    gb.load_game(&rom, force_dmg);
     load_battery_save(gb, filename);
 }
 

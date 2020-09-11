@@ -16,13 +16,15 @@ pub enum Shaders {
 pub struct DisplayOptions {
     pub palette: Palettes,
     pub shader: Shaders,
+    pub force_dmg: bool,
 }
 
 impl DisplayOptions {
-    pub fn new(pal: Palettes, shad: Shaders) -> DisplayOptions {
+    pub fn new(pal: Palettes, shad: Shaders, dmg: bool) -> DisplayOptions {
         DisplayOptions {
             palette: pal,
-            shader: shad
+            shader: shad,
+            force_dmg: dmg,
         }
     }
 }
@@ -31,6 +33,7 @@ pub struct MenuState {
     show_rom_dialog: bool,
     pal_index: usize,
     shader_index: usize,
+    force_dmg: bool,
     filename: Option<String>,
     load_required: bool,
 }
@@ -41,6 +44,7 @@ impl MenuState {
             show_rom_dialog: false,
             pal_index: 0,
             shader_index: 0,
+            force_dmg: false,
             filename: None,
             load_required: false,
         }
@@ -76,6 +80,7 @@ impl MenuState {
                 ];
                 ComboBox::new(im_str!("Palette")).build_simple_string(ui, &mut self.pal_index, &pal_items);
                 ComboBox::new(im_str!("Shader")).build_simple_string(ui, &mut self.shader_index, &shader_items);
+                ui.checkbox(im_str!("Force DMG"), &mut self.force_dmg);
                 menu.end(ui);
             }
             menu_bar.end(ui);
@@ -134,7 +139,7 @@ impl MenuState {
         ];
         let shad = shaders[self.shader_index];
 
-        DisplayOptions::new(pal, shad)
+        DisplayOptions::new(pal, shad, self.force_dmg)
     }
 
     /// ```
@@ -160,6 +165,18 @@ impl MenuState {
     pub fn set_rom_filename(&mut self, filename: String) {
         self.filename = Some(filename);
         self.load_required = true;
+    }
+
+    /// ```
+    /// Set force DMG
+    ///
+    /// Sets the checkbox for the Force DMG option
+    ///
+    /// Input:
+    ///     Whether box should be checked/unchecked (bool)
+    /// ```
+    pub fn set_force_dmg(&mut self, force: bool) {
+        self.force_dmg = force;
     }
 
     /// ```
