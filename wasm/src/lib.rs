@@ -67,7 +67,8 @@ impl GB {
             rom_data.push(data.get_index(i));
         }
 
-        self.cpu.load_game(&rom_data)
+        // TODO: Add option to allow for DMG force in browser
+        self.cpu.load_game(&rom_data, false)
     }
 
     /// ```
