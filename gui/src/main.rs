@@ -10,6 +10,9 @@ extern crate glium;
 #[macro_use]
 extern crate imgui;
 
+#[cfg(feature = "debug")]
+use coredump::register_panic_handler;
+
 use crate::menu::{MenuState, DisplayOptions, Shaders};
 use songbird_core::cpu::Cpu;
 use songbird_core::debug::debugger;
@@ -53,6 +56,9 @@ struct Vertex {
 implement_vertex!(Vertex, position);
 
 fn main() {
+    #[cfg(feature = "debug")]
+    register_panic_handler().unwrap();
+
     let args: Vec<_> = env::args().collect();
     let mut filename = None;
     let mut dmg = false;

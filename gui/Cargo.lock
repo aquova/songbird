@@ -192,6 +192,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "coredump"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4079960e8d47c5f7f6b36b61b2a462ad85eafaf2b1748bab2f71ddd6df6a7b0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "derivative"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1143,6 +1152,7 @@ dependencies = [
 name = "songbird_gui"
 version = "0.1.0"
 dependencies = [
+ "coredump",
  "glium",
  "imgui",
  "imgui-glium-renderer",

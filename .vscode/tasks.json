@@ -20,7 +20,7 @@
         {
             "label": "Run GUI debug build",
             "type": "shell",
-            "command": "cargo run",
+            "command": "cargo run --features 'debug'",
             "options": {
                 "cwd": "${workspaceFolder}/gui"
             },

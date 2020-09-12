@@ -7,6 +7,9 @@ license = "GPL-3.0"
 authors = ["aquova <abrick912@gmail.com>"]
 edition = "2018"
 
+[features]
+debug = ["coredump"]
+
 [dependencies]
 songbird_core = { path = "../core" }
 glium = "0.27.0"
@@ -15,3 +18,4 @@ imgui-glium-renderer = "0.4.0"
 imgui-winit-support = "0.4.0"
 # This crate is not set up properly in crates.io, so I had to include it myself
 imgui_file_explorer = { version = "0.0.3", path = "lib/imgui_file_explorer" }
+coredump = { version = "0.1.1", optional = true }
