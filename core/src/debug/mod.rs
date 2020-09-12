@@ -1,6 +1,8 @@
 // The songbird debugger module
 use crate::cpu::*;
 use std::cmp::min;
+use std::io;
+use std::io::prelude::*;
 use std::collections::HashMap;
 
 const OPCODE_NAMES: [&str; 0x100] = [
@@ -61,6 +63,7 @@ const OPCODE_LENGTH: [u8; 0x100] = [
 // Tell Rust to STFU about camel cases
 #[allow(non_camel_case_types)]
 pub struct debugger {
+    debugging: bool,
     breakpoints: Vec<u16>,
     watchpoints: Vec<u16>
 }
@@ -74,9 +77,78 @@ impl Default for debugger {
 impl debugger {
     pub fn new() -> debugger {
         debugger {
+            debugging: false,
             breakpoints: Vec::new(),
             watchpoints: Vec::new()
         }
+    }
+
+    pub fn set_debugging(&mut self, debug: bool) {
+        self.debugging = debug;
+    }
+
+    pub fn is_debugging(&self) -> bool {
+        self.debugging
+    }
+
+    pub fn debugloop(&mut self, gb: &mut Cpu) -> bool {
+        let mut should_quit = false;
+
+        'debugloop: loop {
+            print!("(songdb) ");
+            io::stdout().flush().unwrap();
+
+            let mut input = String::new();
+            // Await user input
+            let stdin = io::stdin();
+            stdin.read_line(&mut input).expect("Your user input was... odd");
+            trim_newline(&mut input);
+            let words: Vec<&str> = input.split(" ").collect();
+
+            match words[0] {
+                "b" => {
+                    let hex = u16::from_str_radix(words[1], 16);
+                    if let Ok(addr) = hex {
+                        self.add_break(addr);
+                    }
+                },
+                "c" => {
+                    self.set_debugging(false);
+                    break 'debugloop;
+                },
+                "disass" => {
+                    self.disassemble(&gb);
+                },
+                "help" => {
+                    self.print_help();
+                },
+                "info" => {
+                    self.list_points();
+                },
+                "n" => {
+                    gb.tick();
+                    println!("PC: ${:04x}", gb.get_pc());
+                },
+                "p" => {
+                    let hex = u16::from_str_radix(words[1], 16);
+                    if let Ok(addr) = hex {
+                        self.print_ram(addr, &gb);
+                    }
+                },
+                "q" => {
+                    should_quit = true;
+                    break 'debugloop;
+                },
+                "reg" => {
+                    println!("{}", self.print_registers(&gb));
+                },
+                _ => {
+                    println!("Unknown command");
+                }
+            }
+        }
+
+        should_quit
     }
 
     /// ```
@@ -275,5 +347,25 @@ impl debugger {
         }
 
         false
+    }
+}
+
+/// ```
+/// Trim Newline
+///
+/// Helper function that removes trailing newline characters
+/// Works on *nix systems and Windows
+///
+/// Input:
+///     String to trim (&mut String)
+/// ```
+fn trim_newline(s: &mut String) {
+    // Strip newline
+    if s.ends_with('\n') {
+        s.pop();
+        // For Windows
+        if s.ends_with('\r') {
+            s.pop();
+        }
     }
 }

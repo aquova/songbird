@@ -12,6 +12,7 @@ extern crate imgui;
 
 use crate::menu::{MenuState, DisplayOptions, Shaders};
 use songbird_core::cpu::Cpu;
+use songbird_core::debug::debugger;
 use songbird_core::io::Buttons;
 use songbird_core::ppu::palette::Palettes;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -35,6 +36,7 @@ use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::Read;
+use std::process::exit;
 
 // Constants
 const SCALE: usize = 5;
@@ -140,6 +142,7 @@ impl ImguiSystem {
         }
         main_menu.set_force_dmg(force_dmg);
         let mut gb = Cpu::new();
+        let mut dbg = debugger::new();
         let mut curr_disp_opts = DisplayOptions::new(Palettes::GRAYSCALE, Shaders::None, force_dmg);
         let mut running = false;
 
@@ -170,6 +173,11 @@ impl ImguiSystem {
                         // Send keyboard inputs to emulator core
                         if let Some(btn) = key2btn(keycode) {
                             gb.toggle_button(btn, state == ElementState::Pressed);
+                        } else if keycode == VirtualKeyCode::Space {
+                            if state == ElementState::Pressed {
+                                dbg.set_debugging(true);
+                                dbg.print_info(gb.get_pc());
+                            }
                         }
                 },
                 Event::MainEventsCleared => {
@@ -203,7 +211,7 @@ impl ImguiSystem {
                     // Only run emulator and draw screen if ROM has actually been selected and loaded
                     if running {
                         let filename = main_menu.get_rom_filename();
-                        tick_until_draw(&mut gb, filename);
+                        tick_until_draw(&mut gb, filename, &mut dbg);
                         let disp_arr = gb.render();
 
                         let image = RawImage2d::from_raw_rgba_reversed(&disp_arr.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
@@ -284,10 +292,18 @@ fn load_shader(display: &Display, shad: Shaders) -> Program {
 /// Inputs:
 ///     Game Boy CPU (&Cpu)
 ///     Filename of game ROM (&str)
+///     Debugger object (&debugger)
 /// ```
-fn tick_until_draw(gb: &mut Cpu, filename: &str) {
+fn tick_until_draw(mut gb: &mut Cpu, filename: &str, dbg: &mut debugger) {
     loop {
         let draw_time = gb.tick();
+        if dbg.is_debugging() {
+            let is_quitting = dbg.debugloop(&mut gb);
+            if is_quitting {
+                exit(0);
+            }
+        }
+
         if draw_time {
             break;
         }
