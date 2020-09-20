@@ -40,7 +40,7 @@ impl Tile {
     ///     Which byte to update (u16)
     ///     New value (u8)
     /// ```
-    pub fn update_byte(&mut self, index: u16, val: u8) {
+    pub fn set_byte(&mut self, index: u16, val: u8) {
         if index >= TILE_BYTES {
             panic!("Invalid Tile byte index to update");
         }
@@ -52,6 +52,21 @@ impl Tile {
         let row = get_pixel_row(low, high);
 
         self.pixels[i / 2].copy_from_slice(&row);
+    }
+
+    /// ```
+    /// Get byte
+    ///
+    /// Fetches byte from sprite data
+    ///
+    /// Input:
+    ///     Index of byte to fetch (u16)
+    ///
+    /// Output:
+    ///     Value at that index (u8)
+    /// ```
+    pub fn get_byte(&self, index: u16) -> u8 {
+        self.data[index as usize]
     }
 }
 

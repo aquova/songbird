@@ -123,47 +123,46 @@ impl PPU {
     ///     System mode (GB)
     /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
-        if self.is_valid_status(addr) {
-            match addr {
-                OAM_START..=OAM_END => {
-                    let relative_addr = addr - OAM_START;
-                    let spr_num = relative_addr / OAM_BYTE_SIZE;
-                    let byte_num = relative_addr % OAM_BYTE_SIZE;
-                    self.oam[spr_num as usize].update_byte(byte_num, val);
-                },
-                TILE_SET..=TILE_SET_END => {
-                    let offset = addr - TILE_SET;
-                    let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
-                    let byte_num = offset % TILE_BYTES;
-                    self.tiles[tile_num as usize].update_byte(byte_num, val);
-                },
-                VRAM_START..=VRAM_END => {
-                    let vram_addr = addr - VRAM_START;
-                    self.vram[vram_addr as usize] = val;
-                },
-                IO_START..=IO_END => {
-                    if mode == GB::CGB || mode == GB::CGB_DMG {
-                        match addr {
-                            BGPD => {
-                                self.write_cgb_bg_color(val);
-                            },
-                            OBPD => {
-                                self.write_cgb_spr_color(val);
-                            },
-                            VBK => {
-                                self.set_vram_bank(val);
-                            },
-                            _ => {
-                                self.write_io(addr, val);
-                            }
+        // TODO: Need to check for valid clock mode before writes
+        match addr {
+            OAM_START..=OAM_END => {
+                let relative_addr = addr - OAM_START;
+                let spr_num = relative_addr / OAM_BYTE_SIZE;
+                let byte_num = relative_addr % OAM_BYTE_SIZE;
+                self.oam[spr_num as usize].set_byte(byte_num, val);
+            },
+            TILE_SET..=TILE_SET_END => {
+                let offset = addr - TILE_SET;
+                let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
+                let byte_num = offset % TILE_BYTES;
+                self.tiles[tile_num as usize].set_byte(byte_num, val);
+            },
+            VRAM_START..=VRAM_END => {
+                let vram_addr = addr - VRAM_START;
+                self.vram[vram_addr as usize] = val;
+            },
+            IO_START..=IO_END => {
+                if mode == GB::CGB || mode == GB::CGB_DMG {
+                    match addr {
+                        BGPD => {
+                            self.write_cgb_bg_color(val);
+                        },
+                        OBPD => {
+                            self.write_cgb_spr_color(val);
+                        },
+                        VBK => {
+                            self.set_vram_bank(val);
+                        },
+                        _ => {
+                            self.write_io(addr, val);
                         }
-                    } else {
-                        self.write_io(addr, val);
                     }
-                },
-                _ => {
-                    // Unused, do nothing
+                } else {
+                    self.write_io(addr, val);
                 }
+            },
+            _ => {
+                // Unused, do nothing
             }
         }
     }
@@ -182,6 +181,18 @@ impl PPU {
     /// ```
     pub fn read_vram(&self, addr: u16, mode: GB) -> u8 {
         match addr {
+            OAM_START..=OAM_END => {
+                let relative_addr = addr - OAM_START;
+                let spr_num = relative_addr / OAM_BYTE_SIZE;
+                let byte_num = relative_addr % OAM_BYTE_SIZE;
+                self.oam[spr_num as usize].get_byte(byte_num)
+            },
+            TILE_SET..=TILE_SET_END => {
+                let offset = addr - TILE_SET;
+                let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
+                let byte_num = offset % TILE_BYTES;
+                self.tiles[tile_num as usize].get_byte(byte_num)
+            },
             VRAM_START..=VRAM_END => {
                 let vram_addr = addr - VRAM_START;
                 self.vram[vram_addr as usize]

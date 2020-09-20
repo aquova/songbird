@@ -38,6 +38,7 @@ const BG_PRIORITY_BIT: u8 = 7;
 
 #[derive(Copy, Clone)]
 pub struct Sprite {
+    data: [u8; OAM_BYTE_SIZE as usize],
     tile_num: u8,
     x: i16,
     y: i16,
@@ -50,6 +51,7 @@ pub struct Sprite {
 impl Sprite {
     pub fn new() -> Sprite {
         Sprite {
+            data: [0; OAM_BYTE_SIZE as usize],
             tile_num: 0,
             x: 0,
             y: 0,
@@ -69,7 +71,7 @@ impl Sprite {
     ///     Which metadata byte to edit (u16)
     ///     New byte value (u8)
     /// ```
-    pub fn update_byte(&mut self, index: u16, byte: u8) {
+    pub fn set_byte(&mut self, index: u16, byte: u8) {
         match index {
             Y_POS_BYTE =>    { self.parse_oam_byte1(byte); },
             X_POS_BYTE =>    { self.parse_oam_byte2(byte); },
@@ -77,6 +79,27 @@ impl Sprite {
             FLAG_BYTE =>     { self.parse_oam_byte4(byte); },
             _ => { panic!("Byte offset can only be from 0-3"); }
         }
+
+        self.data[index as usize] = byte;
+    }
+
+    /// ```
+    /// Get byte
+    ///
+    /// Gets a byte from sprite metadata
+    ///
+    /// Input:
+    ///     Which metadata byte to get (u16)
+    ///
+    /// Output:
+    ///     Byte at that index (u8)
+    /// ```
+    pub fn get_byte(&self, index: u16) -> u8 {
+        if index >= OAM_BYTE_SIZE {
+            panic!("Byte offset can only be from 0-3");
+        }
+
+        self.data[index as usize]
     }
 
     /// ```
@@ -94,6 +117,18 @@ impl Sprite {
         x_visible || y_visible
     }
 
+    /// ```
+    /// Contains scanline?
+    ///
+    /// Whether the specified scanline passes thru this sprite
+    ///
+    /// Inputs:
+    ///     Scanline in question (u8)
+    ///     Are we in 8x16 sprite mode? (bool)
+    ///
+    /// Output:
+    ///     Whether scanline passes thru this sprite (bool)
+    /// ```
     pub fn contains_scanline(&self, scanline: u8, is_8x16: bool) -> bool {
         let line = scanline as i16;
         let spr_height = (if is_8x16 { 2 * TILESIZE } else { TILESIZE }) as i16;
@@ -183,7 +218,7 @@ impl Sprite {
     ///     Value to parse (u8)
     /// ```
     fn parse_oam_byte1(&mut self, val: u8) {
-        self.y = (val as i16)- Y_OFFSET;
+        self.y = (val as i16) - Y_OFFSET;
     }
 
     /// ```
