@@ -12,6 +12,8 @@ Note that even many widely used emulators don't pass all the tests, but using th
 
 :warning: - Functionality unimplemented
 
+:question: - Test is unclear
+
 ## Blargg Tests
 
 | Test number | cgb_sound | cpu_instrs         | dmg_sound | instr_timing | interrupt_time | mem_timing | mem_timing-2 | oam_bug            |
@@ -27,7 +29,7 @@ Note that even many widely used emulators don't pass all the tests, but using th
 | 9           | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 10          | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
 | 11          | :warning: | :white_check_mark: | :warning: |              |                |            |              |                    |
-| 11          | :warning: |                    | :warning: |              |                |            |              |                    |
+| 12          | :warning: |                    | :warning: |              |                |            |              |                    |
 
 ## Mooneye Tests
 
@@ -76,3 +78,72 @@ Note that even many widely used emulators don't pass all the tests, but using th
 | reti_timing               | :x:                |
 | ret_timing                | :x:                |
 | rst_timing                | :x:                |
+
+#### Bits
+
+| Test              | Success            |
+| ----------------- | ------------------ |
+| mem_oam           | :white_check_mark: |
+| reg_f             | :white_check_mark: |
+| unused_hwio       | :question:         |
+
+#### Instr
+
+| Test              | Success            |
+| ----------------- | ------------------ |
+| daa               | :white_check_mark: |
+
+#### Interrupts
+
+| Test              | Success            |
+| ----------------- | ------------------ |
+| ie_push           | :question:         |
+
+#### OAM DMA
+
+| Test              | Success            |
+| ----------------- | ------------------ |
+| basic             | :white_check_mark: |
+| reg_read          | :x:                |
+| sources-GS        | :x:                |
+
+#### PPU
+
+| Test                            | Success            |
+| ------------------------------- | ------------------ |
+| hblank_ly_scx_timing-GS         | :x:                |
+| intr_1_2_timing-GS              | :x:                |
+| intr_2_0_timing                 | :x:                |
+| intr_2_mode0_timing_sprites     | :x:                |
+| intr_2_mode0_timing             | :x:                |
+| intr_2_mode3_timing             | :x:                |
+| intr_2_oam_ok_timing            | :x:                |
+| lcdon_timing-GS                 | :x:                |
+| lcdon_write_timing-GS           | :x:                |
+| stat_irq_blocking               | :x:                |
+| stat_lyc_onoff                  | :x:                |
+| vblank_stat_intr-GS             | :x:                |
+
+#### Serial
+
+| Test                                | Success            |
+| ----------------------------------- | ------------------ |
+| boot_sclk_align-dmgABCmgb           | :x:                |
+
+#### Timer
+
+| Test                      | Success            |
+| ------------------------- | ------------------ |
+| div_write                 | :x:                |
+| rapid_toggle              | :x:                |
+| tim00_div_trigger         | :x:                |
+| tim00                     | :x:                |
+| tim01_div_trigger         | :x:                |
+| tim01                     | :x:                |
+| tim10_div_trigger         | :x:                |
+| tim10                     | :x:                |
+| tim11_div_trigger         | :x:                |
+| tim11                     | :x:                |
+| tima_reload               | :x:                |
+| tima_write_reloading      | :x:                |
+| tma_write_reloading       | :x:                |
