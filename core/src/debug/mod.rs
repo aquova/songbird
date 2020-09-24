@@ -323,8 +323,14 @@ impl debugger {
         for _ in 0..5 {
             let op = gb.read_ram(pc);
             let op_name = OPCODE_NAMES[op as usize];
-            println!("${:04x} | {}", pc, op_name);
-            pc += OPCODE_LENGTH[op as usize] as u16 + 1;
+            let op_len = OPCODE_LENGTH[op as usize] as u16 + 1;
+            let mut inst = format!("${:04x} | {} ;", pc, op_name);
+            for i in 0..op_len {
+                let arg = gb.read_ram(pc + i);
+                inst = format!("{} {:02x}", inst, arg);
+            }
+            println!("{}", inst);
+            pc += op_len;
         }
     }
 

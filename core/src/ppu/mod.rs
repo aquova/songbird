@@ -124,6 +124,10 @@ impl PPU {
     /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
         // TODO: Need to check for valid clock mode before writes
+        // if !self.is_valid_status(addr) {
+        //     return;
+        // }
+
         match addr {
             OAM_START..=OAM_END => {
                 let relative_addr = addr - OAM_START;

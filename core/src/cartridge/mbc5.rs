@@ -46,11 +46,7 @@ pub fn mbc5_write_byte(cart: &mut Cart, addr: u16, val: u8) -> bool {
     match addr {
         RAM_ENABLE_START..=RAM_ENABLE_STOP => {
             // External RAM access enabled if $0A written
-            if val == 0x0A {
-                cart.ext_ram_enable = true;
-            } else if val == 0x00 {
-                cart.ext_ram_enable = false;
-            }
+            cart.ext_ram_enable = val == 0x0A;
         },
         ROM_BANK_NUM_START..=MBC5_LOW_BITS_ROM_BANK_STOP => {
             cart.rom_bank &= 0xFF00;
