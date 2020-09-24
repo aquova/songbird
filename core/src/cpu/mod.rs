@@ -171,8 +171,7 @@ impl Cpu {
         self.bus.set_status_reg(self.clock.get_mode());
 
         // Tick timer
-        let timer_interrupt = self.timer.tick(cycles);
-        if timer_interrupt {
+        if self.timer.tick() {
             self.enable_interrupt(Interrupts::TIMER);
         }
 
@@ -745,9 +744,17 @@ impl Cpu {
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_ram(&self, addr: u16) -> u8 {
+    pub fn read_ram(&mut self, addr: u16) -> u8 {
         match addr {
-            DIV..=TAC => { self.timer.read_timer(addr) },
+            DIV..=TAC => {
+                let mut timer_interrupt = false;
+                let val = self.timer.read_timer(addr, &mut timer_interrupt);
+                if timer_interrupt {
+                    self.enable_interrupt(Interrupts::TIMER);
+                }
+
+                val
+            },
             _ => { self.bus.read_ram(addr, self.mode) }
         }
     }
@@ -1173,7 +1180,11 @@ impl Cpu {
     pub fn write_ram(&mut self, addr: u16, val: u8) {
         match addr {
             DIV..=TAC => {
-                self.timer.write_timer(addr, val);
+                let mut timer_interrupt = false;
+                self.timer.write_timer(addr, val, &mut timer_interrupt);
+                if timer_interrupt {
+                    self.enable_interrupt(Interrupts::TIMER);
+                }
             },
             _ => {
                 self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
@@ -1211,7 +1222,7 @@ impl Cpu {
     /// Output:
     ///     The interrupt that has been triggered (if any) (Option<Interrupt>)
     /// ```
-    fn interrupt_check(&self) -> Option<Interrupts> {
+    fn interrupt_check(&mut self) -> Option<Interrupts> {
         // If we're halted, interrupt will wake us up, regardless of master enable
         if !self.interrupt_enabled && !self.halted {
             return None;
