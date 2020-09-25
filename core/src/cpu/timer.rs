@@ -5,13 +5,18 @@ pub const TIMA: u16 = 0xFF05; // Counter register
 pub const TMA: u16 = 0xFF06; // Modulo register
 pub const TAC: u16 = 0xFF07; // Control register
 
+// const TIMA_SPEED_IN_CYCLES: [u16; 4] = [1024, 16, 64, 256];
+const DIV_SPEED_IN_CYCLES: u16 = 64;
+const TIMA_SPEED_IN_CYCLES: [u16; 4] = [256, 4, 16, 64];
+
 pub struct Timer {
     running: bool,
-    internal_cnt: u16,
-    tac: u8,
-    counter: u8,
-    modulo: u8,
-    overflow: bool,
+    div_cycles: u16,
+    tima_cycles: u16,
+    tima_index: usize,
+    div: u8, // $FF04
+    tima: u8, // $FF05
+    tma: u8, // $FF06
 }
 
 impl Default for Timer {
@@ -20,114 +25,74 @@ impl Default for Timer {
     }
 }
 
-// Much of the implementation for the timer is based off the Mooneye emulator
-// https://github.com/Gekkio/mooneye-gb
 impl Timer {
     pub fn new() -> Timer {
         Timer {
             running: false,
-            internal_cnt: 0,
-            tac: 0,
-            counter: 0,
-            modulo: 0,
-            overflow: false,
+            div_cycles: 0,
+            tima_cycles: 0,
+            tima_index: 0,
+            div: 0,
+            tima: 0,
+            tma: 0,
         }
     }
 
-    fn counter_mask(&self) -> u16 {
-        match self.tac & 0b11 {
-            0b11 => (1 << 5),
-            0b10 => (1 << 3),
-            0b01 => (1 << 1),
-            _ => (1 << 7)
-        }
-    }
-
-    fn counter_bit(&self) -> bool {
-        (self.internal_cnt & self.counter_mask()) != 0
-    }
-
-    fn increment(&mut self) {
-        let (counter, overflow) = self.counter.overflowing_add(1);
-        self.counter = counter;
-        self.overflow = overflow;
-    }
-
-    pub fn tick(&mut self) -> bool {
+    pub fn tick(&mut self, cycles: u8) -> bool {
         let mut interrupt = false;
 
-        if self.overflow {
-            self.internal_cnt = self.internal_cnt.wrapping_add(1);
-            self.counter = self.modulo;
-            self.overflow = false;
-            interrupt = true;
-        } else if self.running && self.counter_bit() {
-            self.internal_cnt = self.internal_cnt.wrapping_add(1);
-            let new_bit = self.counter_bit();
-            if !new_bit {
-                self.increment();
+        // Timer clock runs slower than CPU clock
+        // So timer registers only increment on set multiple of clock cycles
+        // DIV always runs, while TIMA only runs when set
+        self.div_cycles += cycles as u16;
+        if self.div_cycles >= DIV_SPEED_IN_CYCLES {
+            self.div = self.div.wrapping_add(1);
+            self.div_cycles %= DIV_SPEED_IN_CYCLES;
+        }
+
+        if self.running {
+            self.tima_cycles += cycles as u16;
+
+            let cnt_spd = TIMA_SPEED_IN_CYCLES[self.tima_index];
+            if self.tima_cycles >= cnt_spd {
+                self.tima_cycles %= cnt_spd;
+                let overflow = self.tima.checked_add(1);
+                // If overflow, set Timer counter to Timer Modulo value
+                if overflow.is_none() {
+                    self.tima = self.tma;
+                    interrupt = true;
+                } else {
+                    self.tima += 1;
+                }
             }
-        } else {
-            self.internal_cnt = self.internal_cnt.wrapping_add(1);
         }
 
         interrupt
     }
 
-    pub fn read_timer(&mut self, addr: u16, inter: &mut bool) -> u8 {
-        *inter = self.tick();
-
+    pub fn read_timer(&self, addr: u16) -> u8 {
         match addr {
-            DIV => {
-                (self.internal_cnt >> 6) as u8
-            },
-            TIMA => {
-                self.counter
-            },
-            TMA => {
-                self.modulo
-            },
+            DIV => { self.div },
+            TIMA => { self.tima },
+            TMA => { self.tma },
             TAC => {
-                0b1111_1100 | self.tac
+                let running_val = if self.running { 0b100 } else { 0 };
+                running_val | (self.tima_index as u8)
             },
             _ => { panic!("Trying to read a non-timer register") }
         }
     }
 
-    pub fn write_timer(&mut self, addr: u16, val: u8, inter: &mut bool) {
+    pub fn write_timer(&mut self, addr: u16, val: u8) {
         match addr {
-            DIV => {
-                *inter = self.tick();
-                if self.counter_bit() {
-                    self.increment();
-                }
-                self.internal_cnt = 0;
-            },
-            TIMA => {
-                let overflow = self.overflow;
-                *inter = self.tick();
-                if !overflow {
-                    self.overflow = false;
-                    self.counter = val;
-                }
-            },
-            TMA => {
-                let overflow = self.overflow;
-                *inter = self.tick();
-                self.modulo = val;
-                if overflow {
-                    self.counter = val;
-                }
-            },
+            DIV => { self.div = 0 },
+            TIMA => { self.tima = 0 },
+            TMA => { self.tma = val },
             TAC => {
-                *inter = self.tick();
-                let old_bit = self.running && self.counter_bit();
-                self.tac = val & 0b11;
                 self.running = val.get_bit(2);
-                let new_bit = self.running && self.counter_bit();
-                if old_bit && !new_bit {
-                    self.increment();
-                }
+
+                let clock_spd = val & 0x3;
+                self.tima_index = clock_spd as usize;
             },
             _ => {
                 panic!("Trying to write to non-timer register")

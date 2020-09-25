@@ -91,7 +91,7 @@ impl debugger {
         self.debugging
     }
 
-    pub fn debugloop(&mut self, mut gb: &mut Cpu) -> bool {
+    pub fn debugloop(&mut self, gb: &mut Cpu) -> bool {
         let mut should_quit = false;
 
         'debugloop: loop {
@@ -117,7 +117,7 @@ impl debugger {
                     break 'debugloop;
                 },
                 "disass" => {
-                    self.disassemble(&mut gb);
+                    self.disassemble(&gb);
                 },
                 "help" => {
                     self.print_help();
@@ -132,7 +132,7 @@ impl debugger {
                 "p" => {
                     let hex = u16::from_str_radix(words[1], 16);
                     if let Ok(addr) = hex {
-                        self.print_ram(addr, &mut gb);
+                        self.print_ram(addr, &gb);
                     }
                 },
                 "q" => {
@@ -286,7 +286,7 @@ impl debugger {
     ///     Address to start printing from (u16)
     ///     Reference to CPU object (&Cpu)
     /// ```
-    pub fn print_ram(&self, addr: u16, gb: &mut Cpu) {
+    pub fn print_ram(&self, addr: u16, gb: &Cpu) {
         // Print up to addr + 16, unless we go off the end
         let end_addr = min(addr + 16, 0xFFFF);
         let mut valstring = String::new();
@@ -316,7 +316,7 @@ impl debugger {
     /// Input:
     ///     Refernce to CPU (&Cpu)
     /// ```
-    pub fn disassemble(&self, gb: &mut Cpu) {
+    pub fn disassemble(&self, gb: &Cpu) {
         let mut pc = gb.get_pc();
 
         // Print next 5 instructions
@@ -334,7 +334,7 @@ impl debugger {
         }
     }
 
-    pub fn get_watch_vals(&self, gb: &mut Cpu) -> HashMap<u16, u8> {
+    pub fn get_watch_vals(&self, gb: &Cpu) -> HashMap<u16, u8> {
         let mut vals = HashMap::new();
         for wp in &self.watchpoints {
             vals.insert(*wp, gb.read_ram(*wp));
@@ -343,7 +343,7 @@ impl debugger {
         vals
     }
 
-    pub fn check_watch(&self, gb: &mut Cpu, prev_map: HashMap<u16, u8>) -> bool {
+    pub fn check_watch(&self, gb: &Cpu, prev_map: HashMap<u16, u8>) -> bool {
         for wp in &self.watchpoints {
             if let Some(old) = prev_map.get(wp) {
                 if *old != gb.read_ram(*wp) {
