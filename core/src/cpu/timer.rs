@@ -1,22 +1,18 @@
 use crate::utils::ModifyBits;
 
-pub const DIV: u16 = 0xFF04; // Divider register
+pub const DIV: u16 = 0xFF04;  // Divider register
 pub const TIMA: u16 = 0xFF05; // Counter register
-pub const TMA: u16 = 0xFF06; // Modulo register
-pub const TAC: u16 = 0xFF07; // Control register
+pub const TMA: u16 = 0xFF06;  // Modulo register
+pub const TAC: u16 = 0xFF07;  // Control register
 
-// const TIMA_SPEED_IN_CYCLES: [u16; 4] = [1024, 16, 64, 256];
-const DIV_SPEED_IN_CYCLES: u16 = 64;
-const TIMA_SPEED_IN_CYCLES: [u16; 4] = [256, 4, 16, 64];
+const TAC_ENABLE_BIT: u8 = 3;
 
 pub struct Timer {
-    running: bool,
-    div_cycles: u16,
-    tima_cycles: u16,
-    tima_index: usize,
-    div: u8, // $FF04
-    tima: u8, // $FF05
-    tma: u8, // $FF06
+    div: u16,   // $FF04
+    tima: u8,   // $FF05
+    tma: u8,    // $FF06
+    tac: u8,    // $FF07
+    reset: bool,
 }
 
 impl Default for Timer {
@@ -28,41 +24,49 @@ impl Default for Timer {
 impl Timer {
     pub fn new() -> Timer {
         Timer {
-            running: false,
-            div_cycles: 0,
-            tima_cycles: 0,
-            tima_index: 0,
             div: 0,
             tima: 0,
             tma: 0,
+            tac: 0,
+            reset: false,
         }
     }
 
-    pub fn tick(&mut self, cycles: u8) -> bool {
-        let mut interrupt = false;
-
-        // Timer clock runs slower than CPU clock
-        // So timer registers only increment on set multiple of clock cycles
-        // DIV always runs, while TIMA only runs when set
-        self.div_cycles += cycles as u16;
-        if self.div_cycles >= DIV_SPEED_IN_CYCLES {
-            self.div = self.div.wrapping_add(1);
-            self.div_cycles %= DIV_SPEED_IN_CYCLES;
+    fn get_tima_period(&self) -> u16 {
+        match self.tac & 0b11 {
+            0b00 => (1 << 9),
+            0b01 => (1 << 3),
+            0b10 => (1 << 5),
+            0b11 => (1 << 7),
+            _ => unreachable!()
         }
+    }
 
-        if self.running {
-            self.tima_cycles += cycles as u16;
+    fn tima_tick(&self) -> bool {
+        (self.div & self.get_tima_period()) != 0
+    }
 
-            let cnt_spd = TIMA_SPEED_IN_CYCLES[self.tima_index];
-            if self.tima_cycles >= cnt_spd {
-                self.tima_cycles %= cnt_spd;
-                let overflow = self.tima.checked_add(1);
-                // If overflow, set Timer counter to Timer Modulo value
-                if overflow.is_none() {
+    // A good source on timer behavior here: https://hacktix.github.io/GBEDG/timers/
+    pub fn tick(&mut self, m_cycles: u8) -> bool {
+        let mut interrupt = false;
+        let t_cycles = if self.reset {
+            self.reset = false;
+            4
+        } else {
+            4 * m_cycles
+        };
+
+        for _ in 0..t_cycles {
+            let old_bit = self.tima_tick();
+            self.div = self.div.wrapping_add(1);
+            let new_bit = self.tima_tick();
+
+            if self.tac.get_bit(TAC_ENABLE_BIT) && (old_bit && !new_bit) {
+                let (new_tima, overflow) = self.tima.overflowing_add(1);
+                self.tima = new_tima;
+                if overflow {
                     self.tima = self.tma;
                     interrupt = true;
-                } else {
-                    self.tima += 1;
                 }
             }
         }
@@ -72,31 +76,24 @@ impl Timer {
 
     pub fn read_timer(&self, addr: u16) -> u8 {
         match addr {
-            DIV => { self.div },
-            TIMA => { self.tima },
-            TMA => { self.tma },
-            TAC => {
-                let running_val = if self.running { 0b100 } else { 0 };
-                running_val | (self.tima_index as u8)
-            },
+            DIV => (self.div >> 8) as u8,
+            TIMA => self.tima,
+            TMA => self.tma,
+            TAC => self.tac,
             _ => { panic!("Trying to read a non-timer register") }
         }
     }
 
     pub fn write_timer(&mut self, addr: u16, val: u8) {
         match addr {
-            DIV => { self.div = 0 },
-            TIMA => { self.tima = 0 },
-            TMA => { self.tma = val },
-            TAC => {
-                self.running = val.get_bit(2);
-
-                let clock_spd = val & 0x3;
-                self.tima_index = clock_spd as usize;
+            DIV => {
+                self.div = 0;
+                self.reset = true;
             },
-            _ => {
-                panic!("Trying to write to non-timer register")
-            }
+            TIMA => { self.tima = val },
+            TMA => { self.tma = val },
+            TAC => { self.tac = val },
+            _ => panic!("Trying to write to non-timer register")
         };
     }
 }

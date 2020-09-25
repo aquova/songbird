@@ -156,10 +156,6 @@ impl Cpu {
     pub fn tick(&mut self) -> bool {
         let mut draw_time = false;
 
-        // Check for interrupts
-        if let Some(inter_type) = self.interrupt_check() {
-            self.trigger_interrupt(inter_type);
-        }
         // If halted, simply continue counting without executing opcodes
         let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
@@ -191,6 +187,11 @@ impl Cpu {
                 // Do nothing
             }
         };
+
+        // Check for interrupts
+        if let Some(inter_type) = self.interrupt_check() {
+            self.trigger_interrupt(inter_type);
+        }
 
         draw_time
     }
