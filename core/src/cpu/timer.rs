@@ -6,13 +6,14 @@ pub const TMA: u16 = 0xFF06;  // Modulo register
 pub const TAC: u16 = 0xFF07;  // Control register
 
 const TAC_ENABLE_BIT: u8 = 3;
+const TIMA_COOLDOWN_OVERFLOW: u8 = 4;
 
 pub struct Timer {
     div: u16,   // $FF04
     tima: u8,   // $FF05
     tma: u8,    // $FF06
     tac: u8,    // $FF07
-    reset: bool,
+    tima_cooldown: u8,
 }
 
 impl Default for Timer {
@@ -28,7 +29,7 @@ impl Timer {
             tima: 0,
             tma: 0,
             tac: 0,
-            reset: false,
+            tima_cooldown: 0,
         }
     }
 
@@ -49,24 +50,26 @@ impl Timer {
     // A good source on timer behavior here: https://hacktix.github.io/GBEDG/timers/
     pub fn tick(&mut self, m_cycles: u8) -> bool {
         let mut interrupt = false;
-        let t_cycles = if self.reset {
-            self.reset = false;
-            4
-        } else {
-            4 * m_cycles
-        };
+        let t_cycles = 4 * m_cycles;
 
         for _ in 0..t_cycles {
             let old_bit = self.tima_tick();
             self.div = self.div.wrapping_add(1);
             let new_bit = self.tima_tick();
+            let enabled = self.tac.get_bit(TAC_ENABLE_BIT);
 
-            if self.tac.get_bit(TAC_ENABLE_BIT) && (old_bit && !new_bit) {
+            if self.tima_cooldown != 0 {
+                self.tima_cooldown -= 1;
+                if self.tima_cooldown == 0 {
+                    self.tima = self.tma;
+                    interrupt = true;
+                }
+            } else if (old_bit && enabled) && !(new_bit && enabled) {
                 let (new_tima, overflow) = self.tima.overflowing_add(1);
                 self.tima = new_tima;
                 if overflow {
-                    self.tima = self.tma;
-                    interrupt = true;
+                    self.tima = 0;
+                    self.tima_cooldown = TIMA_COOLDOWN_OVERFLOW;
                 }
             }
         }
@@ -86,11 +89,11 @@ impl Timer {
 
     pub fn write_timer(&mut self, addr: u16, val: u8) {
         match addr {
-            DIV => {
-                self.div = 0;
-                self.reset = true;
+            DIV => { self.div = 0 },
+            TIMA => {
+                self.tima = val;
+                self.tima_cooldown = 0;
             },
-            TIMA => { self.tima = val },
             TMA => { self.tma = val },
             TAC => { self.tac = val },
             _ => panic!("Trying to write to non-timer register")
