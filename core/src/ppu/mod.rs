@@ -246,14 +246,17 @@ impl PPU {
 
             self.write_io(LY, line);
 
+            let mut stat = self.read_io(STAT);
             if self.read_io(LY) == self.read_io(LYC) {
                 // If LY and LYC are equal:
                 // - Set coincidence bit in STAT register
                 // - Trigger LCDC status interrupt if enabled
-                let mut stat = self.read_io(STAT);
                 stat.set_bit(LYC_LY_FLAG_BIT);
                 self.write_io(STAT, stat);
                 return stat.get_bit(LYC_LY_INTERRUPT_BIT);
+            } else {
+                stat.clear_bit(LYC_LY_FLAG_BIT);
+                self.write_io(STAT, stat);
             }
         }
 
