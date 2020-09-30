@@ -55,7 +55,7 @@ const IO_SIZE: usize = (IO_END - IO_START + 1) as usize;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
 const SPR_PER_LINE: usize = 10;
-const CGB_BG_PAL_DATA_SIZE: usize = 0x40 * 2;
+const CGB_BG_PAL_DATA_SIZE: usize = 64; // 8 palettes, 4 colors per palette, 2 bytes per color
 const CGB_SPR_PAL_DATA_SIZE: usize = 64;
 
 // Register bit constants
@@ -78,7 +78,7 @@ pub struct PPU {
     vram: [u8; VRAM_SIZE],
     vram_bank: usize,
     io: [u8; IO_SIZE],
-    screen_buffer: [u8; SCREEN_HEIGHT * SCREEN_WIDTH],
+    screen_buffer: [u8; DISP_SIZE],
     tiles: [Tile; 2 * TILE_NUM], // CGB can have two banks of tiles
     oam: [Sprite; OAM_SPR_NUM],
     last_wndw_line: Option<u8>,
@@ -102,7 +102,7 @@ impl PPU {
             vram: [0; VRAM_SIZE],
             vram_bank: 0,
             io: [0; IO_SIZE],
-            screen_buffer: [0; SCREEN_HEIGHT * SCREEN_WIDTH],
+            screen_buffer: [0; DISP_SIZE],
             tiles: [Tile::new(); 2 * TILE_NUM],
             oam: [Sprite::new(); OAM_SPR_NUM],
             last_wndw_line: None,
@@ -274,14 +274,14 @@ impl PPU {
     pub fn render_scanline(&mut self, mode: GB) {
         // Render current scanline
         let line = self.read_io(LY);
-        let mut pixel_row = [0; SCREEN_WIDTH];
+        let mut pixel_row = [0; SCREEN_WIDTH * COLOR_CHANNELS];
 
         if self.is_bkgd_dspl() {
-            self.render_background_line(&mut pixel_row, line);
+            self.render_background_line(&mut pixel_row, line, mode);
         }
 
         if self.is_wndw_dspl(mode) {
-            self.render_wndw_line(&mut pixel_row, line);
+            self.render_wndw_line(&mut pixel_row, line, mode);
         }
 
         if self.is_sprt_dspl() {
@@ -289,8 +289,8 @@ impl PPU {
         }
 
         // Copy this line of pixels into overall screen buffer
-        let start_index = line as usize * SCREEN_WIDTH;
-        let end_index = (line + 1) as usize * SCREEN_WIDTH;
+        let start_index = line as usize * (SCREEN_WIDTH * COLOR_CHANNELS);
+        let end_index = (line + 1) as usize * (SCREEN_WIDTH * COLOR_CHANNELS);
         self.screen_buffer[start_index..end_index].copy_from_slice(&pixel_row);
     }
 
@@ -318,11 +318,11 @@ impl PPU {
     ///     Array of pixels to draw ([u8])
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
-        let mut map_array = [0; SCREEN_HEIGHT * SCREEN_WIDTH];
+        let mut map_array = [0; DISP_SIZE];
         if self.is_lcd_dspl() {
             map_array.copy_from_slice(&self.screen_buffer);
         }
-        self.get_color(&map_array)
+        map_array
     }
 
     /// ```
@@ -349,10 +349,13 @@ impl PPU {
     /// Inputs:
     ///     Array to load pixel data into (&[u8])
     ///     Scanline to render (u8)
+    ///     Hardware type (GB)
     /// ```
-    fn render_background_line(&self, pixel_row: &mut [u8], line: u8) {
+    fn render_background_line(&self, pixel_row: &mut [u8], line: u8, mode: GB) {
         let tile_map = self.get_bkgd_tile_map();
-        let palette = self.get_bkgd_palette();
+        // TODO: This is not ideal. Someday, I'd like to not have this variable if we aren't DMG
+        let dmg_pal = get_sys_pal(self.sys_pal);
+        let pal_indices = self.get_dmg_bkgd_palette();
         let screen_coords = self.get_scroll_coords();
 
         // Get the row of tiles containing our scanline
@@ -374,9 +377,19 @@ impl PPU {
 
             let tile = &self.tiles[tile_index];
             let col = (start_x + x) % TILESIZE;
-            let pixel = tile.get_row(row)[col];
-            let corrected_pixel = palette[pixel as usize];
-            pixel_row[x] = corrected_pixel;
+            let pixel = tile.get_row(row)[col] as usize;
+            if mode == GB::CGB {
+                let raw_color = merge_bytes(self.cgb_bg_pal_data[pixel + 1], self.cgb_bg_pal_data[pixel]);
+                let color = gbc2rgba(raw_color);
+                for i in 0..COLOR_CHANNELS {
+                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
+                }
+            } else {
+                let color = dmg_pal[pal_indices[pixel] as usize];
+                for i in 0..COLOR_CHANNELS {
+                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
+                }
+            }
         }
     }
 
@@ -389,7 +402,7 @@ impl PPU {
     ///     Array to load pixel data into (&[u8])
     ///     Scanline to render (u8)
     /// ```
-    fn render_wndw_line(&mut self, pixel_row: &mut [u8], line: u8) {
+    fn render_wndw_line(&mut self, pixel_row: &mut [u8], line: u8, mode: GB) {
         let wndw_coords = self.get_wndw_coords();
         // See below for why this is needed
         let line = if self.last_wndw_line.is_none() { line } else { self.last_wndw_line.unwrap() + 1 };
@@ -400,7 +413,8 @@ impl PPU {
         }
 
         let wndw_map = self.get_wndw_tile_map();
-        let palette = self.get_bkgd_palette();
+        let dmg_pal = get_sys_pal(self.sys_pal);
+        let pal_indices = self.get_dmg_bkgd_palette();
 
         // Get the row of tiles containing our scanline
         let y = (line - wndw_coords.y) as usize;
@@ -420,9 +434,19 @@ impl PPU {
             tile_index += self.vram_bank * TILE_NUM;
             let tile = &self.tiles[tile_index];
             let col = (x - start_x) % TILESIZE;
-            let pixel = tile.get_row(row)[col];
-            let corrected_pixel = palette[pixel as usize];
-            pixel_row[x] = corrected_pixel;
+            let pixel = tile.get_row(row)[col] as usize;
+            if mode == GB::CGB {
+                let raw_color = merge_bytes(self.cgb_bg_pal_data[pixel + 1], self.cgb_bg_pal_data[pixel]);
+                let color = gbc2rgba(raw_color);
+                for i in 0..COLOR_CHANNELS {
+                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
+                }
+            } else {
+                let color = dmg_pal[pal_indices[pixel] as usize];
+                for i in 0..COLOR_CHANNELS {
+                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
+                }
+            }
         }
 
         // The window layer has an odd edge case
@@ -446,7 +470,8 @@ impl PPU {
         // Iterate through every sprite
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
-        let mut sprites_drawn = 10;
+        let mut sprites_drawn = 0;
+        let dmg_pal = get_sys_pal(self.sys_pal);
         for spr in sorted_sprites {
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
                 continue;
@@ -455,11 +480,11 @@ impl PPU {
             sprites_drawn += 1;
             // System only allows finite number of sprites drawn per line
             // If we hit threshold, no more sprites can be drawn on this line
-            if sprites_drawn == SPR_PER_LINE {
+            if sprites_drawn > SPR_PER_LINE {
                 break;
             }
 
-            let palette = self.get_spr_palette(spr.is_pal_0());
+            let pal_indices = self.get_dmg_spr_palette(spr.is_pal_0());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
                 let lcd_control = self.read_io(LCDC);
@@ -499,7 +524,7 @@ impl PPU {
             let pixels = tile.get_row(row % TILESIZE);
             let spr_x = top_x as usize;
             for col in 0..TILESIZE {
-                let pixel = pixels[col as usize];
+                let pixel = pixels[col as usize] as usize;
                 let x_offset = if spr.is_x_flip() {
                     TILESIZE - col - 1
                 } else {
@@ -512,46 +537,25 @@ impl PPU {
                     continue;
                 }
 
-                let corrected_pixel = palette[pixel as usize];
-
                 // Only draw pixel if
                 // - Sprite is above background, and the pixel being drawn isn't transparent
                 // - Sprite is below background, and background has transparent color here
-                let should_draw = (above_bg && pixel != 0) || (!above_bg && pixel_row[pixel_x] == 0);
-                if should_draw {
-                    pixel_row[pixel_x] = corrected_pixel;
+                if (above_bg && pixel != 0) || (!above_bg && (pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == dmg_pal[0])) {
+                    if mode == GB::CGB {
+                        let raw_color = merge_bytes(self.cgb_spr_pal_data[pixel + 1], self.cgb_spr_pal_data[pixel]);
+                        let color = gbc2rgba(raw_color);
+                        for i in 0..COLOR_CHANNELS {
+                            pixel_row[COLOR_CHANNELS * pixel_x + i] = color[i];
+                        }
+                    } else {
+                        let color = dmg_pal[pal_indices[pixel] as usize];
+                        for i in 0..COLOR_CHANNELS {
+                            pixel_row[COLOR_CHANNELS * pixel_x + i] = color[i];
+                        }
+                    }
                 }
             }
         }
-    }
-
-    /// ```
-    /// Get color
-    ///
-    /// Gets the pixel values for the pixels currently on screen
-    ///
-    /// Input:
-    ///     160x144 screen pixel array (&[u8])
-    ///
-    /// Output:
-    ///     RGB values for on-screen pixels ([u8])
-    /// ```
-    fn get_color(&self, pixel_array: &[u8]) -> [u8; DISP_SIZE] {
-        let mut rgb_screen = [0; DISP_SIZE];
-        let pal = get_sys_pal(self.sys_pal);
-        // Iterate through every visible pixel
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                let index = y * SCREEN_WIDTH + x;
-                let pixel = pixel_array[index];
-
-                let view_index = index * COLOR_CHANNELS;
-                let color = pal[pixel as usize];
-                rgb_screen[view_index..(color.len() + view_index)].clone_from_slice(&color[..]);
-            }
-        }
-
-        rgb_screen
     }
 
     /// ```
@@ -621,14 +625,14 @@ impl PPU {
     }
 
     /// ```
-    /// Get background palette
+    /// Get DMG background palette
     ///
     /// Gets the palette indices from the BGP register ($FF47)
     ///
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_bkgd_palette(&self) -> [u8; PAL_SIZE] {
+    fn get_dmg_bkgd_palette(&self) -> [u8; DMG_PAL_SIZE] {
         unpack_u8(self.read_io(BGP))
     }
 
@@ -643,7 +647,7 @@ impl PPU {
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_spr_palette(&self, pal_0: bool) -> [u8; PAL_SIZE] {
+    fn get_dmg_spr_palette(&self, pal_0: bool) -> [u8; DMG_PAL_SIZE] {
         if pal_0 {
             unpack_u8(self.read_io(OBP0))
         } else {
@@ -906,7 +910,7 @@ impl PPU {
     ///     Partial color data loaded into the palette data RAM register
     /// ```
     fn read_cgb_spr_color(&self) -> u8 {
-        let ind = self.read_io(OBPI);
+        let ind = self.read_io(OBPI) & 0x7F;
         self.cgb_spr_pal_data[ind as usize]
     }
 
@@ -919,7 +923,7 @@ impl PPU {
     ///     New value for the index set in OBPI
     /// ```
     fn write_cgb_spr_color(&mut self, val: u8) {
-        let ind = self.read_io(OBPI);
+        let ind = self.read_io(OBPI) & 0x7F;
         self.cgb_spr_pal_data[ind as usize] = val;
     }
 }
