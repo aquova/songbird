@@ -274,7 +274,7 @@ impl PPU {
     pub fn render_scanline(&mut self, mode: GB) {
         // Render current scanline
         let line = self.read_io(LY);
-        let mut pixel_row = [0; SCREEN_WIDTH * COLOR_CHANNELS];
+        let mut pixel_row = [0xFF; SCREEN_WIDTH * COLOR_CHANNELS];
 
         if self.is_bkgd_dspl() {
             self.render_background_line(&mut pixel_row, line, mode);
@@ -318,7 +318,7 @@ impl PPU {
     ///     Array of pixels to draw ([u8])
     /// ```
     pub fn render_screen(&self) -> [u8; DISP_SIZE] {
-        let mut map_array = [0; DISP_SIZE];
+        let mut map_array = [0xFF; DISP_SIZE];
         if self.is_lcd_dspl() {
             map_array.copy_from_slice(&self.screen_buffer);
         }
