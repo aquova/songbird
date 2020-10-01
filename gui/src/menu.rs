@@ -70,6 +70,17 @@ impl MenuState {
             if let Some(menu) = ui.begin_menu(im_str!("Display"), true) {
                 let pal_items = [
                     im_str!("Grayscale"),
+                    im_str!("Brown"),
+                    im_str!("Red"),
+                    im_str!("Dark Brown"),
+                    im_str!("Blue"),
+                    im_str!("Dark Blue"),
+                    im_str!("Pastel"),
+                    im_str!("Orange"),
+                    im_str!("Yellow"),
+                    im_str!("Green"),
+                    im_str!("Dark Green"),
+                    im_str!("Inverted")
                 ];
 
                 let shader_items = [
@@ -126,8 +137,20 @@ impl MenuState {
     }
 
     pub fn handle_display_dialog(&self, _ui: &Ui) -> DisplayOptions {
+        // NOTE: These *must* be in the same order as the string list
         let palettes = [
             Palettes::GRAYSCALE,
+            Palettes::BROWN,
+            Palettes::RED,
+            Palettes::DARK_BROWN,
+            Palettes::BLUE,
+            Palettes::DARK_BLUE,
+            Palettes::PASTEL,
+            Palettes::ORANGE,
+            Palettes::YELLOW,
+            Palettes::GREEN,
+            Palettes::DARK_GREEN,
+            Palettes::INVERTED
         ];
         let pal = palettes[self.pal_index];
 

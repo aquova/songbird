@@ -84,7 +84,7 @@ pub struct PPU {
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
     cgb_spr_pal_data: [u8; CGB_SPR_PAL_DATA_SIZE],
-    sys_pal: Palettes,
+    palette: Palette,
 }
 
 impl Default for PPU {
@@ -108,7 +108,7 @@ impl PPU {
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
             cgb_spr_pal_data: [0; CGB_SPR_PAL_DATA_SIZE],
-            sys_pal: Palettes::GRAYSCALE,
+            palette: Palette::new(),
         }
     }
 
@@ -334,7 +334,7 @@ impl PPU {
     ///     Palette (Palettes)
     /// ```
     pub fn set_sys_pal(&mut self, pal: Palettes) {
-        self.sys_pal = pal;
+        self.palette.set_sys_pal(pal);
     }
 
     // ===================
@@ -354,8 +354,8 @@ impl PPU {
     fn render_background_line(&self, pixel_row: &mut [u8], line: u8, mode: GB) {
         let tile_map = self.get_bkgd_tile_map();
         // TODO: This is not ideal. Someday, I'd like to not have this variable if we aren't DMG
-        let dmg_pal = get_sys_pal(self.sys_pal);
-        let pal_indices = self.get_dmg_bkgd_palette();
+        let dmg_pal = self.palette.get_bg_pal();
+        let pal_indices = self.get_dmg_bg_indices();
         let screen_coords = self.get_scroll_coords();
 
         // Get the row of tiles containing our scanline
@@ -413,8 +413,8 @@ impl PPU {
         }
 
         let wndw_map = self.get_wndw_tile_map();
-        let dmg_pal = get_sys_pal(self.sys_pal);
-        let pal_indices = self.get_dmg_bkgd_palette();
+        let dmg_pal = self.palette.get_bg_pal();
+        let pal_indices = self.get_dmg_bg_indices();
 
         // Get the row of tiles containing our scanline
         let y = (line - wndw_coords.y) as usize;
@@ -471,7 +471,6 @@ impl PPU {
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
         let mut sprites_drawn = 0;
-        let dmg_pal = get_sys_pal(self.sys_pal);
         for spr in sorted_sprites {
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
                 continue;
@@ -484,7 +483,8 @@ impl PPU {
                 break;
             }
 
-            let pal_indices = self.get_dmg_spr_palette(spr.is_pal_0());
+            let dmg_pal = self.palette.get_spr_pal(spr.is_pal_0());
+            let pal_indices = self.get_dmg_spr_indices(spr.is_pal_0());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
                 let lcd_control = self.read_io(LCDC);
@@ -625,19 +625,19 @@ impl PPU {
     }
 
     /// ```
-    /// Get DMG background palette
+    /// Get DMG background indices
     ///
     /// Gets the palette indices from the BGP register ($FF47)
     ///
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_dmg_bkgd_palette(&self) -> [u8; DMG_PAL_SIZE] {
+    fn get_dmg_bg_indices(&self) -> [u8; DMG_PAL_SIZE] {
         unpack_u8(self.read_io(BGP))
     }
 
     /// ```
-    /// Get sprite palette
+    /// Get sprite indices
     ///
     /// Gets the palette indices for the sprites
     ///
@@ -647,7 +647,7 @@ impl PPU {
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_dmg_spr_palette(&self, pal_0: bool) -> [u8; DMG_PAL_SIZE] {
+    fn get_dmg_spr_indices(&self, pal_0: bool) -> [u8; DMG_PAL_SIZE] {
         if pal_0 {
             unpack_u8(self.read_io(OBP0))
         } else {

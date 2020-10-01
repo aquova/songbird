@@ -205,8 +205,8 @@ impl ImguiSystem {
                     main_menu.handle_file_dialog(&ui);
                     let new_opts = main_menu.handle_display_dialog(&ui);
                     if new_opts != curr_disp_opts {
-                        gb.set_sys_pal(curr_disp_opts.palette);
-                        program = load_shader(&display, curr_disp_opts.shader);
+                        gb.set_sys_pal(new_opts.palette);
+                        program = load_shader(&display, new_opts.shader);
                         curr_disp_opts = new_opts;
                     }
 
