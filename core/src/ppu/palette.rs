@@ -31,10 +31,26 @@ impl Palette {
         }
     }
 
+    /// ```
+    /// Set system palette
+    ///
+    /// Set which palette the DMG should use
+    ///
+    /// Input:
+    ///     Which palette to use (Palettes)
+    /// ```
     pub fn set_sys_pal(&mut self, pal: Palettes) {
         self.sys_pal = pal;
     }
 
+    /// ```
+    /// Get BG palette
+    ///
+    /// Get which palette is being used for the background
+    ///
+    /// Output:
+    ///     RGBA values for palette ([4x[RGBA u8 values]])
+    /// ```
     pub fn get_bg_pal(&self) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
         match self.sys_pal {
             Palettes::GRAYSCALE => {
@@ -112,6 +128,14 @@ impl Palette {
         }
     }
 
+    /// ```
+    /// Get sprite palette
+    ///
+    /// Get which palette is being used for the sprites
+    ///
+    /// Output:
+    ///     RGBA values for palette ([4x[RGBA u8 values]])
+    /// ```
     pub fn get_spr_pal(&self, pal: u8) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
         match pal {
             0 => { self.get_obj0_pal() },
@@ -120,6 +144,14 @@ impl Palette {
         }
     }
 
+    /// ```
+    /// Get the Object 0 palette
+    ///
+    /// Get which palette is being used for obj 0
+    ///
+    /// Output:
+    ///     RGBA values for palette ([4x[RGBA u8 values]])
+    /// ```
     fn get_obj0_pal(&self) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
         match self.sys_pal {
             Palettes::GRAYSCALE => { self.get_bg_pal() },
@@ -167,6 +199,14 @@ impl Palette {
         }
     }
 
+    /// ```
+    /// Get the Object 1 palette
+    ///
+    /// Get which palette is being used for obj 1
+    ///
+    /// Output:
+    ///     RGBA values for palette ([4x[RGBA u8 values]])
+    /// ```
     fn get_obj1_pal(&self) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
         match self.sys_pal {
             Palettes::GRAYSCALE =>  { self.get_bg_pal() },
@@ -205,6 +245,17 @@ impl Palette {
     }
 }
 
+/// ```
+/// GBC encoding to RGBA values
+///
+/// Helper function to convert 15-bit to 32-bit color
+///
+/// Input:
+///     GBC 15-bit color value (u16)
+///
+/// Output:
+///     Array of RGBA values ([u8; 4])
+/// ```
 pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
     let mut rgba = [0xFF; COLOR_CHANNELS];
     rgba[0] = five_bit_to_eight_bit((gbc & 0x1F) as u8);
@@ -214,6 +265,17 @@ pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
     rgba
 }
 
+/// ```
+/// 5-bit to 8-bit
+///
+/// Helper function to convert a single 5-bit color channel value to 8-bits
+///
+/// Input:
+///     5-bit color channel value (u8)
+///
+/// Output:
+///     8-bit color channel value (u8)
+/// ```
 fn five_bit_to_eight_bit(five_bit: u8) -> u8 {
     (five_bit / 0x1F) * 0xFF as u8
 }

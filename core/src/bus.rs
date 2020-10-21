@@ -318,6 +318,14 @@ impl Bus {
         self.ppu.set_status(clock_mode);
     }
 
+    /// ```
+    /// Set system palette
+    ///
+    /// Set which palette the DMG should use
+    ///
+    /// Input:
+    ///     Which palette to use (Palettes)
+    /// ```
     pub fn set_sys_pal(&mut self, pal: Palettes) {
         self.ppu.set_sys_pal(pal);
     }
