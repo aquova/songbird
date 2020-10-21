@@ -276,7 +276,7 @@ impl PPU {
         let line = self.read_io(LY);
         let mut pixel_row = [0xFF; SCREEN_WIDTH * COLOR_CHANNELS];
 
-        if self.is_bkgd_dspl() {
+        if self.is_bkgd_dspl(mode) {
             self.render_background_line(&mut pixel_row, line, mode);
         }
 
@@ -695,9 +695,13 @@ impl PPU {
     /// Output:
     ///     Whether or not background is displayed (bool)
     /// ```
-    fn is_bkgd_dspl(&self) -> bool {
-        let lcd_control = self.read_io(LCDC);
-        lcd_control.get_bit(BG_DISP_BIT)
+    fn is_bkgd_dspl(&self, mode: GB) -> bool {
+        if mode != GB::CGB {
+            let lcd_control = self.read_io(LCDC);
+            lcd_control.get_bit(BG_DISP_BIT)
+        } else {
+            true
+        }
     }
 
     /// ```
@@ -712,7 +716,7 @@ impl PPU {
         let lcd_control = self.read_io(LCDC);
         let mut is_dspl = lcd_control.get_bit(WNDW_DISP_BIT);
         if mode == GB::CGB_DMG {
-            // For CGB running in DMG mode, the BG bit can also disable the background
+            // For CGB running in DMG mode, clearing the BG bit can also disables the window layer
             is_dspl &= lcd_control.get_bit(BG_DISP_BIT);
         }
 
