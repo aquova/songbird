@@ -1,8 +1,8 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
-use crate::ppu::PPU;
+use crate::ppu::{PPU, LY};
 use crate::ppu::palette::Palettes;
-use crate::utils::{BYTE, DISP_SIZE, GB};
+use crate::utils::*;
 use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
 
 /*
@@ -54,13 +54,19 @@ use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
 // =============
 // = Constants =
 // =============
-const JOYPAD_REG: u16 = 0xFF00;
-const DMA_REG: u16 = 0xFF46;
-const OAM: u16 = 0xFE00;
+const JOYPAD_REG: u16       = 0xFF00;
+const DMA_REG: u16          = 0xFF46;
+const HDMA1_REG: u16        = 0xFF51;
+const HDMA2_REG: u16        = 0xFF52;
+const HDMA3_REG: u16        = 0xFF53;
+const HDMA4_REG: u16        = 0xFF54;
+const HDMA5_REG: u16        = 0xFF55;
 
+const OAM: u16 = 0xFE00;
 const HRAM_START: u16 = 0xFF80;
 const HRAM_END: u16 = 0xFFFF; // Include $FFFF as part of HRAM
 const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
+const VRAM_DMA_PER_HBLANK: u16 = 0x10;
 
 pub struct Bus {
     rom: Cart,
@@ -68,6 +74,17 @@ pub struct Bus {
     ppu: PPU,
     wram: WRAM,
     hram: [u8; HRAM_SIZE],
+    vram_dma_remaining: Option<VRAM_DMA>,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone)]
+struct VRAM_DMA {
+    pub src_addr: u16,
+    pub dst_addr: u16,
+    pub len: u16,
+    pub transferred: u16,
+    pub last_scanline: u8,
 }
 
 // ==================
@@ -87,6 +104,7 @@ impl Bus {
             ppu: PPU::new(),
             wram: WRAM::new(),
             hram: [0; HRAM_SIZE],
+            vram_dma_remaining: None,
         }
     }
 
@@ -186,6 +204,12 @@ impl Bus {
             DMA_REG => {
                 self.oam_dma(val, mode);
             },
+            HDMA5_REG => {
+                self.ppu.write_vram(addr, val, mode);
+                if mode == GB::CGB {
+                    self.vram_dma();
+                }
+            },
             SVBK_REG => {
                 self.wram.set_wram_bank(val, mode);
             },
@@ -282,10 +306,16 @@ impl Bus {
     ///
     /// Input:
     ///     Clock mode (u8)
+    ///     Game Boy mode (GB)
     /// ```
-    pub fn set_status_reg(&mut self, mode: u8) {
-        let mode = mode & 0b0000_0011;
-        self.ppu.set_status(mode);
+    pub fn set_status_reg(&mut self, clock_mode: u8, gb_mode: GB) {
+        let clock_mode = clock_mode & 0b0000_0011;
+        // TODO: The clock_mode comparision should be a const or inherited from Clock or something
+        // If in HBLANK:
+        if clock_mode == 0 && gb_mode == GB::CGB {
+            self.vram_dma();
+        }
+        self.ppu.set_status(clock_mode);
     }
 
     pub fn set_sys_pal(&mut self, pal: Palettes) {
@@ -324,6 +354,71 @@ impl Bus {
         for i in 0..0xA0 {
             let byte = self.read_ram(source_addr + i, mode);
             self.write_ram(dest_addr + i, byte, mode);
+        }
+    }
+
+    /// ```
+    /// VRAM DMA transfer
+    ///
+    /// Copies sprite data from stored area into VRAM, initiated when data written to HDMA5
+    /// ```
+    fn vram_dma(&mut self) {
+        // Game Boy Color only, source and destination areas are encoded as such:
+        // $FF51 - DMA Source, High
+        // $FF52 - DMA Source, Low
+        // $FF53 - DMA Destination, High
+        // $FF54 - DMA Destination, Low
+        // $FF55 - DMA Length
+        match &self.vram_dma_remaining {
+            Some(mut dma_data) => {
+                let scanline = self.read_ram(LY, GB::CGB);
+                if scanline != dma_data.last_scanline {
+                    for i in 0..VRAM_DMA_PER_HBLANK {
+                        let byte = self.read_ram(dma_data.src_addr + dma_data.transferred + i, GB::CGB);
+                        self.write_ram(dma_data.dst_addr + dma_data.transferred + i, byte, GB::CGB);
+                    }
+                    dma_data.transferred += VRAM_DMA_PER_HBLANK;
+                    dma_data.last_scanline = scanline;
+                }
+            },
+            None => {
+                let src_addr_high = self.read_ram(HDMA1_REG, GB::CGB);
+                let src_addr_low = self.read_ram(HDMA2_REG, GB::CGB);
+                let dst_addr_high = self.read_ram(HDMA3_REG, GB::CGB);
+                let dst_addr_low = self.read_ram(HDMA4_REG, GB::CGB);
+
+                let src_addr = merge_bytes(src_addr_high, src_addr_low) & 0xFFF0; // Lower 4 bits are always zero
+                let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0x1FF0; // Lower 4 bits are ignored, as well as highest 3, as dest is always in VRAM
+
+                let raw_transfer_len = self.read_ram(HDMA5_REG, GB::CGB);
+                // Transfer length is (lower 7 bits of HDMA5 value) * $10 + 1
+                let transfer_len = ((raw_transfer_len as u16) & 0b0111_1111) * 0x10 + 1;
+                let hblank_transfer = raw_transfer_len.get_bit(7);
+
+                if hblank_transfer {
+                    // If 7th bit was set, then we transfer $10 bits at a time during each HBLANK scanline
+                    for i in 0..VRAM_DMA_PER_HBLANK {
+                        let byte = self.read_ram(src_addr + i, GB::CGB);
+                        self.write_ram(dst_addr + i, byte, GB::CGB);
+                    }
+
+                    self.vram_dma_remaining = Some(
+                        VRAM_DMA {
+                            src_addr: src_addr,
+                            dst_addr: dst_addr,
+                            len: transfer_len,
+                            transferred: VRAM_DMA_PER_HBLANK,
+                            last_scanline: self.read_ram(LY, GB::CGB),
+                        }
+                    );
+                } else {
+                    // Otherwise, simply transfer all data at once
+                    for i in 0..transfer_len {
+                        let byte = self.read_ram(src_addr + i, GB::CGB);
+                        self.write_ram(dst_addr + i, byte, GB::CGB);
+                    }
+                }
+            }
         }
     }
 }

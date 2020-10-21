@@ -164,7 +164,7 @@ impl Cpu {
         if lcd_interrupt {
             self.enable_interrupt(Interrupts::LCD_STAT);
         }
-        self.bus.set_status_reg(self.clock.get_mode());
+        self.bus.set_status_reg(self.clock.get_mode(), self.mode);
 
         // Tick timer
         let timer_interrupt = self.timer.tick(cycles);

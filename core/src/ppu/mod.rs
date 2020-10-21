@@ -18,7 +18,7 @@ const LCDC: u16                    = 0xFF40;
 const STAT: u16                    = 0xFF41;
 const SCY: u16                     = 0xFF42;
 const SCX: u16                     = 0xFF43;
-const LY: u16                      = 0xFF44;
+pub const LY: u16                  = 0xFF44;
 const LYC: u16                     = 0xFF45;
 // 0xFF46 is DMA transfer, handled by Bus
 const BGP: u16                     = 0xFF47;
