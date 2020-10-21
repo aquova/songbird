@@ -112,8 +112,12 @@ impl Palette {
         }
     }
 
-    pub fn get_spr_pal(&self, is_pal_0: bool) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
-        if is_pal_0 { self.get_obj0_pal() } else { self.get_obj1_pal() }
+    pub fn get_spr_pal(&self, pal: u8) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {
+        match pal {
+            0 => { self.get_obj0_pal() },
+            1 => { self.get_obj1_pal() },
+            _ => { unreachable!("DMG palette index cannot be greater than 1"); }
+        }
     }
 
     fn get_obj0_pal(&self) -> [[u8; COLOR_CHANNELS]; DMG_PAL_SIZE] {

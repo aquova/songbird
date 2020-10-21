@@ -133,7 +133,7 @@ impl PPU {
                 let relative_addr = addr - OAM_START;
                 let spr_num = relative_addr / OAM_BYTE_SIZE;
                 let byte_num = relative_addr % OAM_BYTE_SIZE;
-                self.oam[spr_num as usize].set_byte(byte_num, val);
+                self.oam[spr_num as usize].set_byte(byte_num, val, mode);
             },
             TILE_SET..=TILE_SET_END => {
                 let offset = addr - TILE_SET;
@@ -483,8 +483,8 @@ impl PPU {
                 break;
             }
 
-            let dmg_pal = self.palette.get_spr_pal(spr.is_pal_0());
-            let pal_indices = self.get_dmg_spr_indices(spr.is_pal_0());
+            let dmg_pal = self.palette.get_spr_pal(spr.get_pal());
+            let pal_indices = self.get_dmg_spr_indices(spr.get_pal());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
                 let lcd_control = self.read_io(LCDC);
@@ -642,16 +642,16 @@ impl PPU {
     /// Gets the palette indices for the sprites
     ///
     /// Input:
-    ///     Whether to use palette 0 or 1 (bool)
+    ///     Which DMG palette to use (u8)
     ///
     /// Output:
     ///     Palette indices ([u8])
     /// ```
-    fn get_dmg_spr_indices(&self, pal_0: bool) -> [u8; DMG_PAL_SIZE] {
-        if pal_0 {
-            unpack_u8(self.read_io(OBP0))
-        } else {
-            unpack_u8(self.read_io(OBP1))
+    fn get_dmg_spr_indices(&self, pal: u8) -> [u8; DMG_PAL_SIZE] {
+        match pal {
+            0 => { unpack_u8(self.read_io(OBP0)) },
+            1 => { unpack_u8(self.read_io(OBP1)) },
+            _ => { unreachable!("DMG palette index cannot be greater than 1"); }
         }
     }
 

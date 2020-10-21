@@ -1,4 +1,4 @@
-use crate::utils::{ModifyBits, TILESIZE};
+use crate::utils::{GB, ModifyBits, TILESIZE};
 
 /*
  * Object Attribute Memory (OAM) Layout
@@ -45,7 +45,7 @@ pub struct Sprite {
     above_bkgd: bool,
     x_flip: bool,
     y_flip: bool,
-    palette_0: bool
+    palette: u8,
 }
 
 impl Sprite {
@@ -58,7 +58,7 @@ impl Sprite {
             above_bkgd: true,
             x_flip: false,
             y_flip: false,
-            palette_0: true
+            palette: 0,
         }
     }
 
@@ -70,13 +70,14 @@ impl Sprite {
     /// Inputs:
     ///     Which metadata byte to edit (u16)
     ///     New byte value (u8)
+    ///     Game Boy mode (GB)
     /// ```
-    pub fn set_byte(&mut self, index: u16, byte: u8) {
+    pub fn set_byte(&mut self, index: u16, byte: u8, mode: GB) {
         match index {
             Y_POS_BYTE =>    { self.parse_oam_byte1(byte); },
             X_POS_BYTE =>    { self.parse_oam_byte2(byte); },
             TILE_NUM_BYTE => { self.parse_oam_byte3(byte); },
-            FLAG_BYTE =>     { self.parse_oam_byte4(byte); },
+            FLAG_BYTE =>     { self.parse_oam_byte4(byte, mode); },
             _ => { panic!("Byte offset can only be from 0-3"); }
         }
 
@@ -160,15 +161,15 @@ impl Sprite {
     }
 
     /// ```
-    /// Is palette 0?
+    /// Get palette
     ///
-    /// Whether this sprite uses palette 0 or 1
+    /// Returns which palette index this sprite is using
     ///
     /// Output:
-    ///     Whether sprite uses sprite palette 0 (bool)
+    ///     Which palette the sprite is using (u8)
     /// ```
-    pub fn is_pal_0(&self) -> bool {
-        self.palette_0
+    pub fn get_pal(&self) -> u8 {
+        self.palette
     }
 
     /// ```
@@ -252,11 +253,16 @@ impl Sprite {
     ///
     /// Input:
     ///     Value to parse (u8)
+    ///     Game Boy mode (GB)
     /// ```
-    fn parse_oam_byte4(&mut self, val: u8) {
+    fn parse_oam_byte4(&mut self, val: u8, mode: GB) {
         self.above_bkgd = !val.get_bit(BG_PRIORITY_BIT);
         self.y_flip = val.get_bit(Y_FLIP_BIT);
         self.x_flip = val.get_bit(X_FLIP_BIT);
-        self.palette_0 = !val.get_bit(PAL_NUM_BIT);
+        if mode == GB::CGB {
+            self.palette = val & 0b111;
+        } else {
+            self.palette = if val.get_bit(PAL_NUM_BIT) { 1 } else { 0 };
+        }
     }
 }
