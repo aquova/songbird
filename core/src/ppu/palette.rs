@@ -1,7 +1,7 @@
 use crate::utils::COLOR_CHANNELS;
 
 pub const DMG_PAL_SIZE: usize = 4;
-pub const CGB_PAL_SIZE: usize = 32;
+pub const CGB_PAL_SIZE: usize = 8;
 
 #[allow(non_camel_case_types)]
 #[derive(Eq, PartialEq, Copy, Clone)]

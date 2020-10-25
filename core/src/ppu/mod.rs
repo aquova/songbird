@@ -7,7 +7,6 @@ use sprite::{OAM_BYTE_SIZE, Sprite};
 use tile::{Tile, TILE_BYTES};
 use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
-use std::ops::Range;
 
 // =============
 // = Constants =
@@ -35,22 +34,24 @@ const OBPI: u16                    = 0xFF6A;
 const OBPD: u16                    = 0xFF6B;
 
 // VRAM ranges
-const VRAM_START: u16              = 0x8000;
-const VRAM_END: u16                = 0x9FFF;
+const TILE_SET: u16                = 0x8000;
+const TILE_SET_END: u16            = 0x97FF;
+const TILE_MAP: u16                = 0x9800;
+const TILE_MAP_TBL_0: u16          = TILE_MAP;
+const TILE_MAP_TBL_1: u16          = 0x9C00;
+const TILE_MAP_END: u16            = 0x9FFF;
+
 const OAM_START: u16               = 0xFE00;
 const OAM_END: u16                 = 0xFE9F;
 const IO_START: u16                = 0xFF00;
 const IO_END: u16                  = 0xFF7F;
-const TILE_SET: u16                = VRAM_START;
-const TILE_SET_END: u16            = 0x97FF;
-
-const TILE_MAP_0_RANGE: Range<usize> = (0x9800 - VRAM_START as usize)..(0x9C00 - VRAM_START as usize);
-const TILE_MAP_1_RANGE: Range<usize> = (0x9C00 - VRAM_START as usize)..(0xA000 - VRAM_START as usize);
 
 // General constants
 const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
-const VRAM_SIZE: usize = (VRAM_END - VRAM_START + 1) as usize;
+const VRAM_BANK_NUM: usize = 2;
+const TILE_MAP_SIZE: usize = (TILE_MAP_END - TILE_MAP + 1) as usize;
+const TILE_MAP_TBL_SIZE: usize = (TILE_MAP_TBL_1 - TILE_MAP_TBL_0) as usize;
 const IO_SIZE: usize = (IO_END - IO_START + 1) as usize;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
@@ -68,6 +69,11 @@ const WNDW_DISP_BIT: u8         = 5;
 const WNDW_TILE_MAP_BIT: u8     = 6;
 const LCD_DISP_BIT: u8          = 7;
 
+const VRAM_BANK_BIT: u8         = 3;
+const Y_FLIP_BIT: u8            = 5;
+const X_FLIP_BIT: u8            = 6;
+const PRIORITY_BIT: u8          = 7;
+
 const LYC_LY_FLAG_BIT: u8       = 2;
 // const HBLANK_INTERRUPT_BIT: u8 =    3;
 // const VBLANK_INTERRUPT_BIT: u8 =    4;
@@ -75,11 +81,11 @@ const LYC_LY_FLAG_BIT: u8       = 2;
 const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
 pub struct PPU {
-    vram: [u8; VRAM_SIZE],
     vram_bank: usize,
     io: [u8; IO_SIZE],
     screen_buffer: [u8; DISP_SIZE],
-    tiles: [Tile; 2 * TILE_NUM], // CGB can have two banks of tiles
+    tiles: [Tile; VRAM_BANK_NUM * TILE_NUM],
+    tile_maps: [u8; VRAM_BANK_NUM * TILE_MAP_SIZE],
     oam: [Sprite; OAM_SPR_NUM],
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
@@ -99,11 +105,11 @@ impl PPU {
     // ==================
     pub fn new() -> PPU {
         PPU {
-            vram: [0; VRAM_SIZE],
             vram_bank: 0,
             io: [0; IO_SIZE],
             screen_buffer: [0; DISP_SIZE],
-            tiles: [Tile::new(); 2 * TILE_NUM],
+            tiles: [Tile::new(); VRAM_BANK_NUM * TILE_NUM],
+            tile_maps: [0; VRAM_BANK_NUM * TILE_MAP_SIZE],
             oam: [Sprite::new(); OAM_SPR_NUM],
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
@@ -141,9 +147,9 @@ impl PPU {
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].set_byte(byte_num, val);
             },
-            VRAM_START..=VRAM_END => {
-                let vram_addr = addr - VRAM_START;
-                self.vram[vram_addr as usize] = val;
+            TILE_MAP..=TILE_MAP_END => {
+                let map_addr = (addr - TILE_MAP) as usize + (self.vram_bank * TILE_MAP_SIZE);
+                self.tile_maps[map_addr] = val;
             },
             IO_START..=IO_END => {
                 if mode == GB::CGB || mode == GB::CGB_DMG {
@@ -197,9 +203,9 @@ impl PPU {
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].get_byte(byte_num)
             },
-            VRAM_START..=VRAM_END => {
-                let vram_addr = addr - VRAM_START;
-                self.vram[vram_addr as usize]
+            TILE_MAP..=TILE_MAP_END => {
+                let map_addr = (addr - TILE_MAP) as usize + (self.vram_bank * TILE_MAP_SIZE);
+                self.tile_maps[map_addr]
             },
             IO_START..=IO_END => {
                 if mode == GB::CGB_DMG || mode == GB::CGB {
@@ -353,6 +359,7 @@ impl PPU {
     /// ```
     fn render_background_line(&self, pixel_row: &mut [u8], line: u8, mode: GB) {
         let tile_map = self.get_bkgd_tile_map();
+        let tile_attributes = self.get_cgb_bkgd_map_attributes();
         // TODO: This is not ideal. Someday, I'd like to not have this variable if we aren't DMG
         let dmg_pal = self.palette.get_bg_pal();
         let pal_indices = self.get_dmg_bg_indices();
@@ -368,27 +375,30 @@ impl PPU {
             let map_y = y / TILESIZE;
             let index = map_y * MAP_SIZE + map_x;
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
-            let mut tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
+            let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
                 (256 + (tile_map[index] as i8 as isize)) as usize
             } else {
                 tile_map[index] as usize
             };
-            tile_index += self.vram_bank * TILE_NUM;
 
-            let tile = &self.tiles[tile_index];
+            let tile = if mode == GB::CGB {
+                let meta_tile = tile_attributes[index];
+                let bank_offset = if meta_tile.get_bit(VRAM_BANK_BIT) { TILE_NUM } else { 0 };
+                &self.tiles[tile_index + bank_offset]
+            } else {
+                &self.tiles[tile_index]
+            };
             let col = (start_x + x) % TILESIZE;
             let pixel = tile.get_row(row)[col] as usize;
-            if mode == GB::CGB {
-                let raw_color = merge_bytes(self.cgb_bg_pal_data[pixel + 1], self.cgb_bg_pal_data[pixel]);
-                let color = gbc2rgba(raw_color);
-                for i in 0..COLOR_CHANNELS {
-                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
-                }
+            let color = if mode == GB::CGB {
+                let raw_color = merge_bytes(self.cgb_bg_pal_data[2 * pixel + 1], self.cgb_bg_pal_data[2 * pixel]);
+                gbc2rgba(raw_color)
             } else {
-                let color = dmg_pal[pal_indices[pixel] as usize];
-                for i in 0..COLOR_CHANNELS {
-                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
-                }
+                dmg_pal[pal_indices[pixel] as usize]
+            };
+
+            for i in 0..COLOR_CHANNELS {
+                pixel_row[COLOR_CHANNELS * x + i] = color[i];
             }
         }
     }
@@ -435,17 +445,15 @@ impl PPU {
             let tile = &self.tiles[tile_index];
             let col = (x - start_x) % TILESIZE;
             let pixel = tile.get_row(row)[col] as usize;
-            if mode == GB::CGB {
-                let raw_color = merge_bytes(self.cgb_bg_pal_data[pixel + 1], self.cgb_bg_pal_data[pixel]);
-                let color = gbc2rgba(raw_color);
-                for i in 0..COLOR_CHANNELS {
-                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
-                }
+            let color = if mode == GB::CGB {
+                let raw_color = merge_bytes(self.cgb_bg_pal_data[2 * pixel + 1], self.cgb_bg_pal_data[2 * pixel]);
+                gbc2rgba(raw_color)
             } else {
-                let color = dmg_pal[pal_indices[pixel] as usize];
-                for i in 0..COLOR_CHANNELS {
-                    pixel_row[COLOR_CHANNELS * x + i] = color[i];
-                }
+                dmg_pal[pal_indices[pixel] as usize]
+            };
+
+            for i in 0..COLOR_CHANNELS {
+                pixel_row[COLOR_CHANNELS * x + i] = color[i];
             }
         }
 
@@ -485,6 +493,7 @@ impl PPU {
 
             let dmg_pal = self.palette.get_spr_pal(spr.get_pal());
             let pal_indices = self.get_dmg_spr_indices(spr.get_pal());
+            let cgb_colors = self.get_cgb_spr_indices(spr.get_pal());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
                 let lcd_control = self.read_io(LCDC);
@@ -541,17 +550,15 @@ impl PPU {
                 // - Sprite is above background, and the pixel being drawn isn't transparent
                 // - Sprite is below background, and background has transparent color here
                 if (above_bg && pixel != 0) || (!above_bg && (pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == dmg_pal[0])) {
-                    if mode == GB::CGB {
-                        let raw_color = merge_bytes(self.cgb_spr_pal_data[pixel + 1], self.cgb_spr_pal_data[pixel]);
-                        let color = gbc2rgba(raw_color);
-                        for i in 0..COLOR_CHANNELS {
-                            pixel_row[COLOR_CHANNELS * pixel_x + i] = color[i];
-                        }
+                    let color = if mode == GB::CGB {
+                        let raw_color = merge_bytes(cgb_colors[2 * pixel + 1], cgb_colors[2 * pixel]);
+                        gbc2rgba(raw_color)
                     } else {
-                        let color = dmg_pal[pal_indices[pixel] as usize];
-                        for i in 0..COLOR_CHANNELS {
-                            pixel_row[COLOR_CHANNELS * pixel_x + i] = color[i];
-                        }
+                        dmg_pal[pal_indices[pixel] as usize]
+                    };
+
+                    for i in 0..COLOR_CHANNELS {
+                        pixel_row[COLOR_CHANNELS * pixel_x + i] = color[i];
                     }
                 }
             }
@@ -600,9 +607,9 @@ impl PPU {
         // $00 for $9800-$9BFF
         // $01 for $9C00-$9FFF
         if self.get_bkgd_tile_map_index() == 0 {
-            &self.vram[TILE_MAP_0_RANGE]
+            &self.tile_maps[0..TILE_MAP_TBL_SIZE]
         } else {
-            &self.vram[TILE_MAP_1_RANGE]
+            &self.tile_maps[TILE_MAP_TBL_SIZE..(2 * TILE_MAP_TBL_SIZE)]
         }
     }
 
@@ -618,9 +625,19 @@ impl PPU {
         // $00 for $9800-$9BFF
         // $01 for $9C00-$9FFF
         if self.get_wndw_tile_map_index() == 0 {
-            &self.vram[TILE_MAP_0_RANGE]
+            &self.tile_maps[0..TILE_MAP_TBL_SIZE]
         } else {
-            &self.vram[TILE_MAP_1_RANGE]
+            &self.tile_maps[TILE_MAP_TBL_SIZE..(2 * TILE_MAP_TBL_SIZE)]
+        }
+    }
+
+    fn get_cgb_bkgd_map_attributes(&self) -> &[u8] {
+        // $00 stored at 1:$9800-$9BFF
+        // $01 stored at 1:$9C00-$9FFF
+        if self.get_bkgd_tile_map_index() == 0 {
+            &self.tile_maps[TILE_MAP_SIZE..(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)]
+        } else {
+            &self.tile_maps[(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)..(TILE_MAP_SIZE + 2 * TILE_MAP_TBL_SIZE)]
         }
     }
 
@@ -653,6 +670,21 @@ impl PPU {
             1 => { unpack_u8(self.read_io(OBP1)) },
             _ => { unreachable!("DMG palette index cannot be greater than 1"); }
         }
+    }
+
+    /// ```
+    /// Get CGB sprite indices
+    ///
+    /// Gets palette indices for GBC sprites
+    ///
+    /// Input:
+    ///     Which CGB palette to use (u8)
+    ///
+    /// Output:
+    ///     Palette data (&[u8])
+    /// ```
+    fn get_cgb_spr_indices(&self, pal: u8) -> &[u8] {
+        &self.cgb_spr_pal_data[(pal as usize * CGB_PAL_SIZE)..((pal + 1) as usize * CGB_PAL_SIZE)]
     }
 
     /// ```
@@ -959,5 +991,5 @@ fn is_in_oam(addr: u16) -> bool {
 ///     Whether the address is in VRAM memory (bool)
 /// ```
 fn is_in_vram(addr: u16) -> bool {
-    addr >= VRAM_START && addr <= VRAM_END
+    addr >= TILE_SET && addr <= TILE_MAP_END
 }
