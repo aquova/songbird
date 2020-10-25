@@ -280,5 +280,5 @@ pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
 ///     8-bit color channel value (u8)
 /// ```
 fn five_bit_to_eight_bit(five_bit: u8) -> u8 {
-    (((five_bit as f32) / 32.0) * 255.0) as u8
+    (((five_bit as f32) / 31.0) * 255.0) as u8
 }
