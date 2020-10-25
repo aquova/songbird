@@ -161,6 +161,9 @@ impl Bus {
             JOYPAD_REG => {
                 self.io.read_btns()
             },
+            SVBK_REG => {
+                self.wram.get_wram_bank()
+            },
             HRAM_START..=HRAM_END => {
                 let hram_index = addr - HRAM_START;
                 self.hram[hram_index as usize]
