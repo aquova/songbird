@@ -140,7 +140,10 @@ impl Palette {
         match pal {
             0 => { self.get_obj0_pal() },
             1 => { self.get_obj1_pal() },
-            _ => { unreachable!("DMG palette index cannot be greater than 1"); }
+            _ => {
+                // This won't be used by non-DMG, but need to return some value
+                [[0; COLOR_CHANNELS]; DMG_PAL_SIZE]
+            }
         }
     }
 
@@ -258,8 +261,8 @@ impl Palette {
 /// ```
 pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
     let mut rgba = [0xFF; COLOR_CHANNELS];
-    rgba[0] = five_bit_to_eight_bit((gbc & 0x1F) as u8);
-    rgba[1] = five_bit_to_eight_bit(((gbc & 0b00000_11111_0000) >> 5) as u8);
+    rgba[0] = five_bit_to_eight_bit((gbc & 0b00000_00000_11111) as u8);
+    rgba[1] = five_bit_to_eight_bit(((gbc & 0b00000_11111_00000) >> 5) as u8);
     rgba[2] = five_bit_to_eight_bit(((gbc & 0b11111_00000_00000) >> 10) as u8);
 
     rgba
@@ -277,5 +280,5 @@ pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
 ///     8-bit color channel value (u8)
 /// ```
 fn five_bit_to_eight_bit(five_bit: u8) -> u8 {
-    (five_bit / 0x1F) * 0xFF as u8
+    (((five_bit as f32) / 32.0) * 255.0) as u8
 }

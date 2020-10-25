@@ -37,8 +37,6 @@ const OBPD: u16                    = 0xFF6B;
 const TILE_SET: u16                = 0x8000;
 const TILE_SET_END: u16            = 0x97FF;
 const TILE_MAP: u16                = 0x9800;
-const TILE_MAP_TBL_0: u16          = TILE_MAP;
-const TILE_MAP_TBL_1: u16          = 0x9C00;
 const TILE_MAP_END: u16            = 0x9FFF;
 
 const OAM_START: u16               = 0xFE00;
@@ -51,7 +49,7 @@ const MAP_SIZE: usize = 32; // In tiles
 const MAP_PIXELS: usize = MAP_SIZE * TILESIZE; // In pixels
 const VRAM_BANK_NUM: usize = 2;
 const TILE_MAP_SIZE: usize = (TILE_MAP_END - TILE_MAP + 1) as usize;
-const TILE_MAP_TBL_SIZE: usize = (TILE_MAP_TBL_1 - TILE_MAP_TBL_0) as usize;
+const TILE_MAP_TBL_SIZE: usize = (TILE_MAP_SIZE / 2) as usize;
 const IO_SIZE: usize = (IO_END - IO_START + 1) as usize;
 const TILE_NUM: usize = 384;
 const OAM_SPR_NUM: usize = 40;
@@ -73,6 +71,8 @@ const VRAM_BANK_BIT: u8         = 3;
 const Y_FLIP_BIT: u8            = 5;
 const X_FLIP_BIT: u8            = 6;
 const PRIORITY_BIT: u8          = 7;
+
+const AUTO_INC_BIT: u8          = 7;
 
 const LYC_LY_FLAG_BIT: u8       = 2;
 // const HBLANK_INTERRUPT_BIT: u8 =    3;
@@ -391,7 +391,9 @@ impl PPU {
             let col = (start_x + x) % TILESIZE;
             let pixel = tile.get_row(row)[col] as usize;
             let color = if mode == GB::CGB {
-                let raw_color = merge_bytes(self.cgb_bg_pal_data[2 * pixel + 1], self.cgb_bg_pal_data[2 * pixel]);
+                let pal_idx = tile_attributes[index];
+                let pal_indices = self.get_cgb_bg_indices(pal_idx);
+                let raw_color = merge_bytes(pal_indices[2 * pixel + 1], pal_indices[2 * pixel]);
                 gbc2rgba(raw_color)
             } else {
                 dmg_pal[pal_indices[pixel] as usize]
@@ -609,7 +611,7 @@ impl PPU {
         if self.get_bkgd_tile_map_index() == 0 {
             &self.tile_maps[0..TILE_MAP_TBL_SIZE]
         } else {
-            &self.tile_maps[TILE_MAP_TBL_SIZE..(2 * TILE_MAP_TBL_SIZE)]
+            &self.tile_maps[TILE_MAP_TBL_SIZE..TILE_MAP_SIZE]
         }
     }
 
@@ -627,7 +629,7 @@ impl PPU {
         if self.get_wndw_tile_map_index() == 0 {
             &self.tile_maps[0..TILE_MAP_TBL_SIZE]
         } else {
-            &self.tile_maps[TILE_MAP_TBL_SIZE..(2 * TILE_MAP_TBL_SIZE)]
+            &self.tile_maps[TILE_MAP_TBL_SIZE..TILE_MAP_SIZE]
         }
     }
 
@@ -637,7 +639,7 @@ impl PPU {
         if self.get_bkgd_tile_map_index() == 0 {
             &self.tile_maps[TILE_MAP_SIZE..(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)]
         } else {
-            &self.tile_maps[(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)..(TILE_MAP_SIZE + 2 * TILE_MAP_TBL_SIZE)]
+            &self.tile_maps[(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)..(2 * TILE_MAP_SIZE)]
         }
     }
 
@@ -651,6 +653,11 @@ impl PPU {
     /// ```
     fn get_dmg_bg_indices(&self) -> [u8; DMG_PAL_SIZE] {
         unpack_u8(self.read_io(BGP))
+    }
+
+    fn get_cgb_bg_indices(&self, attr: u8) -> &[u8] {
+        let offset = (attr & 0b111) as usize;
+        &self.cgb_bg_pal_data[(offset * CGB_PAL_SIZE)..((offset + 1) * CGB_PAL_SIZE)]
     }
 
     /// ```
@@ -668,7 +675,10 @@ impl PPU {
         match pal {
             0 => { unpack_u8(self.read_io(OBP0)) },
             1 => { unpack_u8(self.read_io(OBP1)) },
-            _ => { unreachable!("DMG palette index cannot be greater than 1"); }
+            _ => {
+                // This won't be used by non-DMG, but need to return some value
+                [0; DMG_PAL_SIZE]
+            }
         }
     }
 
@@ -928,13 +938,18 @@ impl PPU {
     /// Write CGB Background color data
     ///
     /// Sets the color data from the specified index
+    /// Auto-increments if BGPI bit 7 is set
     ///
     /// Input:
     ///     New value for the index set in BGPI
     /// ```
     fn write_cgb_bg_color(&mut self, val: u8) {
-        let ind = self.read_io(BGPI) & 0x3F;
-        self.cgb_bg_pal_data[ind as usize] = val;
+        let bgpi = self.read_io(BGPI);
+        self.cgb_bg_pal_data[(bgpi & 0x3F) as usize] = val;
+        // Auto-increment if bit 7 set
+        if bgpi.get_bit(AUTO_INC_BIT) {
+            self.write_io(BGPI, (bgpi + 1) & 0b1011_1111);
+        }
     }
 
     /// ```
@@ -959,8 +974,12 @@ impl PPU {
     ///     New value for the index set in OBPI
     /// ```
     fn write_cgb_spr_color(&mut self, val: u8) {
-        let ind = self.read_io(OBPI) & 0x7F;
-        self.cgb_spr_pal_data[ind as usize] = val;
+        let obpi = self.read_io(OBPI);
+        self.cgb_spr_pal_data[(obpi & 0x3F) as usize] = val;
+        // Auto-increment if bit 7 set
+        if obpi.get_bit(AUTO_INC_BIT) {
+            self.write_io(OBPI, (obpi + 1) & 0b1011_1111);
+        }
     }
 }
 
