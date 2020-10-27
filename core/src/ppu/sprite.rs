@@ -46,6 +46,7 @@ pub struct Sprite {
     x_flip: bool,
     y_flip: bool,
     palette: u8,
+    vram_bank: u8,
 }
 
 impl Sprite {
@@ -59,6 +60,7 @@ impl Sprite {
             x_flip: false,
             y_flip: false,
             palette: 0,
+            vram_bank: 0,
         }
     }
 
@@ -173,6 +175,18 @@ impl Sprite {
     }
 
     /// ```
+    /// Get VRAM bank
+    ///
+    /// Returns which VRAM bank the sprite is located in (CGB only)
+    ///
+    /// Output:
+    ///     VRAM bank number (usize)
+    /// ```
+    pub fn get_vram_bank(&self) -> usize {
+        self.vram_bank as usize
+    }
+
+    /// ```
     /// Is X flipped?
     ///
     /// Should the sprite be flipped in the X-direction?
@@ -261,6 +275,7 @@ impl Sprite {
         self.x_flip = val.get_bit(X_FLIP_BIT);
         if mode == GB::CGB {
             self.palette = val & 0b111;
+            self.vram_bank = (val & 0b1000) >> 3;
         } else {
             self.palette = if val.get_bit(PAL_NUM_BIT) { 1 } else { 0 };
         }

@@ -393,8 +393,7 @@ impl PPU {
             let color = if mode == GB::CGB {
                 let pal_idx = tile_attributes[index];
                 let pal_indices = self.get_cgb_bg_indices(pal_idx);
-                let raw_color = merge_bytes(pal_indices[2 * pixel + 1], pal_indices[2 * pixel]);
-                gbc2rgba(raw_color)
+                gbc2rgba(pal_indices[2 * pixel], pal_indices[2 * pixel + 1])
             } else {
                 dmg_pal[pal_indices[pixel] as usize]
             };
@@ -448,8 +447,7 @@ impl PPU {
             let col = (x - start_x) % TILESIZE;
             let pixel = tile.get_row(row)[col] as usize;
             let color = if mode == GB::CGB {
-                let raw_color = merge_bytes(self.cgb_bg_pal_data[2 * pixel + 1], self.cgb_bg_pal_data[2 * pixel]);
-                gbc2rgba(raw_color)
+                gbc2rgba(self.cgb_bg_pal_data[2 * pixel], self.cgb_bg_pal_data[2 * pixel + 1])
             } else {
                 dmg_pal[pal_indices[pixel] as usize]
             };
@@ -498,8 +496,9 @@ impl PPU {
             let cgb_colors = self.get_cgb_spr_indices(spr.get_pal());
             let mut above_bg = spr.is_above_bkgd();
             if mode == GB::CGB {
+                // CBG only - If bit LCDC.0 cleared, then sprites always drawn on top
                 let lcd_control = self.read_io(LCDC);
-                above_bg |= lcd_control.get_bit(BG_DISP_BIT);
+                above_bg |= !lcd_control.get_bit(BG_DISP_BIT);
             }
 
             let (top_x, top_y) = spr.get_coords();
@@ -529,7 +528,7 @@ impl PPU {
                 // If 8x8 sprite, simply get tile num
                 spr.get_tile_num()
             };
-            let spr_bank = spr_num as usize + (self.vram_bank * TILE_NUM);
+            let spr_bank = spr_num as usize + (spr.get_vram_bank() * TILE_NUM);
 
             let tile = &self.tiles[spr_bank];
             let pixels = tile.get_row(row % TILESIZE);
@@ -548,13 +547,19 @@ impl PPU {
                     continue;
                 }
 
+                let bkgd_transparent = if mode == GB::CGB {
+                    // TODO: This isn't correct, it needs to be the background tile's transparent color, not the sprite's
+                    pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == gbc2rgba(cgb_colors[0], cgb_colors[1])
+                } else {
+                    pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == dmg_pal[0]
+                };
+
                 // Only draw pixel if
                 // - Sprite is above background, and the pixel being drawn isn't transparent
-                // - Sprite is below background, and background has transparent color here
-                if (above_bg && pixel != 0) || (!above_bg && (pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == dmg_pal[0])) {
+                // - Sprite is below background, but background has transparent color here
+                if (above_bg && pixel != 0) || (!above_bg && bkgd_transparent) {
                     let color = if mode == GB::CGB {
-                        let raw_color = merge_bytes(cgb_colors[2 * pixel + 1], cgb_colors[2 * pixel]);
-                        gbc2rgba(raw_color)
+                        gbc2rgba(cgb_colors[2 * pixel], cgb_colors[2 * pixel + 1])
                     } else {
                         dmg_pal[pal_indices[pixel] as usize]
                     };

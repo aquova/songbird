@@ -1,4 +1,4 @@
-use crate::utils::COLOR_CHANNELS;
+use crate::utils::{COLOR_CHANNELS, merge_bytes};
 
 pub const DMG_PAL_SIZE: usize = 4;
 pub const CGB_PAL_SIZE: usize = 8;
@@ -259,7 +259,8 @@ impl Palette {
 /// Output:
 ///     Array of RGBA values ([u8; 4])
 /// ```
-pub fn gbc2rgba(gbc: u16) -> [u8; COLOR_CHANNELS] {
+pub fn gbc2rgba(low: u8, high: u8) -> [u8; COLOR_CHANNELS] {
+    let gbc = merge_bytes(high, low);
     let mut rgba = [0xFF; COLOR_CHANNELS];
     rgba[0] = five_bit_to_eight_bit((gbc & 0b00000_00000_11111) as u8);
     rgba[1] = five_bit_to_eight_bit(((gbc & 0b00000_11111_00000) >> 5) as u8);
