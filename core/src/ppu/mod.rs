@@ -1,7 +1,9 @@
 pub mod palette;
+mod map;
 mod sprite;
 mod tile;
 
+use map::Map;
 use palette::*;
 use sprite::{OAM_BYTE_SIZE, Sprite};
 use tile::{Tile, TILE_BYTES};
@@ -67,11 +69,6 @@ const WNDW_DISP_BIT: u8         = 5;
 const WNDW_TILE_MAP_BIT: u8     = 6;
 const LCD_DISP_BIT: u8          = 7;
 
-const VRAM_BANK_BIT: u8         = 3;
-const Y_FLIP_BIT: u8            = 5;
-const X_FLIP_BIT: u8            = 6;
-const PRIORITY_BIT: u8          = 7;
-
 const AUTO_INC_BIT: u8          = 7;
 
 const LYC_LY_FLAG_BIT: u8       = 2;
@@ -85,7 +82,7 @@ pub struct PPU {
     io: [u8; IO_SIZE],
     screen_buffer: [u8; DISP_SIZE],
     tiles: [Tile; VRAM_BANK_NUM * TILE_NUM],
-    tile_maps: [u8; VRAM_BANK_NUM * TILE_MAP_SIZE],
+    tile_maps: [Map; VRAM_BANK_NUM * TILE_MAP_SIZE],
     oam: [Sprite; OAM_SPR_NUM],
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
@@ -109,7 +106,7 @@ impl PPU {
             io: [0; IO_SIZE],
             screen_buffer: [0; DISP_SIZE],
             tiles: [Tile::new(); VRAM_BANK_NUM * TILE_NUM],
-            tile_maps: [0; VRAM_BANK_NUM * TILE_MAP_SIZE],
+            tile_maps: [Map::new(); VRAM_BANK_NUM * TILE_MAP_SIZE],
             oam: [Sprite::new(); OAM_SPR_NUM],
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
@@ -148,8 +145,13 @@ impl PPU {
                 self.tiles[tile_num as usize].set_byte(byte_num, val);
             },
             TILE_MAP..=TILE_MAP_END => {
-                let map_addr = (addr - TILE_MAP) as usize + (self.vram_bank * TILE_MAP_SIZE);
-                self.tile_maps[map_addr] = val;
+                let map_addr = (addr - TILE_MAP) as usize;
+                if self.vram_bank == 0 {
+                    self.tile_maps[map_addr].set_tile_num(val);
+                } else {
+                    assert_ne!(mode, GB::DMG, "VRAM bank can't be greater than 0 for DMG");
+                    self.tile_maps[map_addr].set_metadata(val);
+                }
             },
             IO_START..=IO_END => {
                 if mode == GB::CGB || mode == GB::CGB_DMG {
@@ -204,8 +206,13 @@ impl PPU {
                 self.tiles[tile_num as usize].get_byte(byte_num)
             },
             TILE_MAP..=TILE_MAP_END => {
-                let map_addr = (addr - TILE_MAP) as usize + (self.vram_bank * TILE_MAP_SIZE);
-                self.tile_maps[map_addr]
+                let map_addr = (addr - TILE_MAP) as usize;
+                if self.vram_bank == 0 {
+                    self.tile_maps[map_addr].get_tile_num()
+                } else {
+                    assert_ne!(mode, GB::DMG, "VRAM bank can't be greater than 0 for DMG");
+                    self.tile_maps[map_addr].get_metadata()
+                }
             },
             IO_START..=IO_END => {
                 if mode == GB::CGB_DMG || mode == GB::CGB {
@@ -358,8 +365,6 @@ impl PPU {
     ///     Hardware type (GB)
     /// ```
     fn render_background_line(&self, pixel_row: &mut [u8], line: u8, mode: GB) {
-        let tile_map = self.get_bkgd_tile_map();
-        let tile_attributes = self.get_cgb_bkgd_map_attributes();
         // TODO: This is not ideal. Someday, I'd like to not have this variable if we aren't DMG
         let dmg_pal = self.palette.get_bg_pal();
         let pal_indices = self.get_dmg_bg_indices();
@@ -373,17 +378,18 @@ impl PPU {
             // Get coords for current tile
             let map_x = ((start_x + x) % MAP_PIXELS) / TILESIZE;
             let map_y = y / TILESIZE;
-            let index = map_y * MAP_SIZE + map_x;
+            // The index is the cell in question, plus the offset for which map table is being used
+            let idx = (map_y * MAP_SIZE + map_x) + (self.get_bkgd_tile_map_index() as usize * TILE_MAP_TBL_SIZE);
+            let tile_data = self.tile_maps[idx];
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
             let tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
-                (256 + (tile_map[index] as i8 as isize)) as usize
+                (256 + (tile_data.get_tile_num() as i8 as isize)) as usize
             } else {
-                tile_map[index] as usize
+                tile_data.get_tile_num() as usize
             };
 
             let tile = if mode == GB::CGB {
-                let meta_tile = tile_attributes[index];
-                let bank_offset = if meta_tile.get_bit(VRAM_BANK_BIT) { TILE_NUM } else { 0 };
+                let bank_offset = tile_data.get_vram_bank() * TILE_NUM;
                 &self.tiles[tile_index + bank_offset]
             } else {
                 &self.tiles[tile_index]
@@ -391,8 +397,7 @@ impl PPU {
             let col = (start_x + x) % TILESIZE;
             let pixel = tile.get_row(row)[col] as usize;
             let color = if mode == GB::CGB {
-                let pal_idx = tile_attributes[index];
-                let pal_indices = self.get_cgb_bg_indices(pal_idx);
+                let pal_indices = self.get_cgb_bg_indices(tile_data.get_pal_num());
                 gbc2rgba(pal_indices[2 * pixel], pal_indices[2 * pixel + 1])
             } else {
                 dmg_pal[pal_indices[pixel] as usize]
@@ -423,7 +428,6 @@ impl PPU {
             return;
         }
 
-        let wndw_map = self.get_wndw_tile_map();
         let dmg_pal = self.palette.get_bg_pal();
         let pal_indices = self.get_dmg_bg_indices();
 
@@ -435,12 +439,14 @@ impl PPU {
         for x in start_x..SCREEN_WIDTH {
             // Get coords for current tile
             let map_x = ((x - start_x) % MAP_PIXELS) / TILESIZE;
-            let index = map_y * MAP_SIZE + map_x;
+            // The index is the cell in question, plus the offset for which map table is being used
+            let idx = (map_y * MAP_SIZE + map_x) + (self.get_wndw_tile_map_index() as usize * TILE_MAP_TBL_SIZE);
+            let wndw_data = self.tile_maps[idx];
             // The tile indexes in the second tile pattern table ($8800-97ff) are signed
             let mut tile_index = if self.get_bkgd_wndw_tile_set_index() == 0 {
-                (256 + (wndw_map[index] as i8 as isize)) as usize
+                (256 + (wndw_data.get_tile_num() as i8 as isize)) as usize
             } else {
-                wndw_map[index] as usize
+                wndw_data.get_tile_num() as usize
             };
             tile_index += self.vram_bank * TILE_NUM;
             let tile = &self.tiles[tile_index];
@@ -603,52 +609,6 @@ impl PPU {
     }
 
     /// ```
-    /// Get background tile map
-    ///
-    /// Gets the pixel data for the background tiles
-    ///
-    /// Output:
-    ///     Slice of tilemap values (&[u8])
-    /// ```
-    fn get_bkgd_tile_map(&self) -> &[u8] {
-        // $00 for $9800-$9BFF
-        // $01 for $9C00-$9FFF
-        if self.get_bkgd_tile_map_index() == 0 {
-            &self.tile_maps[0..TILE_MAP_TBL_SIZE]
-        } else {
-            &self.tile_maps[TILE_MAP_TBL_SIZE..TILE_MAP_SIZE]
-        }
-    }
-
-    /// ```
-    /// Get window tile map
-    ///
-    /// Gets the pixel data for the window tiles
-    ///
-    /// Output:
-    ///     Slice of tilemap values (&[u8])
-    /// ```
-    fn get_wndw_tile_map(&self) -> &[u8] {
-        // $00 for $9800-$9BFF
-        // $01 for $9C00-$9FFF
-        if self.get_wndw_tile_map_index() == 0 {
-            &self.tile_maps[0..TILE_MAP_TBL_SIZE]
-        } else {
-            &self.tile_maps[TILE_MAP_TBL_SIZE..TILE_MAP_SIZE]
-        }
-    }
-
-    fn get_cgb_bkgd_map_attributes(&self) -> &[u8] {
-        // $00 stored at 1:$9800-$9BFF
-        // $01 stored at 1:$9C00-$9FFF
-        if self.get_bkgd_tile_map_index() == 0 {
-            &self.tile_maps[TILE_MAP_SIZE..(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)]
-        } else {
-            &self.tile_maps[(TILE_MAP_SIZE + TILE_MAP_TBL_SIZE)..(2 * TILE_MAP_SIZE)]
-        }
-    }
-
-    /// ```
     /// Get DMG background indices
     ///
     /// Gets the palette indices from the BGP register ($FF47)
@@ -660,9 +620,19 @@ impl PPU {
         unpack_u8(self.read_io(BGP))
     }
 
-    fn get_cgb_bg_indices(&self, attr: u8) -> &[u8] {
-        let offset = (attr & 0b111) as usize;
-        &self.cgb_bg_pal_data[(offset * CGB_PAL_SIZE)..((offset + 1) * CGB_PAL_SIZE)]
+    /// ```
+    /// Get CGB background indices
+    ///
+    /// Gets the slice of currently used GBC palette data
+    ///
+    /// Input:
+    ///     Which palette is being used (usize)
+    ///
+    /// Output:
+    ///     Slice of palette data (&[u8])
+    /// ```
+    fn get_cgb_bg_indices(&self, num: usize) -> &[u8] {
+        &self.cgb_bg_pal_data[(num * CGB_PAL_SIZE)..((num + 1) * CGB_PAL_SIZE)]
     }
 
     /// ```

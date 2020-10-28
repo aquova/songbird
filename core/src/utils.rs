@@ -7,7 +7,7 @@ pub const COLOR_CHANNELS: usize = 4;
 pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT * COLOR_CHANNELS;
 
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GB {
     DMG,
     CGB_DMG,
