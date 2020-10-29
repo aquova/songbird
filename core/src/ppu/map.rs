@@ -1,8 +1,8 @@
 use crate::utils::*;
 
 const VRAM_BANK_BIT: u8         = 3;
-const Y_FLIP_BIT: u8            = 5;
-const X_FLIP_BIT: u8            = 6;
+const X_FLIP_BIT: u8            = 5;
+const Y_FLIP_BIT: u8            = 6;
 const PRIORITY_BIT: u8          = 7;
 
 #[derive(Copy, Clone)]

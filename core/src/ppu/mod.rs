@@ -394,7 +394,19 @@ impl PPU {
             } else {
                 &self.tiles[tile_index]
             };
+
             let col = (start_x + x) % TILESIZE;
+            let col = if tile_data.is_x_flip() {
+                TILESIZE - col - 1
+            } else {
+                col
+            };
+            let row = if tile_data.is_y_flip() {
+                TILESIZE - row - 1
+            } else {
+                row
+            };
+
             let pixel = tile.get_row(row)[col] as usize;
             let color = if mode == GB::CGB {
                 let pal_indices = self.get_cgb_bg_indices(tile_data.get_pal_num());
