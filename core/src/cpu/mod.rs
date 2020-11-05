@@ -258,6 +258,18 @@ impl Cpu {
     }
 
     /// ```
+    /// Get ROM bank
+    ///
+    /// Returns the currently banked ROM number, used for debugging
+    ///
+    /// Output:
+    ///     Which ROM bank is currently mapped in (u16)
+    /// ```
+    pub fn get_rom_bank(&self) -> u16 {
+        self.bus.get_rom_bank()
+    }
+
+    /// ```
     /// Is battery RAM dirty?
     ///
     /// Checks whether battery RAM has been updated

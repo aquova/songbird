@@ -364,6 +364,18 @@ impl Bus {
     pub fn write_ext_ram(&mut self, data: &[u8]) {
         self.rom.write_ext_ram(data);
     }
+
+    /// ```
+    /// Get ROM bank
+    ///
+    /// Returns the currently banked ROM number, used for debugging
+    ///
+    /// Output:
+    ///     Which ROM bank is currently mapped in (u16)
+    /// ```
+    pub fn get_rom_bank(&self) -> u16 {
+        self.rom.get_rom_bank()
+    }
 }
 
 // Private functions

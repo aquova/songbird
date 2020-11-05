@@ -1,5 +1,6 @@
 // The songbird debugger module
 use crate::cpu::*;
+use crate::cartridge::ROM_STOP;
 use std::cmp::min;
 use std::io;
 use std::io::prelude::*;
@@ -127,7 +128,12 @@ impl debugger {
                 },
                 "n" => {
                     gb.tick();
-                    println!("PC: ${:04x}", gb.get_pc());
+                    let pc = gb.get_pc();
+                    if pc <= ROM_STOP {
+                        println!("PC: {}:${:04x}", gb.get_rom_bank(), pc);
+                    } else {
+                        println!("PC: ${:04x}", pc);
+                    }
                 },
                 "p" => {
                     let hex = u16::from_str_radix(words[1], 16);
