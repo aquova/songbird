@@ -12,8 +12,10 @@ use timer::*;
 // =============
 // = Constants =
 // =============
-const IF_REG: u16 = 0xFF0F; // Interrupt Flag
-const IE_REG: u16 = 0xFFFF; // Interrupt Enable
+const IF_REG: u16   = 0xFF0F;   // Interrupt Flag
+const KEY1_REG: u16 = 0xFF4D;   // CGB Speed Switch
+const IE_REG: u16   = 0xFFFF;   // Interrupt Enable
+
 const INTER_PRIORITIES: [Interrupts; 5] = [
     Interrupts::VBLANK,
     Interrupts::LCD_STAT,
@@ -21,7 +23,6 @@ const INTER_PRIORITIES: [Interrupts; 5] = [
     Interrupts::SERIAL,
     Interrupts::JOYPAD
 ];
-
 
 pub enum Flags {
     Z,
@@ -78,6 +79,7 @@ pub struct Cpu {
     halted: bool,
     bus: Bus,
     dirty_battery_ram: bool,
+    double_speed: bool,
 }
 
 impl Default for Cpu {
@@ -107,6 +109,7 @@ impl Cpu {
             halted: false,
             bus: Bus::new(),
             dirty_battery_ram: false,
+            double_speed: false,
         };
 
         // Magic values for RAM initialization
@@ -761,6 +764,13 @@ impl Cpu {
     pub fn read_ram(&self, addr: u16) -> u8 {
         match addr {
             DIV..=TAC => { self.timer.read_timer(addr) },
+            KEY1_REG => {
+                if self.mode == GB::CGB {
+                    if self.double_speed { 0x80 } else { 0 }
+                } else {
+                    self.bus.read_ram(addr, self.mode)
+                }
+            },
             _ => { self.bus.read_ram(addr, self.mode) }
         }
     }
@@ -1188,6 +1198,13 @@ impl Cpu {
             DIV..=TAC => {
                 self.timer.write_timer(addr, val);
             },
+            KEY1_REG => {
+                if self.mode == GB::CGB {
+                    self.double_speed = val.get_bit(0);
+                } else {
+                    self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
+                }
+            }
             _ => {
                 self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
             }
