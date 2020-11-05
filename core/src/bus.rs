@@ -5,6 +5,8 @@ use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
 
+use std::cmp::min;
+
 /*
  * RAM Map
  * Not drawn to scale
@@ -85,6 +87,7 @@ struct VRAM_DMA {
     pub len: u16,
     pub transferred: u16,
     pub last_scanline: u8,
+    pub active: bool,
 }
 
 // ==================
@@ -164,6 +167,22 @@ impl Bus {
             SVBK_REG => {
                 self.wram.get_wram_bank()
             },
+            HDMA5_REG => {
+                match self.vram_dma_remaining {
+                    Some(dma_data) => {
+                        let remaining = dma_data.len - dma_data.transferred;
+                        let raw_remaining = (remaining / 0x10 - 1) as u8;
+                        if dma_data.active {
+                            raw_remaining
+                        } else {
+                            0x80 | raw_remaining
+                        }
+                    },
+                    None => {
+                        0xFF
+                    }
+                }
+            },
             HRAM_START..=HRAM_END => {
                 let hram_index = addr - HRAM_START;
                 self.hram[hram_index as usize]
@@ -208,9 +227,10 @@ impl Bus {
                 self.oam_dma(val, mode);
             },
             HDMA5_REG => {
-                self.ppu.write_vram(addr, val, mode);
                 if mode == GB::CGB {
-                    self.vram_dma();
+                    self.vram_dma(Some(val));
+                } else {
+                    self.ppu.write_vram(addr, val, mode);
                 }
             },
             SVBK_REG => {
@@ -316,7 +336,7 @@ impl Bus {
         // TODO: The clock_mode comparision should be a const or inherited from Clock or something
         // If in HBLANK:
         if clock_mode == 0 && gb_mode == GB::CGB {
-            self.vram_dma();
+            self.vram_dma(None);
         }
         self.ppu.set_status(clock_mode);
     }
@@ -372,8 +392,11 @@ impl Bus {
     /// VRAM DMA transfer
     ///
     /// Copies sprite data from stored area into VRAM, initiated when data written to HDMA5
+    ///
+    /// Input:
+    ///     Length in bytes to transfer, if any (Option<u8>)
     /// ```
-    fn vram_dma(&mut self) {
+    fn vram_dma(&mut self, val: Option<u8>) {
         // Game Boy Color only, source and destination areas are encoded as such:
         // $FF51 - DMA Source, High
         // $FF52 - DMA Source, Low
@@ -382,53 +405,88 @@ impl Bus {
         // $FF55 - DMA Length
         match &self.vram_dma_remaining {
             Some(mut dma_data) => {
-                let scanline = self.read_ram(LY, GB::CGB);
-                if scanline != dma_data.last_scanline {
-                    for i in 0..VRAM_DMA_PER_HBLANK {
-                        let byte = self.read_ram(dma_data.src_addr + dma_data.transferred + i, GB::CGB);
-                        self.write_ram(dma_data.dst_addr + dma_data.transferred + i, byte, GB::CGB);
+                if dma_data.active {
+                    if let Some(pause_data) = val {
+                        // If newly written data to HDMA5 has 7th bit clear, halt transfer
+                        // This effectively ends the transfer, but metadata needs to be available to be read
+                        if !pause_data.get_bit(7) {
+                            dma_data.active = false;
+                            return;
+                        }
                     }
-                    dma_data.transferred += VRAM_DMA_PER_HBLANK;
-                    dma_data.last_scanline = scanline;
+
+                    // Complete data transfer of at most $16 bytes, noting if we're done
+                    let scanline = self.read_ram(LY, GB::CGB);
+                    if scanline != dma_data.last_scanline {
+                        let remaining = min(VRAM_DMA_PER_HBLANK, dma_data.len - dma_data.transferred);
+                        for i in 0..remaining {
+                            let byte = self.read_ram(dma_data.src_addr + dma_data.transferred + i, GB::CGB);
+                            self.write_ram(dma_data.dst_addr + dma_data.transferred + i, byte, GB::CGB);
+                        }
+                        dma_data.transferred += remaining;
+                        if dma_data.transferred == dma_data.len {
+                            self.vram_dma_remaining = None;
+                        } else {
+                            dma_data.last_scanline = scanline;
+                        }
+                    }
+                } else if let Some(raw_transfer_len) = val {
+                    // If the previous transfer is no longer active, but new data has come in, start a new transfer
+                    self.vram_dma_helper(raw_transfer_len);
                 }
             },
             None => {
-                let src_addr_high = self.read_ram(HDMA1_REG, GB::CGB);
-                let src_addr_low = self.read_ram(HDMA2_REG, GB::CGB);
-                let dst_addr_high = self.read_ram(HDMA3_REG, GB::CGB);
-                let dst_addr_low = self.read_ram(HDMA4_REG, GB::CGB);
-
-                let src_addr = merge_bytes(src_addr_high, src_addr_low) & 0xFFF0; // Lower 4 bits are always zero
-                let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0x1FF0; // Lower 4 bits are ignored, as well as highest 3, as dest is always in VRAM
-
-                let raw_transfer_len = self.read_ram(HDMA5_REG, GB::CGB);
-                // Transfer length is (lower 7 bits of HDMA5 value) * $10 + 1
-                let transfer_len = ((raw_transfer_len as u16) & 0b0111_1111) * 0x10 + 1;
-                let hblank_transfer = raw_transfer_len.get_bit(7);
-
-                if hblank_transfer {
-                    // If 7th bit was set, then we transfer $10 bits at a time during each HBLANK scanline
-                    for i in 0..VRAM_DMA_PER_HBLANK {
-                        let byte = self.read_ram(src_addr + i, GB::CGB);
-                        self.write_ram(dst_addr + i, byte, GB::CGB);
-                    }
-
-                    self.vram_dma_remaining = Some(
-                        VRAM_DMA {
-                            src_addr: src_addr,
-                            dst_addr: dst_addr,
-                            len: transfer_len,
-                            transferred: VRAM_DMA_PER_HBLANK,
-                            last_scanline: self.read_ram(LY, GB::CGB),
-                        }
-                    );
-                } else {
-                    // Otherwise, simply transfer all data at once
-                    for i in 0..transfer_len {
-                        let byte = self.read_ram(src_addr + i, GB::CGB);
-                        self.write_ram(dst_addr + i, byte, GB::CGB);
-                    }
+                // Only initiate a new VRAM DMA transfer if a value was written to HDMA5
+                if let Some(raw_transfer_len) = val {
+                    self.vram_dma_helper(raw_transfer_len);
                 }
+            }
+        }
+    }
+
+    /// ```
+    /// VRAM DMA helper
+    ///
+    /// Performs a complete VRAM DMA transfer of the entire specified data amount
+    ///
+    /// Input:
+    ///     Amount of bytes to transfer (u8)
+    /// ```
+    fn vram_dma_helper(&mut self, raw_transfer_len: u8) {
+        let src_addr_high = self.read_ram(HDMA1_REG, GB::CGB);
+        let src_addr_low = self.read_ram(HDMA2_REG, GB::CGB);
+        let dst_addr_high = self.read_ram(HDMA3_REG, GB::CGB);
+        let dst_addr_low = self.read_ram(HDMA4_REG, GB::CGB);
+
+        let src_addr = merge_bytes(src_addr_high, src_addr_low) & 0xFFF0; // Lower 4 bits are always zero
+        let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0x1FF0; // Lower 4 bits are ignored, as well as highest 3, as dest is always in VRAM
+
+        // Transfer length is (lower 7 bits of HDMA5 value) * $10 + 1
+        let transfer_len = (((raw_transfer_len as u16) & 0b0111_1111) + 1) * 0x10;
+        let hblank_transfer = raw_transfer_len.get_bit(7);
+
+        if hblank_transfer {
+            // If 7th bit was set, then we transfer $10 bits at a time during each HBLANK scanline
+            for i in 0..VRAM_DMA_PER_HBLANK {
+                let byte = self.read_ram(src_addr + i, GB::CGB);
+                self.write_ram(dst_addr + i, byte, GB::CGB);
+            }
+
+            self.vram_dma_remaining = Some(
+                VRAM_DMA {
+                    src_addr: src_addr,
+                    dst_addr: dst_addr,
+                    len: transfer_len,
+                    transferred: VRAM_DMA_PER_HBLANK,
+                    last_scanline: self.read_ram(LY, GB::CGB),
+                    active: true,
+                }
+            );
+        } else {
+            // Otherwise, simply transfer all data at once
+            for i in 0..transfer_len {
+                let byte = self.read_ram(src_addr + i, GB::CGB);
+                self.write_ram(dst_addr + i, byte, GB::CGB);
             }
         }
     }

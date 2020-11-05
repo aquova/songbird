@@ -140,7 +140,7 @@ impl PPU {
             },
             TILE_SET..=TILE_SET_END => {
                 let offset = addr - TILE_SET;
-                let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
+                let tile_num = (offset / TILE_BYTES) + (self.vram_bank * TILE_NUM) as u16;
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].set_byte(byte_num, val);
             },
@@ -201,7 +201,7 @@ impl PPU {
             },
             TILE_SET..=TILE_SET_END => {
                 let offset = addr - TILE_SET;
-                let tile_num = offset / TILE_BYTES + (self.vram_bank * TILE_NUM) as u16;
+                let tile_num = (offset / TILE_BYTES) + (self.vram_bank * TILE_NUM) as u16;
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].get_byte(byte_num)
             },
@@ -222,6 +222,9 @@ impl PPU {
                         },
                         OBPD => {
                             self.read_cgb_spr_color()
+                        },
+                        VBK => {
+                            0xFE | self.vram_bank as u8
                         },
                         _ => {
                             self.read_io(addr)
@@ -505,7 +508,10 @@ impl PPU {
             sprites_drawn += 1;
             // System only allows finite number of sprites drawn per line
             // If we hit threshold, no more sprites can be drawn on this line
-            if sprites_drawn > SPR_PER_LINE {
+
+            // TODO: This has been shown to cause issues on GBC games (See Mario Deluxe)
+            // Need to re-verify whether this is a requirement there as well
+            if sprites_drawn > SPR_PER_LINE && mode != GB::CGB {
                 break;
             }
 
