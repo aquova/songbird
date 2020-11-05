@@ -154,7 +154,7 @@ impl PPU {
                 }
             },
             IO_START..=IO_END => {
-                if mode == GB::CGB || mode == GB::CGB_DMG {
+                if mode == GB::CGB {
                     match addr {
                         BGPD => {
                             self.write_cgb_bg_color(val);
@@ -215,7 +215,7 @@ impl PPU {
                 }
             },
             IO_START..=IO_END => {
-                if mode == GB::CGB_DMG || mode == GB::CGB {
+                if mode == GB::CGB {
                     match addr {
                         BGPD => {
                             self.read_cgb_bg_color()
@@ -749,13 +749,7 @@ impl PPU {
     /// ```
     fn is_wndw_dspl(&self, mode: GB) -> bool {
         let lcd_control = self.read_io(LCDC);
-        let mut is_dspl = lcd_control.get_bit(WNDW_DISP_BIT);
-        if mode == GB::CGB_DMG {
-            // For CGB running in DMG mode, clearing the BG bit can also disables the window layer
-            is_dspl &= lcd_control.get_bit(BG_DISP_BIT);
-        }
-
-        is_dspl
+        lcd_control.get_bit(WNDW_DISP_BIT)
     }
 
     /// ```

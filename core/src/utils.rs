@@ -10,7 +10,6 @@ pub const DISP_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT * COLOR_CHANNELS;
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GB {
     DMG,
-    CGB_DMG,
     CGB,
     SGB
 }

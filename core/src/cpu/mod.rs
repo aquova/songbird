@@ -229,8 +229,7 @@ impl Cpu {
     ///     Game name (&str)
     /// ```
     pub fn get_title(&self) -> &str {
-        let is_cgb = self.mode == GB::CGB_DMG || self.mode == GB::CGB;
-        self.bus.get_title(is_cgb)
+        self.bus.get_title(self.mode == GB::CGB)
     }
 
     /// ```
@@ -312,7 +311,7 @@ impl Cpu {
         }
 
         // System determines if hardware is CGB if accumulator is $11 at start
-        if self.mode == GB::CGB_DMG || self.mode == GB::CGB {
+        if self.mode == GB::CGB {
             self.set_reg(Regs::A, 0x11);
         }
     }
@@ -1204,7 +1203,7 @@ impl Cpu {
                 } else {
                     self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
                 }
-            }
+            },
             _ => {
                 self.dirty_battery_ram |= self.bus.write_ram(addr, val, self.mode);
             }

@@ -305,9 +305,6 @@ impl Cart {
     fn get_cgb(&self) -> GB {
         let val = self.rom[CGB_FLAG_ADDR];
         match val {
-            // DMG_CGB_FLAG => {
-            //     GB::CGB_DMG
-            // },
             DMG_CGB_FLAG | CGB_ONLY_FLAG => {
                 GB::CGB
             },
