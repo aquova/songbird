@@ -499,6 +499,7 @@ impl PPU {
         // Iterate through every sprite
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
+        let screen_coords = self.get_scroll_coords();
         let mut sprites_drawn = 0;
         for spr in sorted_sprites {
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
@@ -571,11 +572,20 @@ impl PPU {
                     continue;
                 }
 
+                let pixel_rgba = &pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))];
                 let bkgd_transparent = if mode == GB::CGB {
-                    // TODO: This isn't correct, it needs to be the background tile's transparent color, not the sprite's
-                    pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == gbc2rgba(cgb_colors[0], cgb_colors[1])
+                    // Need to get the specific palette for this background tile
+                    let map_x = (screen_coords.x as usize + pixel_x) % MAP_SIZE;
+                    let map_y = ((screen_coords.y as usize) + (line as usize)) % MAP_SIZE;
+                    // The index is the cell in question, plus the offset for which map table is being used
+                    let idx = (map_y * MAP_SIZE + map_x) + (self.get_bkgd_tile_map_index() as usize * TILE_MAP_TBL_SIZE);
+                    let tile_data = self.tile_maps[idx];
+                    let pal_indices = self.get_cgb_bg_indices(tile_data.get_pal_num());
+                    let bkgd_pal = gbc2rgba(pal_indices[0], pal_indices[1]);
+                    // Check if the pixel already drawn is the transparancy color for that BG tile
+                    pixel_rgba == bkgd_pal
                 } else {
-                    pixel_row[(COLOR_CHANNELS * pixel_x)..(COLOR_CHANNELS * (pixel_x + 1))] == dmg_pal[0]
+                    pixel_rgba == dmg_pal[0]
                 };
 
                 // Only draw pixel if
@@ -651,6 +661,11 @@ impl PPU {
     /// ```
     fn get_cgb_bg_indices(&self, num: usize) -> &[u8] {
         &self.cgb_bg_pal_data[(num * CGB_PAL_SIZE)..((num + 1) * CGB_PAL_SIZE)]
+    }
+
+    fn get_cgb_transparent_color(&self, pal_idx: usize) -> [u8; COLOR_CHANNELS] {
+        let pal = self.get_cgb_bg_indices(pal_idx);
+        gbc2rgba(pal[0], pal[1])
     }
 
     /// ```
