@@ -500,6 +500,7 @@ impl PPU {
         let sorted_sprites = self.sort_sprites();
         let is_8x16 = self.spr_are_8x16();
         let screen_coords = self.get_scroll_coords();
+        let lcd_control = self.read_io(LCDC);
         let mut sprites_drawn = 0;
         for spr in sorted_sprites {
             if !spr.contains_scanline(line, is_8x16) || !spr.is_onscreen() {
@@ -520,12 +521,6 @@ impl PPU {
             let pal_indices = self.get_dmg_spr_indices(spr.get_pal());
             let cgb_colors = self.get_cgb_spr_indices(spr.get_pal());
             let mut above_bg = spr.is_above_bkgd();
-            if mode == GB::CGB {
-                // CBG only - If bit LCDC.0 cleared, then sprites always drawn on top
-                let lcd_control = self.read_io(LCDC);
-                above_bg |= !lcd_control.get_bit(BG_DISP_BIT);
-            }
-
             let (top_x, top_y) = spr.get_coords();
             // Get which row in the sprite we're drawing
             let row = ((line as i16) - top_y) as usize;
@@ -582,6 +577,12 @@ impl PPU {
                     let tile_data = self.tile_maps[idx];
                     let pal_indices = self.get_cgb_bg_indices(tile_data.get_pal_num());
                     let bkgd_pal = gbc2rgba(pal_indices[0], pal_indices[1]);
+
+                    // While we have the background tile metadata, see if this tile has priority over sprites
+                    above_bg &= !tile_data.is_bg_priority();
+                    // Master enable, if LCDC.0 cleared, then sprites always display on top
+                    above_bg |= !lcd_control.get_bit(BG_DISP_BIT);
+
                     // Check if the pixel already drawn is the transparancy color for that BG tile
                     pixel_rgba == bkgd_pal
                 } else {
@@ -661,11 +662,6 @@ impl PPU {
     /// ```
     fn get_cgb_bg_indices(&self, num: usize) -> &[u8] {
         &self.cgb_bg_pal_data[(num * CGB_PAL_SIZE)..((num + 1) * CGB_PAL_SIZE)]
-    }
-
-    fn get_cgb_transparent_color(&self, pal_idx: usize) -> [u8; COLOR_CHANNELS] {
-        let pal = self.get_cgb_bg_indices(pal_idx);
-        gbc2rgba(pal[0], pal[1])
     }
 
     /// ```
