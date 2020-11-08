@@ -590,9 +590,10 @@ impl PPU {
                 };
 
                 // Only draw pixel if
-                // - Sprite is above background, and the pixel being drawn isn't transparent
+                // - Pixel isn't transparent
+                // - Sprite is going to be drawn above the backgroud OR
                 // - Sprite is below background, but background has transparent color here
-                if (above_bg && pixel != 0) || (!above_bg && bkgd_transparent) {
+                if pixel != 0 && (above_bg || (!above_bg && bkgd_transparent)) {
                     let color = if mode == GB::CGB {
                         gbc2rgba(cgb_colors[2 * pixel], cgb_colors[2 * pixel + 1])
                     } else {
