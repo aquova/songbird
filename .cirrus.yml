@@ -57,7 +57,7 @@ rpi_task:
 
   build_script:
     - make arm
-    - mv gui/target/arm-unknown-linux-gnueabihf/songbird_gui .
+    - mv gui/target/arm-unknown-linux-gnueabihf/release/songbird_gui .
     - mv songbird_gui songbird_rpi
 
   songbird_artifacts:
