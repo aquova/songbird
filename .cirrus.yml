@@ -1,6 +1,6 @@
 linux_task:
   container:
-    image: aquova/songbird:1.0
+    image: aquova/songbird:0.2
 
   build_script:
     - make gui
@@ -28,7 +28,7 @@ osx_task:
 
 win_task:
   container:
-    image: aquova/songbird:1.0
+    image: aquova/songbird:0.2
 
   build_script:
     - make windows
@@ -40,7 +40,7 @@ win_task:
 
 wasm_task:
   container:
-    image: aquova/songbird:1.0
+    image: aquova/songbird:0.2
 
   build_script:
     - make wasm
@@ -50,3 +50,15 @@ wasm_task:
 
   songbird_artifacts:
     path: songbird_wasm.zip
+
+rpi_task:
+  container:
+    image: aquova/songbird:0.2
+
+  build_script:
+    - make arm
+    - mv gui/target/arm-unknown-linux-gnueabihf/songbird_gui .
+    - mv songbird_gui songbird_rpi
+
+  songbird_artifacts:
+    - songbird_rpi

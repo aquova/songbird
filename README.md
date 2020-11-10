@@ -4,11 +4,12 @@ sonGBird
 [![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=win)](https://cirrus-ci.com/github/aquova/songbird/master)
 [![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=osx)](https://cirrus-ci.com/github/aquova/songbird/master)
 [![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=linux)](https://cirrus-ci.com/github/aquova/songbird/master)
+[![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=rpi)](https://cirrus-ci.com/github/aquova/songbird/master)
 [![Build status](https://api.cirrus-ci.com/github/aquova/songbird.svg?task=wasm)](https://cirrus-ci.com/github/aquova/songbird/master)
 
 <img src="assets/logos/songbird_logo_mono.png" width=256 height=256>
 
-Songbird is a cross-platform Nintendo Game Boy emulator written in Rust. It runs on Windows, MacOS, Linux, and in a web browser via WebAssembly.
+Songbird is a cross-platform Nintendo Game Boy emulator written in Rust. It runs on Windows, MacOS, Linux, Raspberry Pi, and in a web browser via WebAssembly.
 
 Written by aquova, 2019-2020
 
