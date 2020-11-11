@@ -126,25 +126,39 @@ impl PPU {
     ///     System mode (GB)
     /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
-        // TODO: Need to check for valid clock mode before writes
-        // if !self.is_valid_status(addr) {
-        //     return;
-        // }
+        // TODO: These limitations need to eventually be supported,
+        // but due to my poor clock timer, cause issues due to inaccuracies
+        // let clock_mode = self.get_lcdc_status();
 
         match addr {
             OAM_START..=OAM_END => {
+                // During clock modes 2 and 3, cannot access OAM
+                // if clock_mode == ModeTypes::OAMReadMode || clock_mode == ModeTypes::VRAMReadMode {
+                //     return;
+                // }
+
                 let relative_addr = addr - OAM_START;
                 let spr_num = relative_addr / OAM_BYTE_SIZE;
                 let byte_num = relative_addr % OAM_BYTE_SIZE;
                 self.oam[spr_num as usize].set_byte(byte_num, val, mode);
             },
             TILE_SET..=TILE_SET_END => {
+                // During clock mode 3, cannot access VRAM
+                // if clock_mode == ModeTypes::VRAMReadMode {
+                //     return;
+                // }
+
                 let offset = addr - TILE_SET;
                 let tile_num = (offset / TILE_BYTES) + (self.vram_bank * TILE_NUM) as u16;
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].set_byte(byte_num, val);
             },
             TILE_MAP..=TILE_MAP_END => {
+                // During clock mode 3, cannot access VRAM
+                // if clock_mode == ModeTypes::VRAMReadMode {
+                //     return;
+                // }
+
                 let map_addr = (addr - TILE_MAP) as usize;
                 if self.vram_bank == 0 {
                     self.tile_maps[map_addr].set_tile_num(val);
@@ -162,6 +176,11 @@ impl PPU {
                     },
                     BGPD => {
                         if mode == GB::CGB {
+                            // During clock mode 3, cannot edit palette data
+                            // if clock_mode == ModeTypes::VRAMReadMode {
+                            //     return;
+                            // }
+
                             self.write_cgb_bg_color(val);
                         } else {
                             self.write_io(addr, val);
@@ -169,6 +188,11 @@ impl PPU {
                     },
                     OBPD => {
                         if mode == GB::CGB {
+                            // During clock mode 3, cannot edit palette data
+                            // if clock_mode == ModeTypes::VRAMReadMode {
+                            //     return;
+                            // }
+
                             self.write_cgb_spr_color(val);
                         } else {
                             self.write_io(addr, val);
@@ -309,7 +333,7 @@ impl PPU {
             self.render_background_line(&mut pixel_row, line, mode);
         }
 
-        if self.is_wndw_dspl(mode) {
+        if self.is_wndw_dspl() {
             self.render_wndw_line(&mut pixel_row, line, mode);
         }
 
@@ -799,7 +823,7 @@ impl PPU {
     /// Output:
     ///     Whether window layer is visible (bool)
     /// ```
-    fn is_wndw_dspl(&self, mode: GB) -> bool {
+    fn is_wndw_dspl(&self) -> bool {
         let lcd_control = self.read_io(LCDC);
         lcd_control.get_bit(WNDW_DISP_BIT)
     }
@@ -931,36 +955,6 @@ impl PPU {
     }
 
     /// ```
-    /// Is valid status
-    ///
-    /// Can we write to the given address, given the clock mode?
-    ///
-    /// Input:
-    ///     Address to write to (u16)
-    ///
-    /// Output:
-    ///     Write status (bool)
-    /// ```
-    fn is_valid_status(&self, addr: u16) -> bool {
-        let lcdc_status = self.get_lcdc_status();
-
-        match lcdc_status {
-            ModeTypes::OAMReadMode => {
-                !is_in_oam(addr)
-            },
-            ModeTypes::VRAMReadMode => {
-                // TODO: This function should also not allow writes to VRAM
-                // However, this blocks needed GFX writes, and causes corrupted graphics
-                // Likely an issue with timing, probably fixed when mem_timing passes
-                !is_in_oam(addr) // && !is_in_vram(addr)
-            },
-            _ => {
-                true
-            }
-        }
-    }
-
-    /// ```
     /// Read CGB Background color data
     ///
     /// Gets the color data from the specified index
@@ -1020,34 +1014,4 @@ impl PPU {
             self.write_io(OBPI, (obpi + 1) & 0b1011_1111);
         }
     }
-}
-
-/// ```
-/// Is in OAM?
-///
-/// Helper function to determine if address being written to is in OAM memory
-///
-/// Inputs:
-///     Address to write to (u16)
-///
-/// Outputs:
-///     Whether the address is in OAM memory (bool)
-/// ```
-fn is_in_oam(addr: u16) -> bool {
-    addr >= OAM_START && addr <= OAM_END
-}
-
-/// ```
-/// Is in VRAM?
-///
-/// Helper function to determine if address being written to is in VRAM memory
-///
-/// Inputs:
-///     Address to write to (u16)
-///
-/// Outputs:
-///     Whether the address is in VRAM memory (bool)
-/// ```
-fn is_in_vram(addr: u16) -> bool {
-    addr >= TILE_SET && addr <= TILE_MAP_END
 }
