@@ -72,9 +72,9 @@ const LCD_DISP_BIT: u8          = 7;
 const AUTO_INC_BIT: u8          = 7;
 
 const LYC_LY_FLAG_BIT: u8       = 2;
-// const HBLANK_INTERRUPT_BIT: u8 =    3;
-// const VBLANK_INTERRUPT_BIT: u8 =    4;
-// const OAM_INTERRUPT_BIT: u8 =       5;
+const HBLANK_INTERRUPT_BIT: u8  = 3;
+const VBLANK_INTERRUPT_BIT: u8  = 4;
+const OAM_INTERRUPT_BIT: u8     = 5;
 const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
 pub struct PPU {
@@ -154,27 +154,40 @@ impl PPU {
                 }
             },
             IO_START..=IO_END => {
-                if mode == GB::CGB {
-                    match addr {
-                        BGPD => {
+                match addr {
+                    STAT => {
+                        let mask = val & 0b1111_1000;
+                        let stat = self.read_io(STAT);
+                        self.write_io(STAT, mask | stat);
+                    },
+                    BGPD => {
+                        if mode == GB::CGB {
                             self.write_cgb_bg_color(val);
-                        },
-                        OBPD => {
-                            self.write_cgb_spr_color(val);
-                        },
-                        VBK => {
-                            self.set_vram_bank(val);
-                        },
-                        _ => {
+                        } else {
                             self.write_io(addr, val);
                         }
+                    },
+                    OBPD => {
+                        if mode == GB::CGB {
+                            self.write_cgb_spr_color(val);
+                        } else {
+                            self.write_io(addr, val);
+                        }
+                    },
+                    VBK => {
+                        if mode == GB::CGB {
+                            self.set_vram_bank(val);
+                        } else {
+                            self.write_io(addr, val);
+                        }
+                    },
+                    _ => {
+                        self.write_io(addr, val);
                     }
-                } else {
-                    self.write_io(addr, val);
                 }
             },
             _ => {
-                // Unused, do nothing
+                unreachable!("The address {:04x} should not have led to this function", addr);
             }
         }
     }
@@ -317,12 +330,39 @@ impl PPU {
     ///
     /// Input:
     ///     Current clock mode (u8)
+    ///
+    /// Output:
+    ///     Whether STAT interrupt has been tripped
     /// ```
-    pub fn set_status(&mut self, mode: u8) {
+    pub fn set_status(&mut self, mode: u8) -> bool {
         let mut stat = self.read_io(STAT);
+        let old_mode = stat & 0b11;
         stat &= 0b1111_1100;
         stat |= mode;
         self.write_io(STAT, stat);
+
+        // Trigger interrupt if
+        // - Mode has changed
+        // - Interrupt for that mode is enabled
+        if old_mode != mode {
+            match mode {
+                0 => {
+                    stat.get_bit(HBLANK_INTERRUPT_BIT)
+                },
+                1 => {
+                    stat.get_bit(VBLANK_INTERRUPT_BIT)
+                },
+                2 => {
+                    stat.get_bit(OAM_INTERRUPT_BIT)
+                },
+                3 => {
+                    false
+                },
+                _ => { unreachable!("Mode must be < 4") }
+            }
+        } else {
+            false
+        }
     }
 
     /// ```

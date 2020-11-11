@@ -163,11 +163,12 @@ impl Cpu {
         let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
         let clock_result = self.clock.clock_step(cycles);
-        let lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
+        let mut lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
+        lcd_interrupt |= self.bus.set_status_reg(self.clock.get_mode(), self.mode);
+
         if lcd_interrupt {
             self.enable_interrupt(Interrupts::LCD_STAT);
         }
-        self.bus.set_status_reg(self.clock.get_mode(), self.mode);
 
         // Tick timer
         let timer_interrupt = self.timer.tick(cycles);

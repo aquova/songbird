@@ -330,15 +330,18 @@ impl Bus {
     /// Input:
     ///     Clock mode (u8)
     ///     Game Boy mode (GB)
+    ///
+    /// Output:
+    ///     Whether STAT interrupt has been tripped
     /// ```
-    pub fn set_status_reg(&mut self, clock_mode: u8, gb_mode: GB) {
+    pub fn set_status_reg(&mut self, clock_mode: u8, gb_mode: GB) -> bool {
         let clock_mode = clock_mode & 0b0000_0011;
         // TODO: The clock_mode comparision should be a const or inherited from Clock or something
         // If in HBLANK:
         if clock_mode == 0 && gb_mode == GB::CGB {
             self.vram_dma(None);
         }
-        self.ppu.set_status(clock_mode);
+        self.ppu.set_status(clock_mode)
     }
 
     /// ```
