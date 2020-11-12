@@ -9,6 +9,9 @@
 *.exe
 **/gui/core
 
+# Editor files
+**/.idea/*
+
 # Hide files that aren't ours
 **/docs
 **/games
