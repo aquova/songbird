@@ -8,17 +8,18 @@ use crate::cartridge::*;
 /// Inputs:
 ///     Cartridge object (&Cart)
 ///     Memory address (u16)
+///     RAM bank (u8)
 ///
 /// Output:
 ///     Byte read (u8)
 /// ```
-pub fn mbc3_read_byte(cart: &Cart, addr: u16) -> u8 {
-    if cart.rtc.is_enabled() && (0x08 <= cart.ram_bank && cart.ram_bank <= 0x0C) {
-        cart.rtc.read_byte(cart.ram_bank)
+pub fn mbc3_read_byte(cart: &Cart, addr: u16, bank: u8) -> u8 {
+    if cart.rtc.is_enabled() && (0x08 <= bank && bank <= 0x0C) {
+        cart.rtc.read_byte(bank as u8)
     } else {
         let rel_addr = (addr - EXT_RAM_START) as usize;
         // Reading from external RAM
-        let ram_bank_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
+        let ram_bank_addr = (bank as usize) * RAM_BANK_SIZE + rel_addr;
         cart.ram[ram_bank_addr]
     }
 }

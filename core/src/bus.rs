@@ -145,21 +145,22 @@ impl Bus {
     ///
     /// Input:
     ///     RAM address (u16)
+    ///     Bank override (Option<u16>)
     ///     System mode (GB)
     ///
     /// Output:
     ///     Value at address (u8)
     /// ```
-    pub fn read_ram(&self, addr: u16, mode: GB) -> u8 {
+    pub fn read_ram(&self, addr: u16, bank_override: Option<u16>, mode: GB) -> u8 {
         match addr {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
-                self.rom.read_cart(addr)
+                self.rom.read_cart(addr, bank_override)
             },
             WRAM_START..=WRAM_END => {
-                self.wram.read_wram(addr)
+                self.wram.read_wram(addr, bank_override)
             },
             ECHO_START..=ECHO_END => {
-                self.wram.read_echo(addr)
+                self.wram.read_echo(addr, bank_override)
             },
             JOYPAD_REG => {
                 self.io.read_btns()
@@ -188,7 +189,7 @@ impl Bus {
                 self.hram[hram_index as usize]
             },
             _ => { // $8000-$9FFF, $FE00-$FE9F, $FF00-$FF7F
-                self.ppu.read_vram(addr, mode)
+                self.ppu.read_vram(addr, bank_override, mode)
             }
         }
     }
@@ -398,7 +399,7 @@ impl Bus {
         let dest_addr = OAM;
 
         for i in 0..0xA0 {
-            let byte = self.read_ram(source_addr + i, mode);
+            let byte = self.read_ram(source_addr + i, None, mode);
             self.write_ram(dest_addr + i, byte, mode);
         }
     }
@@ -431,11 +432,11 @@ impl Bus {
                     }
 
                     // Complete data transfer of at most $16 bytes, noting if we're done
-                    let scanline = self.read_ram(LY, GB::CGB);
+                    let scanline = self.read_ram(LY, None, GB::CGB);
                     if scanline != dma_data.last_scanline {
                         let remaining = min(VRAM_DMA_PER_HBLANK, dma_data.len - dma_data.transferred);
                         for i in 0..remaining {
-                            let byte = self.read_ram(dma_data.src_addr + dma_data.transferred + i, GB::CGB);
+                            let byte = self.read_ram(dma_data.src_addr + dma_data.transferred + i, None, GB::CGB);
                             self.write_ram(dma_data.dst_addr + dma_data.transferred + i, byte, GB::CGB);
                         }
                         dma_data.transferred += remaining;
@@ -468,10 +469,10 @@ impl Bus {
     ///     Amount of bytes to transfer (u8)
     /// ```
     fn vram_dma_helper(&mut self, raw_transfer_len: u8) {
-        let src_addr_high = self.read_ram(HDMA1_REG, GB::CGB);
-        let src_addr_low = self.read_ram(HDMA2_REG, GB::CGB);
-        let dst_addr_high = self.read_ram(HDMA3_REG, GB::CGB);
-        let dst_addr_low = self.read_ram(HDMA4_REG, GB::CGB);
+        let src_addr_high = self.read_ram(HDMA1_REG, None, GB::CGB);
+        let src_addr_low = self.read_ram(HDMA2_REG, None, GB::CGB);
+        let dst_addr_high = self.read_ram(HDMA3_REG, None, GB::CGB);
+        let dst_addr_low = self.read_ram(HDMA4_REG, None, GB::CGB);
 
         let src_addr = merge_bytes(src_addr_high, src_addr_low) & 0xFFF0; // Lower 4 bits are always zero
         let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0x1FF0; // Lower 4 bits are ignored, as well as highest 3, as dest is always in VRAM
@@ -483,7 +484,7 @@ impl Bus {
         if hblank_transfer {
             // If 7th bit was set, then we transfer $10 bits at a time during each HBLANK scanline
             for i in 0..VRAM_DMA_PER_HBLANK {
-                let byte = self.read_ram(src_addr + i, GB::CGB);
+                let byte = self.read_ram(src_addr + i, None, GB::CGB);
                 self.write_ram(dst_addr + i, byte, GB::CGB);
             }
 
@@ -493,14 +494,14 @@ impl Bus {
                     dst_addr: dst_addr,
                     len: transfer_len,
                     transferred: VRAM_DMA_PER_HBLANK,
-                    last_scanline: self.read_ram(LY, GB::CGB),
+                    last_scanline: self.read_ram(LY, None, GB::CGB),
                     active: true,
                 }
             );
         } else {
             // Otherwise, simply transfer all data at once
             for i in 0..transfer_len {
-                let byte = self.read_ram(src_addr + i, GB::CGB);
+                let byte = self.read_ram(src_addr + i, None, GB::CGB);
                 self.write_ram(dst_addr + i, byte, GB::CGB);
             }
         }

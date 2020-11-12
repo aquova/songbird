@@ -243,7 +243,7 @@ impl Cpu {
     /// ```
     pub fn fetch(&mut self) -> u8 {
         let pc = self.get_pc();
-        let val = self.read_ram(pc);
+        let val = self.read_ram(pc, None);
         self.pc += 1;
         val
     }
@@ -725,8 +725,8 @@ impl Cpu {
         // If at $FFFE, then stack is empty, assert?
         let mut sp = self.get_sp();
         assert_ne!(sp, 0xFFFE, "Trying to pop when stack is empty");
-        let low = self.read_ram(sp);
-        let high = self.read_ram(sp + 1);
+        let low = self.read_ram(sp, None);
+        let high = self.read_ram(sp + 1, None);
         let byte = merge_bytes(high, low);
         sp += 2;
         self.set_sp(sp);
@@ -757,21 +757,22 @@ impl Cpu {
     ///
     /// Input:
     ///     Address in RAM (u16)
+    ///     Bank override (Option<u16>)
     ///
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_ram(&self, addr: u16) -> u8 {
+    pub fn read_ram(&self, addr: u16, bank_override: Option<u16>) -> u8 {
         match addr {
             DIV..=TAC => { self.timer.read_timer(addr) },
             KEY1_REG => {
                 if self.mode == GB::CGB {
                     if self.double_speed { 0x80 } else { 0 }
                 } else {
-                    self.bus.read_ram(addr, self.mode)
+                    self.bus.read_ram(addr, bank_override, self.mode)
                 }
             },
-            _ => { self.bus.read_ram(addr, self.mode) }
+            _ => { self.bus.read_ram(addr, bank_override, self.mode) }
         }
     }
 
@@ -1162,7 +1163,7 @@ impl Cpu {
     ///     Whether to set bit to 1 or 0 (bool)
     /// ```
     pub fn write_bit_ram(&mut self, addr: u16, digit: u8, set: bool) {
-        let mut val = self.read_ram(addr);
+        let mut val = self.read_ram(addr, None);
         val.write_bit(digit, set);
         self.write_ram(addr, val);
     }
@@ -1248,8 +1249,8 @@ impl Cpu {
         }
 
         // Interrupt must be requesting to occur
-        let if_reg = self.read_ram(IF_REG);
-        let ie_reg = self.read_ram(IE_REG);
+        let if_reg = self.read_ram(IF_REG, None);
+        let ie_reg = self.read_ram(IE_REG, None);
         let valid_interrupt = (if_reg & ie_reg) & 0x1F;
         let mut mask = 0b1;
 
@@ -1295,7 +1296,7 @@ impl Cpu {
     ///     Interrupt type (Interrupts)
     /// ```
     fn trigger_interrupt(&mut self, inter: Interrupts) {
-        let mut if_reg = self.read_ram(IF_REG);
+        let mut if_reg = self.read_ram(IF_REG, None);
         let vector = self.get_inter_vector(inter);
         self.halted = false;
 
@@ -1328,7 +1329,7 @@ impl Cpu {
     ///     Interrupt type (Interrupts)
     /// ```
     fn enable_interrupt(&mut self, inter: Interrupts) {
-        let mut if_reg = self.read_ram(IF_REG);
+        let mut if_reg = self.read_ram(IF_REG, None);
 
         match inter {
             Interrupts::VBLANK =>   { if_reg.set_bit(0) },

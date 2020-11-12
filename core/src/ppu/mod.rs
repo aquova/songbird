@@ -223,12 +223,19 @@ impl PPU {
     ///
     /// Input:
     ///     Address to read from (u16)
+    ///     Bank override (Option<u16>)
     ///     System mode (GB)
     ///
     /// Output:
     ///     Value at given address (u8)
     /// ```
-    pub fn read_vram(&self, addr: u16, mode: GB) -> u8 {
+    pub fn read_vram(&self, addr: u16, bank_override: Option<u16>, mode: GB) -> u8 {
+        let bank = if let Some(b) = bank_override {
+            b as usize
+        } else {
+            self.vram_bank
+        };
+
         match addr {
             OAM_START..=OAM_END => {
                 let relative_addr = addr - OAM_START;
@@ -238,13 +245,13 @@ impl PPU {
             },
             TILE_SET..=TILE_SET_END => {
                 let offset = addr - TILE_SET;
-                let tile_num = (offset / TILE_BYTES) + (self.vram_bank * TILE_NUM) as u16;
+                let tile_num = (offset / TILE_BYTES) + (bank * TILE_NUM) as u16;
                 let byte_num = offset % TILE_BYTES;
                 self.tiles[tile_num as usize].get_byte(byte_num)
             },
             TILE_MAP..=TILE_MAP_END => {
                 let map_addr = (addr - TILE_MAP) as usize;
-                if self.vram_bank == 0 {
+                if bank == 0 {
                     self.tile_maps[map_addr].get_tile_num()
                 } else {
                     assert_ne!(mode, GB::DMG, "VRAM bank can't be greater than 0 for DMG");
@@ -261,7 +268,7 @@ impl PPU {
                             self.read_cgb_spr_color()
                         },
                         VBK => {
-                            0xFE | self.vram_bank as u8
+                            0xFE | bank as u8
                         },
                         _ => {
                             self.read_io(addr)

@@ -12,15 +12,16 @@ const MBC2_EXT_RAM_TOGGLE_BIT: u8 = 5;
 /// Inputs:
 ///     Cartridge object (&Cart)
 ///     Memory address (u16)
+///     RAM bank (u8)
 ///
 /// Output:
 ///     Byte read (u8)
 /// ```
-pub fn mbc2_read_byte(cart: &Cart, addr: u16) -> u8 {
+pub fn mbc2_read_byte(cart: &Cart, addr: u16, bank: u8) -> u8 {
     // MBC2 only uses the lower four bits
     let rel_addr = ((addr - EXT_RAM_START) & 0x0F) as usize;
     // Reading from external RAM
-    let ram_bank_addr = (cart.ram_bank as usize) * RAM_BANK_SIZE + rel_addr;
+    let ram_bank_addr = (bank as usize) * RAM_BANK_SIZE + rel_addr;
     cart.ram[ram_bank_addr]
 }
 

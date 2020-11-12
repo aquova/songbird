@@ -171,25 +171,38 @@ impl Cart {
     ///
     /// Input:
     ///     Address in ROM (u16)
+    ///     Bank override (Option<u16>)
     ///
     /// Output:
     ///     Byte at specified address (u8)
     /// ```
-    pub fn read_cart(&self, address: u16) -> u8 {
+    pub fn read_cart(&self, address: u16, bank_override: Option<u16>) -> u8 {
         if address < ROM_BANK_SIZE as u16 {
             // If in Bank 0, simply read value
             self.rom[address as usize]
         } else if address <= ROM_STOP {
             // If in other rom bank, need to obey bank switching
+            let bank = if let Some(b) = bank_override {
+                b as usize
+            } else {
+                self.rom_bank as usize
+            };
+
             let rel_address = (address as usize) - ROM_BANK_SIZE;
-            let bank_address = (self.rom_bank as usize) * ROM_BANK_SIZE + rel_address;
+            let bank_address = bank * ROM_BANK_SIZE + rel_address;
             self.rom[bank_address as usize]
         } else {
+            let bank = if let Some(b) = bank_override {
+                b as u8
+            } else {
+                self.ram_bank
+            };
+
             match self.mbc {
-                MBC::MBC1 => { mbc1_read_byte(self, address) },
-                MBC::MBC2 => { mbc2_read_byte(self, address) },
-                MBC::MBC3 => { mbc3_read_byte(self, address) },
-                MBC::MBC5 => { mbc5_read_byte(self, address) },
+                MBC::MBC1 => { mbc1_read_byte(self, address, bank) },
+                MBC::MBC2 => { mbc2_read_byte(self, address, bank) },
+                MBC::MBC3 => { mbc3_read_byte(self, address, bank) },
+                MBC::MBC5 => { mbc5_read_byte(self, address, bank) },
                 _ => { 0 }
             }
         }

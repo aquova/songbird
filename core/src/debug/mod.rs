@@ -136,9 +136,20 @@ impl debugger {
                     }
                 },
                 "p" => {
-                    let hex = u16::from_str_radix(words[1], 16);
-                    if let Ok(addr) = hex {
-                        self.print_ram(addr, &gb);
+                    let parts: Vec<&str> = words[1].split(":").collect();
+                    if parts.len() == 1 {
+                        let hex = u16::from_str_radix(parts[0], 16);
+                        if let Ok(addr) = hex {
+                            self.print_ram(addr, 0, &gb);
+                        }
+                    } else {
+                        let bank_hex = u16::from_str_radix(parts[0], 16);
+                        let addr_hex = u16::from_str_radix(parts[1], 16);
+                        if let Ok(bank) = bank_hex {
+                            if let Ok(addr) = addr_hex {
+                                self.print_ram(addr, bank, &gb);
+                            }
+                        }
                     }
                 },
                 "q" => {
@@ -292,12 +303,12 @@ impl debugger {
     ///     Address to start printing from (u16)
     ///     Reference to CPU object (&Cpu)
     /// ```
-    pub fn print_ram(&self, addr: u16, gb: &Cpu) {
+    pub fn print_ram(&self, addr: u16, bank: u16, gb: &Cpu) {
         // Print up to addr + 16, unless we go off the end
         let end_addr = min(addr + 16, 0xFFFF);
         let mut valstring = String::new();
         for i in addr..end_addr {
-            let val = gb.read_ram(i);
+            let val = gb.read_ram(i, Some(bank));
             valstring = format!("{} {:02x}", valstring, val);
         }
 
@@ -327,12 +338,12 @@ impl debugger {
 
         // Print next 5 instructions
         for _ in 0..5 {
-            let op = gb.read_ram(pc);
+            let op = gb.read_ram(pc, None);
             let op_name = OPCODE_NAMES[op as usize];
             let op_len = OPCODE_LENGTH[op as usize] as u16 + 1;
             let mut inst = format!("${:04x} | {} ;", pc, op_name);
             for i in 0..op_len {
-                let arg = gb.read_ram(pc + i);
+                let arg = gb.read_ram(pc + i, None);
                 inst = format!("{} {:02x}", inst, arg);
             }
             println!("{}", inst);
@@ -343,7 +354,7 @@ impl debugger {
     pub fn get_watch_vals(&self, gb: &Cpu) -> HashMap<u16, u8> {
         let mut vals = HashMap::new();
         for wp in &self.watchpoints {
-            vals.insert(*wp, gb.read_ram(*wp));
+            vals.insert(*wp, gb.read_ram(*wp, None));
         }
 
         vals
@@ -352,7 +363,7 @@ impl debugger {
     pub fn check_watch(&self, gb: &Cpu, prev_map: HashMap<u16, u8>) -> bool {
         for wp in &self.watchpoints {
             if let Some(old) = prev_map.get(wp) {
-                if *old != gb.read_ram(*wp) {
+                if *old != gb.read_ram(*wp, None) {
                     return true;
                 }
             }

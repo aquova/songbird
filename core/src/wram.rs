@@ -30,18 +30,25 @@ impl WRAM {
     ///
     /// Input:
     ///     Address to read from (u16)
+    ///     Bank override (Option<u16>)
     ///
     /// Output:
     ///     Value at that address (u8)
     /// ```
-    pub fn read_wram(&self, addr: u16) -> u8 {
+    pub fn read_wram(&self, addr: u16, bank_override: Option<u16>) -> u8 {
+        let bank = if let Some(b) = bank_override {
+            b as usize
+        } else {
+            self.wram_bank
+        };
+
         let rel_addr = addr - WRAM_START;
 
         // $C000-$CFFF is always bank 0
         if rel_addr < WRAM_BANK_SIZE as u16 {
             self.wram[rel_addr as usize]
         } else {
-            let index = ((self.wram_bank - 1) * WRAM_BANK_SIZE) + rel_addr as usize;
+            let index = ((bank - 1) * WRAM_BANK_SIZE) + rel_addr as usize;
             self.wram[index]
         }
     }
@@ -73,13 +80,14 @@ impl WRAM {
     ///
     /// Input:
     ///     Address to read from (u16)
+    ///     Bank override (Option<u16>)
     ///
     /// Output:
     ///     Value at specified address (u8)
     /// ```
-    pub fn read_echo(&self, addr: u16) -> u8 {
+    pub fn read_echo(&self, addr: u16, bank_override: Option<u16>) -> u8 {
         let wram_addr = addr - ECHO_OFFSET;
-        self.read_wram(wram_addr)
+        self.read_wram(wram_addr, bank_override)
     }
 
     /// ```
