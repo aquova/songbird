@@ -475,7 +475,7 @@ impl Bus {
         let dst_addr_low = self.read_ram(HDMA4_REG, None, GB::CGB);
 
         let src_addr = merge_bytes(src_addr_high, src_addr_low) & 0xFFF0; // Lower 4 bits are always zero
-        let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0x1FF0; // Lower 4 bits are ignored, as well as highest 3, as dest is always in VRAM
+        let dst_addr = merge_bytes(dst_addr_high, dst_addr_low) & 0xFFF0; // Lower 4 bits are ignored
 
         // Transfer length is (lower 7 bits of HDMA5 value) * $10 + 1
         let transfer_len = (((raw_transfer_len as u16) & 0b0111_1111) + 1) * 0x10;
