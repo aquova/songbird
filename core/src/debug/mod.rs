@@ -117,6 +117,17 @@ impl debugger {
                     self.set_debugging(false);
                     break 'debugloop;
                 },
+                "del" => {
+                    let hex = u16::from_str_radix(words[1], 16);
+                    match hex {
+                        Ok(addr) => {
+                            self.del_break(addr);
+                        },
+                        Err(e) => {
+                            println!("{} is not a valid address", e);
+                        }
+                    }
+                },
                 "disass" => {
                     self.disassemble(&gb);
                 },
@@ -175,18 +186,13 @@ impl debugger {
     ///
     /// Input:
     ///     Program counter (u16)
-    ///
-    /// Outputs:
-    ///     Whether or not to break (bool)
     /// ```
-    pub fn check_break(&self, pc: u16) -> bool {
+    pub fn check_break(&mut self, pc: u16) {
         for bp in &self.breakpoints {
             if *bp == pc {
-                return true;
+                self.debugging = true;
             }
         }
-
-        false
     }
 
     /// ```
@@ -315,6 +321,14 @@ impl debugger {
         println!("${:04x}: {}", addr, valstring);
     }
 
+    /// ```
+    /// Delete breakpoint
+    ///
+    /// Attempts to delete the specified breakpoint, if it exists
+    ///
+    /// Input:
+    ///     Address to remove (u16)
+    /// ```
     pub fn del_break(&mut self, addr: u16) {
         for i in 0..self.breakpoints.len() {
             if self.breakpoints[i] == addr {
