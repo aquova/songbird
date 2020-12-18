@@ -3,5 +3,11 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"search.exclude": {
+			"**/games/*": true,
+			"**/target/*": true
+		}
+	}
 }
