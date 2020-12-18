@@ -919,11 +919,11 @@ impl PPU {
     /// Output:
     ///     SCX, SCY point (Point)
     /// ```
-    fn get_scroll_coords(&self) -> Point {
+    fn get_scroll_coords(&self) -> Point<u8> {
         let scroll_x = self.read_io(SCX);
         let scroll_y = self.read_io(SCY);
 
-        Point::new(scroll_x, scroll_y)
+        Point { x: scroll_x, y: scroll_y }
     }
 
     /// ```
@@ -934,11 +934,11 @@ impl PPU {
     /// Output:
     ///     Location of the window (Point)
     /// ```
-    fn get_wndw_coords(&self) -> Point {
+    fn get_wndw_coords(&self) -> Point<u8> {
         let wndw_x = self.read_io(WX).saturating_sub(7);
         let wndw_y = self.read_io(WY);
 
-        Point::new(wndw_x, wndw_y)
+        Point{ x: wndw_x, y: wndw_y }
     }
 
     /// ```

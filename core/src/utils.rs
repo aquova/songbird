@@ -14,19 +14,9 @@ pub enum GB {
     SGB
 }
 
-pub struct Point {
-    pub x: u8,
-    pub y: u8
-}
-
-impl Point {
-    pub fn new(x: u8, y: u8) -> Point {
-        Point { x, y }
-    }
-
-    pub fn to_str(&self) -> String {
-        format!("X: {}, Y: {}", self.x, self.y)
-    }
+pub struct Point<T> {
+    pub x: T,
+    pub y: T,
 }
 
 pub trait ModifyBits {
@@ -37,8 +27,7 @@ pub trait ModifyBits {
 }
 
 // Make trait generic via macro
-// I don't really understand how this works, but it's fancy af.
-macro_rules! impl_modifybits_for_usize {
+macro_rules! impl_modifybits {
     ($T:ty) => {
         impl ModifyBits for $T {
             /// ```
@@ -106,8 +95,9 @@ macro_rules! impl_modifybits_for_usize {
     };
 }
 
-impl_modifybits_for_usize!(u8);
-impl_modifybits_for_usize!(u16);
+// Call macros
+impl_modifybits!(u8);
+impl_modifybits!(u16);
 
 pub trait ModifyBytes {
     fn get_high_byte(&self) -> u8;
@@ -187,7 +177,6 @@ pub fn check_h_borrow_u8(high: u8, low: u8) -> bool {
 ///     Whether or not there has been a borrow from the 12th to 11th bit (bool)
 /// ```
 pub fn check_h_borrow_u16(high: u16, low: u16) -> bool {
-    // TODO: See if the two borrow functions can be generic-ized
     (high & 0xF).checked_sub(low & 0xF).is_none()
 }
 
