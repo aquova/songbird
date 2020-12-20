@@ -15,6 +15,12 @@ pub struct WRAM {
     wram_bank: usize,
 }
 
+impl Default for WRAM {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WRAM {
     pub fn new() -> WRAM {
         WRAM {

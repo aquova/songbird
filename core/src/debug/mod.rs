@@ -104,7 +104,7 @@ impl debugger {
             let stdin = io::stdin();
             stdin.read_line(&mut input).expect("Your user input was... odd");
             trim_newline(&mut input);
-            let words: Vec<&str> = input.split(" ").collect();
+            let words: Vec<&str> = input.split(' ').collect();
 
             match words[0] {
                 "b" => {
@@ -147,7 +147,7 @@ impl debugger {
                     }
                 },
                 "p" => {
-                    let parts: Vec<&str> = words[1].split(":").collect();
+                    let parts: Vec<&str> = words[1].split(':').collect();
                     if parts.len() == 1 {
                         let hex = u16::from_str_radix(parts[0], 16);
                         if let Ok(addr) = hex {

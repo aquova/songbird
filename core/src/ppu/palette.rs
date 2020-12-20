@@ -24,6 +24,12 @@ pub struct Palette {
     sys_pal: Palettes,
 }
 
+impl Default for Palette {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Palette {
     pub fn new() -> Palette {
         Palette {

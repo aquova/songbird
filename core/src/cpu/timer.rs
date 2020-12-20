@@ -64,7 +64,7 @@ impl Timer {
                     self.tima = self.tma;
                     interrupt = true;
                 }
-            } else if (old_bit && enabled) && !(new_bit && enabled) {
+            } else if old_bit && enabled && !new_bit {
                 let (new_tima, overflow) = self.tima.overflowing_add(1);
                 self.tima = new_tima;
                 if overflow {
