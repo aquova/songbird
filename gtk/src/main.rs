@@ -3,10 +3,12 @@
 
 mod menubar;
 
+use std::cell::RefCell;
 use std::env::args;
 use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, Read};
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
@@ -16,7 +18,7 @@ use crate::menubar::EmuMenubar;
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, FileChooserAction, FileChooserDialog, Orientation, WindowPosition};
+use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, FileChooserAction, FileChooserDialog, FileFilter, Orientation, WindowPosition};
 
 #[cfg(feature = "debug")]
 use coredump::register_panic_handler;
@@ -29,10 +31,13 @@ struct App {
     window: ApplicationWindow,
     accel_group: AccelGroup,
     menubar: EmuMenubar,
+    emu: Rc<RefCell<Cpu>>,
 }
 
 impl App {
     pub fn new(app: &Application) -> Self {
+        let gb = Rc::new(RefCell::new(Cpu::new()));
+
         let window = ApplicationWindow::new(app);
         window.set_title("Songbird");
         window.set_position(WindowPosition::Center);
@@ -55,6 +60,7 @@ impl App {
             window,
             accel_group,
             menubar,
+            emu: gb,
         };
 
         us.connect_events();
@@ -68,17 +74,17 @@ impl App {
         self.menubar.quit_btn.add_accelerator("activate", &self.accel_group, quit_key, quit_modifier, AccelFlags::VISIBLE);
 
         let window = self.window.clone(); // Shadow another one I guess
+        let gb = self.emu.clone();
         self.menubar.open_btn.connect_activate(move |_| {
-            let filename = gtk_open_file(&window);
+            let filename = show_open_dialog(&window);
             if let Some(f) = filename {
-                println!("{:?}", f);
+                setup_emu(&mut gb.borrow_mut(), &f, false);
             }
         });
 
         // Set shortcut keys
         let (open_key, open_modifier) = gtk::accelerator_parse("<Primary>O");
         self.menubar.open_btn.add_accelerator("activate", &self.accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
-
     }
 }
 
@@ -93,25 +99,26 @@ fn main() {
     application.run(&args().collect::<Vec<_>>());
 }
 
-fn gtk_open_file(win: &ApplicationWindow) -> Option<PathBuf> {
-    let file_chooser = gtk::FileChooserDialog::new(
-        Some("Open file"),
-        Some(win),
-        gtk::FileChooserAction::Open,
-    );
-
-    file_chooser.add_buttons(&[
+fn show_open_dialog(parent: &ApplicationWindow) -> Option<PathBuf> {
+    let mut file = None;
+    let dialog = FileChooserDialog::new(Some("Select a Game Boy ROM"), Some(parent), FileChooserAction::Open);
+    let filter = FileFilter::new();
+    filter.add_pattern("*.gb");
+    filter.add_pattern("*.gbc");
+    filter.set_name(Some("Game Boy ROM files"));
+    dialog.add_filter(&filter);
+    dialog.add_buttons(&[
         ("Open", gtk::ResponseType::Ok),
         ("Cancel", gtk::ResponseType::Cancel),
     ]);
 
-    let run = file_chooser.run();
-    if run == gtk::ResponseType::Ok {
-        file_chooser.close();
-        file_chooser.get_filename()
-    } else {
-        None
+    let result = dialog.run();
+    if result == gtk::ResponseType::Ok {
+        file = dialog.get_filename();
     }
+    dialog.close();
+
+    file
 }
 
 // fn load_shader(display: &Display, shad: Shaders) -> Program {
@@ -158,9 +165,9 @@ fn gtk_open_file(win: &ApplicationWindow) -> Option<PathBuf> {
 ///
 /// Inputs:
 ///     Game Boy CPU (&Cpu)
-///     Filename of game ROM (&str)
+///     Filename of game ROM (&PathBuf)
 /// ```
-fn tick_until_draw(mut gb: &mut Cpu, filename: &str) {
+fn tick_until_draw(gb: &mut Cpu, filename: &PathBuf) {
     loop {
         let draw_time = gb.tick();
 
@@ -209,10 +216,10 @@ fn tick_until_draw(mut gb: &mut Cpu, filename: &str) {
 ///
 /// Inputs:
 ///     Game Boy CPU object (&Cpu)
-///     ROM file path (&str)
+///     ROM file path (&PathBuf)
 ///     Whether to force DMG (bool)
 /// ```
-fn setup_emu(gb: &mut Cpu, filename: &str, force_dmg: bool) {
+fn setup_emu(gb: &mut Cpu, filename: &PathBuf, force_dmg: bool) {
     // In case anything is currently running, simply make a new Cpu instance
     *gb = Cpu::new();
     let rom = load_rom(filename);
@@ -226,12 +233,12 @@ fn setup_emu(gb: &mut Cpu, filename: &str, force_dmg: bool) {
 /// Loads game ROM into memory
 ///
 /// Input:
-///     Path to game (&str)
+///     Path to game (&PathBuf)
 ///
 /// Output:
 ///     Game data (Vec<u8>)
 /// ```
-fn load_rom(path: &str) -> Vec<u8> {
+fn load_rom(path: &PathBuf) -> Vec<u8> {
     let mut buffer: Vec<u8> = Vec::new();
 
     let mut f = File::open(path).expect("Error opening ROM");
@@ -247,15 +254,15 @@ fn load_rom(path: &str) -> Vec<u8> {
 ///
 /// Inputs:
 ///     Game Boy CPU object (Cpu)
-///     Name of ROM file (&str)
+///     Name of ROM file (&PathBuf)
 /// ```
-fn load_battery_save(gb: &mut Cpu, gamename: &str) {
+fn load_battery_save(gb: &mut Cpu, filename: &PathBuf) {
     if gb.has_battery() {
         let mut battery_ram: Vec<u8> = Vec::new();
-        let mut filename = gamename.to_owned();
-        filename.push_str(".sav");
+        let mut savename = filename.clone();
+        savename.set_extension("sav");
 
-        if let Ok(mut f) = OpenOptions::new().read(true).open(filename) {
+        if let Ok(mut f) = OpenOptions::new().read(true).open(savename) {
             f.read_to_end(&mut battery_ram).expect("Error reading external RAM");
             gb.write_ext_ram(&battery_ram);
         }
@@ -269,13 +276,13 @@ fn load_battery_save(gb: &mut Cpu, gamename: &str) {
 ///
 /// Inputs:
 ///     Game Boy CPU object (Cpu)
-///     Name of ROM file (&str)
+///     Name of ROM file (&PathBuf)
 /// ```
-fn write_battery_save(gb: &mut Cpu, gamename: &str) {
+fn write_battery_save(gb: &mut Cpu, filename: &PathBuf) {
     if gb.has_battery() {
         let ram_data = gb.get_ext_ram();
-        let mut filename = gamename.to_owned();
-        filename.push_str(".sav");
+        let mut savename = filename.clone();
+        savename.set_extension("sav");
 
         let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
         file.write_all(ram_data).unwrap();
