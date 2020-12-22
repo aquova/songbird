@@ -1,22 +1,22 @@
 // Songbird GTK desktop build
 // Austin Bricker 2020
 
-use std::cell::RefCell;
+mod menubar;
+
 use std::env::args;
 use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, Read};
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use songbird_core::cpu::Cpu;
 use songbird_core::io::Buttons;
 use songbird_core::ppu::palette::Palette;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::menubar::EmuMenubar;
 
 use gio::prelude::*;
-use glib::clone;
-use gtk::{AccelFlags, prelude::*};
-use gtk::{AccelGroup, Application, ApplicationWindow, Menu, MenuBar, MenuItem, Orientation, WindowPosition};
+use gtk::prelude::*;
+use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, FileChooserAction, FileChooserDialog, Orientation, WindowPosition};
 
 #[cfg(feature = "debug")]
 use coredump::register_panic_handler;
@@ -25,84 +25,72 @@ const SCALE: usize = 5;
 const WINDOW_WIDTH: usize = SCREEN_WIDTH * SCALE;
 const WINDOW_HEIGHT: usize = SCREEN_HEIGHT * SCALE;
 
+struct App {
+    window: ApplicationWindow,
+    accel_group: AccelGroup,
+    menubar: EmuMenubar,
+}
+
+impl App {
+    pub fn new(app: &Application) -> Self {
+        let window = ApplicationWindow::new(app);
+        window.set_title("Songbird");
+        window.set_position(WindowPosition::Center);
+        window.set_size_request(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
+
+        // Add items to window
+        let v_box = gtk::Box::new(Orientation::Vertical, 10);
+        let menubar = EmuMenubar::new();
+        let placeholder = gtk::Label::new(Some("Placeholder item"));
+        v_box.pack_start(&menubar.menubar, false, false, 0);
+        v_box.pack_start(&placeholder, true, true, 0);
+        window.add(&v_box);
+
+        let accel_group = AccelGroup::new();
+        window.add_accel_group(&accel_group);
+
+        window.show_all();
+
+        let us = Self {
+            window,
+            accel_group,
+            menubar,
+        };
+
+        us.connect_events();
+        us
+    }
+
+    fn connect_events(&self) {
+        let window = self.window.clone();
+        self.menubar.quit_btn.connect_activate(move |_| window.close());
+        let (quit_key, quit_modifier) = gtk::accelerator_parse("<Primary>Q");
+        self.menubar.quit_btn.add_accelerator("activate", &self.accel_group, quit_key, quit_modifier, AccelFlags::VISIBLE);
+
+        let window = self.window.clone(); // Shadow another one I guess
+        self.menubar.open_btn.connect_activate(move |_| {
+            let filename = gtk_open_file(&window);
+            if let Some(f) = filename {
+                println!("{:?}", f);
+            }
+        });
+
+        // Set shortcut keys
+        let (open_key, open_modifier) = gtk::accelerator_parse("<Primary>O");
+        self.menubar.open_btn.add_accelerator("activate", &self.accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
+
+    }
+}
+
 fn main() {
     #[cfg(feature = "debug")]
     register_panic_handler().unwrap();
 
-    // let args: Vec<_> = args().collect();
-    // let mut filename = None;
-    // let mut dmg = false;
-
-    // // Running my own argparse, because I don't care for how most of the crates work
-    // for i in 1..args.len() {
-    //     match args[i].as_str() {
-    //         "--dmg" => {
-    //             dmg = true;
-    //         },
-    //         "-" => {
-    //             // Needed to send flags to debug builds, do nothing
-    //         },
-    //         _ => {
-    //             if filename.is_none() {
-    //                 filename = Some(args[i].clone());
-    //             }
-    //         }
-    //     }
-    // }
-
-    let app = Application::new(Some("com.github.aquova.songbird"), Default::default()).expect("Initialization failed");
-    app.connect_activate(|app| build_ui(app));
-    app.run(&args().collect::<Vec<_>>());
-}
-
-fn build_ui(app: &Application) {
-    let window = ApplicationWindow::new(app);
-    window.set_title("Songbird");
-    window.set_position(WindowPosition::Center);
-    window.set_size_request(SCREEN_WIDTH as i32, SCREEN_HEIGHT as i32);
-
-    let v_box = gtk::Box::new(Orientation::Vertical, 10);
-
-    let accel_group = AccelGroup::new();
-    window.add_accel_group(&accel_group);
-    let menu_bar = MenuBar::new();
-
-    // Create drop down menu, populate with items and append to menu bar
-    let file_menu = Menu::new();
-    let open = MenuItem::with_label("Open");
-    let quit = MenuItem::with_label("Quit");
-    file_menu.append(&open);
-    file_menu.append(&quit);
-
-    let file = MenuItem::with_label("File");
-    file.set_submenu(Some(&file_menu));
-
-    menu_bar.append(&file);
-
-    let game_filepath: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
-    open.connect_activate(clone!(@weak window => move |_| {
-        let filename = gtk_open_file(&window);
-        if let Some(f) = filename {
-            // println!("{:?}", f);
-            *game_filepath.borrow_mut() = Some(f);
-        }
-    }));
-
-    quit.connect_activate(clone!(@weak window => move |_| window.close()));
-
-    // Set shortcut keys
-    let (open_key, open_modifier) = gtk::accelerator_parse("<Primary>O");
-    open.add_accelerator("activate", &accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
-    let (quit_key, quit_modifier) = gtk::accelerator_parse("<Primary>Q");
-    quit.add_accelerator("activate", &accel_group, quit_key, quit_modifier, AccelFlags::VISIBLE);
-
-    // Add items to window
-    let placeholder = gtk::Label::new(Some("Placeholder item"));
-    v_box.pack_start(&menu_bar, false, false, 0);
-    v_box.pack_start(&placeholder, true, true, 0);
-
-    window.add(&v_box);
-    window.show_all();
+    let application = Application::new(Some("com.github.aquova.songbird"), Default::default()).expect("Initialization failed");
+    application.connect_activate(|application| {
+        let _app = App::new(application);
+    });
+    application.run(&args().collect::<Vec<_>>());
 }
 
 fn gtk_open_file(win: &ApplicationWindow) -> Option<PathBuf> {
