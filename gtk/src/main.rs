@@ -16,9 +16,10 @@ use songbird_core::ppu::palette::Palette;
 use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::menubar::EmuMenubar;
 
+use gdk::keys::Key;
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, FileChooserAction, FileChooserDialog, FileFilter, Orientation, WindowPosition};
+use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, FileChooserAction, FileChooserDialog, FileFilter, GLArea, Orientation, WindowPosition};
 
 #[cfg(feature = "debug")]
 use coredump::register_panic_handler;
@@ -31,7 +32,8 @@ struct App {
     window: ApplicationWindow,
     accel_group: AccelGroup,
     menubar: EmuMenubar,
-    emu: Rc<RefCell<Cpu>>,
+    gb: Rc<RefCell<Cpu>>,
+    gl: GLArea,
 }
 
 impl App {
@@ -44,11 +46,11 @@ impl App {
         window.set_size_request(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
 
         // Add items to window
-        let v_box = gtk::Box::new(Orientation::Vertical, 10);
+        let v_box = gtk::Box::new(Orientation::Vertical, 0);
         let menubar = EmuMenubar::new();
-        let placeholder = gtk::Label::new(Some("Placeholder item"));
+        let gl = GLArea::new();
         v_box.pack_start(&menubar.menubar, false, false, 0);
-        v_box.pack_start(&placeholder, true, true, 0);
+        v_box.pack_start(&gl, true, true, 0);
         window.add(&v_box);
 
         let accel_group = AccelGroup::new();
@@ -60,7 +62,8 @@ impl App {
             window,
             accel_group,
             menubar,
-            emu: gb,
+            gb,
+            gl,
         };
 
         us.connect_events();
@@ -68,23 +71,58 @@ impl App {
     }
 
     fn connect_events(&self) {
+        self.connect_quit();
+        self.connect_open();
+        self.connect_keypress();
+        self.connect_keyrelease();
+    }
+
+    fn connect_quit(&self) {
         let window = self.window.clone();
         self.menubar.quit_btn.connect_activate(move |_| window.close());
         let (quit_key, quit_modifier) = gtk::accelerator_parse("<Primary>Q");
         self.menubar.quit_btn.add_accelerator("activate", &self.accel_group, quit_key, quit_modifier, AccelFlags::VISIBLE);
+    }
 
-        let window = self.window.clone(); // Shadow another one I guess
-        let gb = self.emu.clone();
+    fn connect_open(&self) {
+        let window = self.window.clone();
+        let gb = self.gb.clone();
         self.menubar.open_btn.connect_activate(move |_| {
             let filename = show_open_dialog(&window);
             if let Some(f) = filename {
                 setup_emu(&mut gb.borrow_mut(), &f, false);
             }
         });
-
-        // Set shortcut keys
         let (open_key, open_modifier) = gtk::accelerator_parse("<Primary>O");
         self.menubar.open_btn.add_accelerator("activate", &self.accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
+    }
+
+    fn connect_keypress(&self) {
+        let window = self.window.clone();
+        let gb = self.gb.clone();
+        window.connect_key_press_event(move|_, evt| {
+            let mut key = evt.get_keyval();
+            *key = gdk::keyval_to_upper(*key);
+            if let Some(btn) = key2btn(key) {
+                gb.borrow_mut().toggle_button(btn, true);
+            }
+
+            Inhibit(false)
+        });
+    }
+
+    fn connect_keyrelease(&self) {
+        let window = self.window.clone();
+        let gb = self.gb.clone();
+        window.connect_key_release_event(move|_, evt| {
+            let mut key = evt.get_keyval();
+            *key = gdk::keyval_to_upper(*key);
+            if let Some(btn) = key2btn(key) {
+                gb.borrow_mut().toggle_button(btn, false);
+            }
+
+            Inhibit(false)
+        });
     }
 }
 
@@ -103,8 +141,8 @@ fn show_open_dialog(parent: &ApplicationWindow) -> Option<PathBuf> {
     let mut file = None;
     let dialog = FileChooserDialog::new(Some("Select a Game Boy ROM"), Some(parent), FileChooserAction::Open);
     let filter = FileFilter::new();
-    filter.add_pattern("*.gb");
-    filter.add_pattern("*.gbc");
+    filter.add_mime_type("application/x-gameboy-rom");
+    filter.add_mime_type("application/x-gameboy-color-rom");
     filter.set_name(Some("Game Boy ROM files"));
     dialog.add_filter(&filter);
     dialog.add_buttons(&[
@@ -190,24 +228,24 @@ fn tick_until_draw(gb: &mut Cpu, filename: &PathBuf) {
 /// Converts keycode into GameBoy button
 ///
 /// Input:
-///     Glium keybode keycode (VirtualKeyCode)
+///     GDK keybode keycode (Key)
 ///
 /// Output:
 ///     Gameboy button (Option<Buttons>)
 /// ```
-// fn key2btn(key: VirtualKeyCode) -> Option<Buttons> {
-//     match key {
-//         VirtualKeyCode::Down =>    { Some(Buttons::Down)   },
-//         VirtualKeyCode::Up =>      { Some(Buttons::Up)     },
-//         VirtualKeyCode::Right =>   { Some(Buttons::Right)  },
-//         VirtualKeyCode::Left =>    { Some(Buttons::Left)   },
-//         VirtualKeyCode::Return =>  { Some(Buttons::Start)  },
-//         VirtualKeyCode::Back =>    { Some(Buttons::Select) },
-//         VirtualKeyCode::X =>       { Some(Buttons::A)      },
-//         VirtualKeyCode::Z =>       { Some(Buttons::B)      },
-//         _ =>                       { None                  }
-//     }
-// }
+fn key2btn(key: Key) -> Option<Buttons> {
+    match key {
+        gdk::keys::constants::Down =>    Some(Buttons::Down),
+        gdk::keys::constants::Up =>      Some(Buttons::Up),
+        gdk::keys::constants::Right =>   Some(Buttons::Right),
+        gdk::keys::constants::Left =>    Some(Buttons::Left),
+        gdk::keys::constants::Return =>  Some(Buttons::Start),
+        gdk::keys::constants::Back =>    Some(Buttons::Select),
+        gdk::keys::constants::X =>       Some(Buttons::A),
+        gdk::keys::constants::Z =>       Some(Buttons::B),
+        _ =>                             None
+    }
+}
 
 /// ```
 /// Setup emulator
