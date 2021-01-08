@@ -9,6 +9,7 @@ edition = "2018"
 
 [dependencies]
 songbird_core = { path = "../core" }
+cairo-rs = "0.9.1"
 gdk = "0.13.2"
 gio = "0.9.1"
 glib = "0.10.3"
