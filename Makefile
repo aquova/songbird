@@ -6,10 +6,10 @@ ARM_TARGET = arm-unknown-linux-gnueabihf
 REL_FLAGS = --release
 DEBUG_FLAGS = --features "debug"
 
-all: gui wasm windows arm term debug
+all: imgui wasm windows arm term debug
 
-gui:
-	cd gui && \
+imgui:
+	cd imgui && \
 	$(CARGO) build $(REL_FLAGS)
 
 wasm:
@@ -19,11 +19,11 @@ wasm:
 	mv pkg/songbird_wasm.js ../web
 
 windows:
-	cd gui && \
+	cd imgui && \
 	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS)
 
 arm:
-	cd gui && \
+	cd imgui && \
 	$(CARGO) build --target $(ARM_TARGET) $(REL_FLAGS)
 
 term:
@@ -31,10 +31,10 @@ term:
 	$(CARGO) build $(REL_FLAGS)
 
 debug:
-	cd gui && \
+	cd imgui && \
 	$(CARGO) build $(DEBUG_FLAGS)
 
-clean: clean_core clean_gui clean_wasm clean_term
+clean: clean_core clean_imgui clean_wasm clean_term
 
 clean_core:
 	cd core && \
@@ -47,14 +47,14 @@ clean_wasm:
 	cd wasm && \
 	$(CARGO) clean
 
-clean_gui:
-	cd gui && \
+clean_imgui:
+	cd imgui && \
 	$(CARGO) clean && \
-	rm -f songbird_gui.exe
+	rm -f songbird_imgui.exe
 	rm -f imgui.ini
 
 clean_term:
 	cd term && \
 	$(CARGO) clean
 
-.PHONY: all gui wasm windows arm term debug clean
+.PHONY: all imgui wasm windows arm term debug clean
