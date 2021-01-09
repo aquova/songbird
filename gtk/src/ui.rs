@@ -18,6 +18,7 @@ pub const FRAME_DELAY: u32 = 1000 / 60;
 const SCALE: usize = 5;
 const WINDOW_WIDTH: usize = SCREEN_WIDTH * SCALE;
 const WINDOW_HEIGHT: usize = SCREEN_HEIGHT * SCALE;
+const MENUBAR_HEIGHT: usize = 30;
 
 pub enum UiAction {
     Quit,
@@ -41,7 +42,7 @@ pub fn create_ui(
     let window = ApplicationWindow::new(&app);
     window.set_title("Songbird");
     window.set_position(WindowPosition::Center);
-    window.set_size_request(WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
+    window.set_size_request(WINDOW_WIDTH as i32, (WINDOW_HEIGHT + MENUBAR_HEIGHT) as i32);
 
     // Add items to window
     let v_box = gtk::Box::new(Orientation::Vertical, 0);
@@ -58,9 +59,9 @@ pub fn create_ui(
 
     drawing_area.connect_draw(move |_, cr| {
         let data = frame.lock().unwrap().to_vec();
-        // let argb = rgba2argb(&data);
+        let argb = rgba2bgra(&data);
         let img = ImageSurface::create_for_data(
-            data,
+            argb,
             Format::ARgb32,
             SCREEN_WIDTH as i32,
             SCREEN_HEIGHT as i32,
@@ -69,8 +70,8 @@ pub fn create_ui(
 
         let pattern = SurfacePattern::create(&img);
         pattern.set_filter(Filter::Nearest);
+        cr.scale(SCALE as f64, SCALE as f64);
         cr.set_source(&pattern);
-        cr.scale(WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64);
         cr.paint();
 
         Inhibit(false)
@@ -214,20 +215,21 @@ fn key2btn(key: Key) -> Option<Buttons> {
     }
 }
 
-fn rgba2argb(rgba: &[u8]) -> [u8; DISP_SIZE] {
+fn rgba2bgra(rgba: &[u8]) -> [u8; DISP_SIZE] {
     let mut argb: [u8; DISP_SIZE] = [0; DISP_SIZE];
 
     for i in 0..(rgba.len() / COLOR_CHANNELS) {
         let idx = COLOR_CHANNELS * i;
+
         let r = rgba[idx];
         let g = rgba[idx + 1];
         let b = rgba[idx + 2];
         let a = rgba[idx + 3];
 
-        argb[idx] = a;
-        argb[idx + 1] = r;
-        argb[idx + 2] = g;
-        argb[idx + 3] = b;
+        argb[idx] = b;
+        argb[idx + 1] = g;
+        argb[idx + 2] = r;
+        argb[idx + 3] = a;
     }
 
     argb

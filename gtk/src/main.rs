@@ -7,6 +7,7 @@ mod ui;
 use crate::ui::*;
 
 use songbird_core::cpu::Cpu;
+use songbird_core::utils::DISP_SIZE;
 
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
@@ -22,7 +23,10 @@ fn main() {
     let filename: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let (ui_to_gb_sender, ui_to_gb_receiver) = channel::<UiAction>();
     let (gb_to_ui_sender, gb_to_ui_receiver) = channel::<CoreAction>();
-    let frame = Arc::new(Mutex::new(Vec::new()));
+    // The UI thread is expecting this initial vec to be DISP_SIZE.
+    // Even when it's initialized, it makes comparisons against height x width,
+    // and will fail when given a vector of length 0.
+    let frame = Arc::new(Mutex::new(vec![0; DISP_SIZE]));
 
     let thread_frame = frame.clone();
     let ui_thread = thread::spawn(move || {
