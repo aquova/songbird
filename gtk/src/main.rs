@@ -13,17 +13,20 @@ use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, Read};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex, mpsc::channel};
 use std::thread;
+use std::time::Duration;
 
 fn main() {
     let mut gb = Cpu::new();
     let filename: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let (ui_to_gb_sender, ui_to_gb_receiver) = channel::<UiAction>();
     let (gb_to_ui_sender, gb_to_ui_receiver) = channel::<CoreAction>();
+    let frame = Arc::new(Mutex::new(Vec::new()));
 
+    let thread_frame = frame.clone();
     let ui_thread = thread::spawn(move || {
-        create_ui(ui_to_gb_sender, gb_to_ui_receiver);
+        create_ui(ui_to_gb_sender, gb_to_ui_receiver, thread_frame);
     });
 
     // Main loop
@@ -32,16 +35,13 @@ fn main() {
             match evt {
                 UiAction::Quit => break,
                 UiAction::Load(f) => {
-                    println!("Loading {:?}", f);
                     setup_emu(&mut gb, &f, false);
                     filename.borrow_mut().replace(f);
                 },
                 UiAction::BtnPress(btn) => {
-                    println!("Push");
                     gb.toggle_button(btn, true);
                 },
                 UiAction::BtnRelease(btn) => {
-                    println!("Unpush");
                     gb.toggle_button(btn, false);
                 }
             }
@@ -50,8 +50,14 @@ fn main() {
         if let Some(f) = filename.borrow().as_ref() {
             tick_until_draw(&mut gb, &f);
             let disp_arr = gb.render();
-            gb_to_ui_sender.send(CoreAction::Render(disp_arr)).unwrap();
+            if let Ok(mut buffer) = frame.lock() {
+                *buffer = disp_arr.to_vec();
+            }
+
+            gb_to_ui_sender.send(CoreAction::Render).unwrap();
         }
+
+        thread::sleep(Duration::from_millis(FRAME_DELAY as u64));
     }
     ui_thread.join().unwrap();
 }
@@ -152,7 +158,7 @@ fn write_battery_save(gb: &mut Cpu, filename: &PathBuf) {
         let mut savename = filename.clone();
         savename.set_extension("sav");
 
-        let mut file = OpenOptions::new().write(true).create(true).open(filename).expect("Error opening save file");
+        let mut file = OpenOptions::new().write(true).create(true).open(savename).expect("Error opening save file");
         file.write_all(ram_data).unwrap();
         file.flush().unwrap();
         gb.clean_battery_flag();

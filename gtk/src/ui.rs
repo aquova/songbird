@@ -1,16 +1,20 @@
 use crate::menubar::EmuMenubar;
 
 use songbird_core::io::Buttons;
-use songbird_core::utils::{SCREEN_HEIGHT, SCREEN_WIDTH, DISP_SIZE};
+use songbird_core::utils::{COLOR_CHANNELS, DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 
+use cairo::{Filter, Format, ImageSurface, SurfacePattern};
 use gdk::keys::Key;
 use gio::prelude::*;
+use glib::timeout_add_local;
 use gtk::prelude::*;
 use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, DrawingArea, FileChooserAction, FileChooserDialog, FileFilter, Orientation, WindowPosition};
 
+pub const FRAME_DELAY: u32 = 1000 / 60;
 const SCALE: usize = 5;
 const WINDOW_WIDTH: usize = SCREEN_WIDTH * SCALE;
 const WINDOW_HEIGHT: usize = SCREEN_HEIGHT * SCALE;
@@ -23,10 +27,14 @@ pub enum UiAction {
 }
 
 pub enum CoreAction {
-    Render([u8; DISP_SIZE]),
+    Render,
 }
 
-pub fn create_ui(ui_to_gb: Sender<UiAction>, gb_to_ui: Receiver<CoreAction>) {
+pub fn create_ui(
+    ui_to_gb: Sender<UiAction>,
+    gb_to_ui: Receiver<CoreAction>,
+    frame: Arc<Mutex<Vec<u8>>>,
+) {
     gtk::init().unwrap();
     let app = Application::new(Some("com.github.aquova.songbird"), Default::default()).expect("Initialization failed");
 
@@ -48,6 +56,26 @@ pub fn create_ui(ui_to_gb: Sender<UiAction>, gb_to_ui: Receiver<CoreAction>) {
 
     window.show_all();
 
+    drawing_area.connect_draw(move |_, cr| {
+        let data = frame.lock().unwrap().to_vec();
+        // let argb = rgba2argb(&data);
+        let img = ImageSurface::create_for_data(
+            data,
+            Format::ARgb32,
+            SCREEN_WIDTH as i32,
+            SCREEN_HEIGHT as i32,
+            Format::ARgb32.stride_for_width(SCREEN_WIDTH as u32).unwrap(),
+        ).unwrap();
+
+        let pattern = SurfacePattern::create(&img);
+        pattern.set_filter(Filter::Nearest);
+        cr.set_source(&pattern);
+        cr.scale(WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64);
+        cr.paint();
+
+        Inhibit(false)
+    });
+
     connect_quit(&window, &menubar, &accel_group, &ui_to_gb);
     connect_open(&window, &menubar, &accel_group, &ui_to_gb);
     connect_keypress(&window, &ui_to_gb);
@@ -57,28 +85,21 @@ pub fn create_ui(ui_to_gb: Sender<UiAction>, gb_to_ui: Receiver<CoreAction>) {
         app.add_window(&window);
     });
 
-    if let Ok(evt) = gb_to_ui.try_recv() {
-        match evt {
-            CoreAction::Render(data) => {
-                // drawing_area.connect_draw(move |_, cr| {
-                //     let img = ImageSurface::create_for_data(
-                //         data,
-                //         Format::A8,
-                //         WINDOW_WIDTH as i32,
-                //         WINDOW_HEIGHT as i32,
-                //         Format::A8.stride_for_width(WINDOW_WIDTH as u32).unwrap(),
-                //     ).unwrap();
-
-                //     let pattern = SurfacePattern::create(&img);
-                //     pattern.set_filter(Filter::Nearest);
-                //     cr.set_source(&pattern);
-                //     cr.paint();
-
-                //     Inhibit(false)
-                // });
+    timeout_add_local(FRAME_DELAY, move || {
+        if let Ok(evt) = gb_to_ui.try_recv() {
+            match evt {
+                CoreAction::Render => {
+                    drawing_area.queue_draw_area(
+                        0, 0,
+                        drawing_area.get_allocated_width(),
+                        drawing_area.get_allocated_height()
+                    );
+                }
             }
         }
-    }
+
+        glib::Continue(true)
+    });
 
     app.run(&[]);
     ui_to_gb.send(UiAction::Quit).unwrap();
@@ -191,4 +212,23 @@ fn key2btn(key: Key) -> Option<Buttons> {
         gdk::keys::constants::Z =>       Some(Buttons::B),
         _ =>                             None
     }
+}
+
+fn rgba2argb(rgba: &[u8]) -> [u8; DISP_SIZE] {
+    let mut argb: [u8; DISP_SIZE] = [0; DISP_SIZE];
+
+    for i in 0..(rgba.len() / COLOR_CHANNELS) {
+        let idx = COLOR_CHANNELS * i;
+        let r = rgba[idx];
+        let g = rgba[idx + 1];
+        let b = rgba[idx + 2];
+        let a = rgba[idx + 3];
+
+        argb[idx] = a;
+        argb[idx + 1] = r;
+        argb[idx + 2] = g;
+        argb[idx + 3] = b;
+    }
+
+    argb
 }
