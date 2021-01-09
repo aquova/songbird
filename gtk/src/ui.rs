@@ -31,6 +31,16 @@ pub enum CoreAction {
     Render,
 }
 
+/// ```
+/// Create UI
+///
+/// Function to create our GTK windows and initialize, as well as to handle rendering
+///
+/// Inputs:
+///     Channel for messages from this thread to the main (Sender<UiAction>)
+///     Channel for messages from the main thread to this one (Receiver<CoreAction>)
+///     Shared frame buffer (Arc<Mutex<Vec<u8>>>)
+/// ```
 pub fn create_ui(
     ui_to_gb: Sender<UiAction>,
     gb_to_ui: Receiver<CoreAction>,
@@ -57,8 +67,11 @@ pub fn create_ui(
 
     window.show_all();
 
+    // Initialize our drawing area.
+    // Specifies which frame buffer is to be used, and scales to match our screen
     drawing_area.connect_draw(move |_, cr| {
         let data = frame.lock().unwrap().to_vec();
+        // Despite the name, the DrawingArea requires data as BGRA, not ARGB
         let argb = rgba2bgra(&data);
         let img = ImageSurface::create_for_data(
             argb,
@@ -77,6 +90,7 @@ pub fn create_ui(
         Inhibit(false)
     });
 
+    // Add event handlers for UI elements and keys
     connect_quit(&window, &menubar, &accel_group, &ui_to_gb);
     connect_open(&window, &menubar, &accel_group, &ui_to_gb);
     connect_keypress(&window, &ui_to_gb);
@@ -86,6 +100,7 @@ pub fn create_ui(
         app.add_window(&window);
     });
 
+    // Sleep inbetween checking channels for rending messages
     timeout_add_local(FRAME_DELAY, move || {
         if let Ok(evt) = gb_to_ui.try_recv() {
             match evt {
@@ -106,6 +121,17 @@ pub fn create_ui(
     ui_to_gb.send(UiAction::Quit).unwrap();
 }
 
+/// ```
+/// Connect Quit
+///
+/// Sets up event handling for 'Quit' menubar option
+///
+/// Inputs:
+///     GTK Application Window (&ApplicationWindow)
+///     Our GTK menubar (&EmuMenubar)
+///     Key combination shortcut handler (&AccelGroup)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
 fn connect_quit(
     window: &ApplicationWindow,
     menubar: &EmuMenubar,
@@ -122,6 +148,17 @@ fn connect_quit(
     menubar.quit_btn.add_accelerator("activate", accel_group, quit_key, quit_modifier, AccelFlags::VISIBLE);
 }
 
+/// ```
+/// Connect Open
+///
+/// Sets up event handling for 'Open' menubar option
+///
+/// Inputs:
+///     GTK Application Window (&ApplicationWindow)
+///     Our GTK menubar (&EmuMenubar)
+///     Key combination shortcut handler (&AccelGroup)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
 fn connect_open(
     window: &ApplicationWindow,
     menubar: &EmuMenubar,
@@ -140,6 +177,15 @@ fn connect_open(
     menubar.open_btn.add_accelerator("activate", accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
 }
 
+/// ```
+/// Connect Key Press
+///
+/// Sets up event handling for key presses
+///
+/// Inputs:
+///     GTK Application Window (&ApplicationWindow)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
 fn connect_keypress(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
     let window = window.clone();
     let ui_to_gb = ui_to_gb.clone();
@@ -154,6 +200,15 @@ fn connect_keypress(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
     });
 }
 
+/// ```
+/// Connect Key Release
+///
+/// Sets up event handling for key releases
+///
+/// Inputs:
+///     GTK Application Window (&ApplicationWindow)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
 fn connect_keyrelease(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
     let window = window.clone();
     let ui_to_gb = ui_to_gb.clone();
@@ -168,6 +223,17 @@ fn connect_keyrelease(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
     });
 }
 
+/// ```
+/// Show open dialog
+///
+/// Opens a new GTK file picker dialog menu
+///
+/// Input:
+///     Our parent GTK window (&ApplicationWindow)
+///
+/// Output:
+///     The path to our file, if any (Option<PathBuf>)
+/// ```
 fn show_open_dialog(parent: &ApplicationWindow) -> Option<PathBuf> {
     let mut file = None;
     let dialog = FileChooserDialog::new(Some("Select a Game Boy ROM"), Some(parent), FileChooserAction::Open);
@@ -215,6 +281,17 @@ fn key2btn(key: Key) -> Option<Buttons> {
     }
 }
 
+/// ```
+/// RGBA to BGRA
+///
+/// A helper function to convert RGBA encoded arrays to BGRA
+///
+/// Input:
+///     RGBA encoded slice (&[u8])
+///
+/// Output:
+///     Same data, but rearranged as BGRA ([u8; DISP_SIZE])
+/// ```
 fn rgba2bgra(rgba: &[u8]) -> [u8; DISP_SIZE] {
     let mut argb: [u8; DISP_SIZE] = [0; DISP_SIZE];
 

@@ -23,11 +23,18 @@ fn main() {
     let filename: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let (ui_to_gb_sender, ui_to_gb_receiver) = channel::<UiAction>();
     let (gb_to_ui_sender, gb_to_ui_receiver) = channel::<CoreAction>();
+
+    // We will share our screen buffer with the UI/Rendering thread via
+    // a Arc<Mutex>
+
     // The UI thread is expecting this initial vec to be DISP_SIZE.
     // Even when it's initialized, it makes comparisons against height x width,
     // and will fail when given a vector of length 0.
     let frame = Arc::new(Mutex::new(vec![0; DISP_SIZE]));
 
+    // The UI and rendering will be performed on a separate thread,
+    // which will communicate to this one via UiAction and CoreAction
+    // messages sent thru channels
     let thread_frame = frame.clone();
     let ui_thread = thread::spawn(move || {
         create_ui(ui_to_gb_sender, gb_to_ui_receiver, thread_frame);
@@ -36,6 +43,7 @@ fn main() {
     // Main loop
     loop {
         if let Ok(evt) = ui_to_gb_receiver.try_recv() {
+            // Parse messages sent from UI thread
             match evt {
                 UiAction::Quit => break,
                 UiAction::Load(f) => {
@@ -51,6 +59,7 @@ fn main() {
             }
         }
 
+        // Perform backend emulation, send message to UI/Rendering thread when ready
         if let Some(f) = filename.borrow().as_ref() {
             tick_until_draw(&mut gb, &f);
             let disp_arr = gb.render();
@@ -61,6 +70,7 @@ fn main() {
             gb_to_ui_sender.send(CoreAction::Render).unwrap();
         }
 
+        // TODO: Make this more precise than simply sleeping
         thread::sleep(Duration::from_millis(FRAME_DELAY as u64));
     }
     ui_thread.join().unwrap();
