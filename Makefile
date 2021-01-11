@@ -4,9 +4,12 @@ WASM_TARGET = web
 WIN_TARGET = x86_64-pc-windows-gnu
 ARM_TARGET = arm-unknown-linux-gnueabihf
 REL_FLAGS = --release
-DEBUG_FLAGS = --features "debug"
 
-all: imgui wasm windows arm term debug
+all: gtk imgui wasm windows arm
+
+gtk:
+	cd gtk && \
+	$(CARGO) build $(REL_FLAGS)
 
 imgui:
 	cd imgui && \
@@ -14,27 +17,33 @@ imgui:
 
 wasm:
 	cd wasm && \
-	$(WASM_PACK) build --target $(WASM_TARGET) && \
+	$(WASM_PACK) build --target=$(WASM_TARGET) && \
 	mv pkg/songbird_wasm_bg.wasm ../web && \
 	mv pkg/songbird_wasm.js ../web
 
 windows:
-	cd imgui && \
-	$(CARGO) build --target $(WIN_TARGET) $(REL_FLAGS)
+	export PKG_CONFIG_ALLOW_CROSS=1 && \
+	case "${1}" in \
+		(--fedora|--docker) \
+			export MINGW_PREFIX=/usr/x86_64-w64-mingw32/sys-root/mingw \
+		;; \
+		(--arch|--manjaro|''|*) \
+			export MINGW_PREFIX=/usr/x86_64-w64-mingw32 \
+		;; \
+	esac && \
+	export PKG_CONFIG_PATH=$(MINGW_PREFIX)/lib/pkgconfig && \
+	cd gtk && \
+	$(CARGO) build --target=$(WIN_TARGET) $(REL_FLAGS)
 
 arm:
-	cd imgui && \
-	$(CARGO) build --target $(ARM_TARGET) $(REL_FLAGS)
+	cd gtk && \
+	$(CARGO) build --target=$(ARM_TARGET) $(REL_FLAGS)
 
 term:
 	cd term && \
 	$(CARGO) build $(REL_FLAGS)
 
-debug:
-	cd imgui && \
-	$(CARGO) build $(DEBUG_FLAGS)
-
-clean: clean_core clean_imgui clean_wasm clean_term
+clean: clean_core clean_gtk clean_imgui clean_wasm clean_term
 
 clean_core:
 	cd core && \
@@ -47,14 +56,17 @@ clean_wasm:
 	cd wasm && \
 	$(CARGO) clean
 
+clean_gtk:
+	cd gtk && \
+	$(CARGO) clean && \
+	rm -f songbird_gtk.exe
+
 clean_imgui:
 	cd imgui && \
-	$(CARGO) clean && \
-	rm -f songbird_imgui.exe
-	rm -f imgui.ini
+	$(CARGO) clean
 
 clean_term:
 	cd term && \
 	$(CARGO) clean
 
-.PHONY: all imgui wasm windows arm term debug clean
+.PHONY: all gtk imgui wasm windows arm term debug clean

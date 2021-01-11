@@ -11,7 +11,7 @@ sonGBird
 
 Songbird is a cross-platform Nintendo Game Boy emulator written in Rust. It runs on Windows, MacOS, Linux, Raspberry Pi, and in a web browser via WebAssembly.
 
-Written by aquova, 2019-2020
+Written by aquova, 2019-2021
 
 https://github.com/aquova/songbird
 
@@ -21,16 +21,12 @@ https://aquova.net/songbird
 
 Latest builds can be downloaded [here](https://cirrus-ci.com/github/aquova/songbird/master)
 
-If you have Rust and Cargo installed, you can install via:
-
-```
-cargo install --git https://github.com/aquova/songbird
-```
-
 ## Resources
 
 - The Imgui file explorer module is originally from [here](https://github.com/aflak-vis/aflak)
+- Information on cross-compiling from Linux to Windows [here](https://gtk-rs.org/docs-src/tutorial/cross)
 - Songbird Docker image on DockerHub [here](https://hub.docker.com/r/aquova/songbird)
+- Of course the [Pandocs](https://gbdev.io/pandocs/), which are a huge help to all GB emulator developers
 
 ## Screenshots
 
