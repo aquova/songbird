@@ -34,7 +34,7 @@ impl Emu {
 
     pub fn init(&mut self) {
         let rom = self.load_rom();
-        self.gb.load_game(&rom);
+        self.gb.load_game(&rom, false);
         self.load_battery_save();
     }
 
