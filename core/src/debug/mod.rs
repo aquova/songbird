@@ -1,7 +1,7 @@
 // The songbird debugger module
 use crate::cpu::*;
 use crate::cartridge::ROM_STOP;
-use std::cmp::min;
+use std::{cmp::min, hash::Hash};
 use std::io;
 use std::io::prelude::*;
 use std::collections::HashMap;
@@ -60,13 +60,18 @@ const OPCODE_LENGTH: [u8; 0x100] = [
     1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 2, 0, 0, 0, 1, 0
 ];
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+struct MemAddr {
+    pub bank: u16,
+    pub addr: u16,
+}
 
-// Tell Rust to STFU about camel cases
 #[allow(non_camel_case_types)]
 pub struct debugger {
     debugging: bool,
-    breakpoints: Vec<u16>,
-    watchpoints: Vec<u16>
+    breakpoints: Vec<MemAddr>,
+    watchpoints: Vec<MemAddr>,
+    watch_map: HashMap<MemAddr, u8>,
 }
 
 impl Default for debugger {
@@ -80,7 +85,8 @@ impl debugger {
         debugger {
             debugging: false,
             breakpoints: Vec::new(),
-            watchpoints: Vec::new()
+            watchpoints: Vec::new(),
+            watch_map: HashMap::new(),
         }
     }
 
@@ -108,9 +114,9 @@ impl debugger {
 
             match words[0] {
                 "b" => {
-                    let hex = u16::from_str_radix(words[1], 16);
-                    if let Ok(addr) = hex {
-                        self.add_break(addr);
+                    let mem_addr = parse_mem_addr(words[1]);
+                    if let Some(bp) = mem_addr {
+                        self.add_break(bp);
                     }
                 },
                 "c" => {
@@ -118,14 +124,11 @@ impl debugger {
                     break 'debugloop;
                 },
                 "del" => {
-                    let hex = u16::from_str_radix(words[1], 16);
-                    match hex {
-                        Ok(addr) => {
-                            self.del_break(addr);
-                        },
-                        Err(e) => {
-                            println!("{} is not a valid address", e);
-                        }
+                    let mem_addr = parse_mem_addr(words[1]);
+                    if let Some(bp) = mem_addr {
+                        self.del_break(bp);
+                    } else {
+                        println!("{} is not a valid address", words[1]);
                     }
                 },
                 "disass" => {
@@ -147,20 +150,9 @@ impl debugger {
                     }
                 },
                 "p" => {
-                    let parts: Vec<&str> = words[1].split(':').collect();
-                    if parts.len() == 1 {
-                        let hex = u16::from_str_radix(parts[0], 16);
-                        if let Ok(addr) = hex {
-                            self.print_ram(addr, 0, &gb);
-                        }
-                    } else {
-                        let bank_hex = u16::from_str_radix(parts[0], 16);
-                        let addr_hex = u16::from_str_radix(parts[1], 16);
-                        if let Ok(bank) = bank_hex {
-                            if let Ok(addr) = addr_hex {
-                                self.print_ram(addr, bank, &gb);
-                            }
-                        }
+                    let mem_addr = parse_mem_addr(words[1]);
+                    if let Some(mem) = mem_addr {
+                        self.print_ram(mem.addr, mem.bank, &gb);
                     }
                 },
                 "q" => {
@@ -169,6 +161,12 @@ impl debugger {
                 },
                 "reg" => {
                     println!("{}", self.print_registers(&gb));
+                },
+                "w" => {
+                    let mem_addr = parse_mem_addr(words[1]);
+                    if let Some(wp) = mem_addr {
+                        self.add_watch(wp, &gb);
+                    }
                 },
                 _ => {
                     println!("Unknown command");
@@ -188,8 +186,9 @@ impl debugger {
     ///     Program counter (u16)
     /// ```
     pub fn check_break(&mut self, pc: u16) {
+        let to_check = MemAddr{ bank: 0, addr: pc };
         for bp in &self.breakpoints {
-            if *bp == pc {
+            if *bp == to_check {
                 self.debugging = true;
             }
         }
@@ -211,7 +210,7 @@ impl debugger {
     ///
     /// Prints the debugger help message
     /// ```
-    pub fn print_help(&self) {
+    fn print_help(&self) {
         println!("'b #' to break at that address");
         println!("'c' to continue execution");
         println!("'del #' to delete breakpoint at that address");
@@ -222,7 +221,7 @@ impl debugger {
         println!("'p' to print 16 bytes at given RAM address (in hex)");
         println!("'q' to quit program");
         println!("'reg' to list register contents");
-        println!("'watch #' to add (write) watchpoint at that address");
+        println!("'w #' to add (write) watchpoint at that address");
         println!();
     }
 
@@ -234,7 +233,7 @@ impl debugger {
     /// Input:
     ///     Reference to CPU object (&Cpu)
     /// ```
-    pub fn print_registers(&self, gb: &Cpu) -> String {
+    fn print_registers(&self, gb: &Cpu) -> String {
         let mut reg_info = format!("PC: ${:04x}\n", gb.get_pc());
         reg_info = format!("{}SP: ${:04x}\n", reg_info, gb.get_sp());
         reg_info = format!("{}AF: ${:04x}\n", reg_info, gb.get_reg_16(Regs16::AF));
@@ -250,11 +249,11 @@ impl debugger {
     ///
     /// Prints the currently set break/watchpoints
     /// ```
-    pub fn list_points(&self) {
+    fn list_points(&self) {
         if !self.breakpoints.is_empty() {
             let mut breakstring = "Breakpoints:".to_string();
             for bp in &self.breakpoints {
-                breakstring = format!("{} ${:04x}", breakstring, bp);
+                breakstring = format!("{} ${:02x}:{:04x}", breakstring, bp.bank, bp.addr);
             }
             println!("{}", breakstring);
         } else {
@@ -264,7 +263,7 @@ impl debugger {
         if !self.watchpoints.is_empty() {
             let mut watchstring = "Watchpoints:".to_string();
             for wp in &self.watchpoints {
-                watchstring = format!("{} ${:04x}", watchstring, wp);
+                watchstring = format!("{} ${:02x}:{:04x}", watchstring, wp.bank, wp.addr);
             }
             println!("{}", watchstring);
         } else {
@@ -283,8 +282,8 @@ impl debugger {
     /// Input:
     ///     Address to break (u16)
     /// ```
-    pub fn add_break(&mut self, addr: u16) {
-        self.breakpoints.push(addr);
+    fn add_break(&mut self, bp: MemAddr) {
+        self.breakpoints.push(bp);
     }
 
     /// ```
@@ -296,8 +295,10 @@ impl debugger {
     /// Input:
     ///     Address to watch (u16)
     /// ```
-    pub fn add_watch(&mut self, addr: u16) {
-        self.watchpoints.push(addr);
+    fn add_watch(&mut self, wp: MemAddr, gb: &Cpu) {
+        self.watchpoints.push(wp);
+        let orig_val = gb.read_ram(wp.addr, Some(wp.bank));
+        self.watch_map.insert(wp, orig_val);
     }
 
     /// ```
@@ -309,7 +310,7 @@ impl debugger {
     ///     Address to start printing from (u16)
     ///     Reference to CPU object (&Cpu)
     /// ```
-    pub fn print_ram(&self, addr: u16, bank: u16, gb: &Cpu) {
+    fn print_ram(&self, addr: u16, bank: u16, gb: &Cpu) {
         // Print up to addr + 16, unless we go off the end
         let end_addr = min(addr + 16, 0xFFFF);
         let mut valstring = String::new();
@@ -329,9 +330,9 @@ impl debugger {
     /// Input:
     ///     Address to remove (u16)
     /// ```
-    pub fn del_break(&mut self, addr: u16) {
+    fn del_break(&mut self, mem: MemAddr) {
         for i in 0..self.breakpoints.len() {
-            if self.breakpoints[i] == addr {
+            if self.breakpoints[i] == mem {
                 self.breakpoints.remove(i);
                 break;
             }
@@ -347,7 +348,7 @@ impl debugger {
     /// Input:
     ///     Refernce to CPU (&Cpu)
     /// ```
-    pub fn disassemble(&self, gb: &Cpu) {
+    fn disassemble(&self, gb: &Cpu) {
         let mut pc = gb.get_pc();
 
         // Print next 5 instructions
@@ -365,26 +366,42 @@ impl debugger {
         }
     }
 
-    pub fn get_watch_vals(&self, gb: &Cpu) -> HashMap<u16, u8> {
-        let mut vals = HashMap::new();
+    pub fn check_watch(&mut self, gb: &Cpu) {
         for wp in &self.watchpoints {
-            vals.insert(*wp, gb.read_ram(*wp, None));
-        }
-
-        vals
-    }
-
-    pub fn check_watch(&self, gb: &Cpu, prev_map: HashMap<u16, u8>) -> bool {
-        for wp in &self.watchpoints {
-            if let Some(old) = prev_map.get(wp) {
-                if *old != gb.read_ram(*wp, None) {
-                    return true;
+            let curr = gb.read_ram(wp.addr, Some(wp.bank));
+            let new = self.watch_map.insert(*wp, curr);
+            if let Some(new_val) = new {
+                if new_val != curr {
+                    self.debugging = true;
                 }
             }
         }
-
-        false
     }
+}
+
+fn parse_mem_addr(input: &str) -> Option<MemAddr> {
+    let parts: Vec<&str> = input.split(':').collect();
+    let addr = if parts.len() == 1 {
+        let hex = u16::from_str_radix(parts[0], 16);
+        if let Ok(addr) = hex {
+            Some(MemAddr{ bank: 0, addr })
+        } else {
+            None
+        }
+    } else {
+        let bank_hex = u16::from_str_radix(parts[0], 16);
+        let addr_hex = u16::from_str_radix(parts[1], 16);
+        if let Ok(bank) = bank_hex {
+            if let Ok(addr) = addr_hex {
+                Some(MemAddr{ bank, addr })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+    addr
 }
 
 /// ```

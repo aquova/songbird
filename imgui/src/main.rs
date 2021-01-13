@@ -305,11 +305,14 @@ fn tick_until_draw(mut gb: &mut Cpu, filename: &str, dbg: &mut debugger) {
         let draw_time = gb.tick();
 
         dbg.check_break(gb.get_pc());
+        dbg.check_watch(&gb);
 
         if dbg.is_debugging() {
             let is_quitting = dbg.debugloop(&mut gb);
             if is_quitting {
                 exit(0);
+            } else {
+                break;
             }
         }
 
