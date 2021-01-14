@@ -27,7 +27,7 @@ const OBP0: u16                    = 0xFF48;
 const OBP1: u16                    = 0xFF49;
 const WY: u16                      = 0xFF4A;
 const WX: u16                      = 0xFF4B;
-const VBK: u16                     = 0xFF4F;
+pub const VBK: u16                 = 0xFF4F;
 
 // CGB Palette registers
 const BGPI: u16                    = 0xFF68;
@@ -268,7 +268,7 @@ impl PPU {
                             self.read_cgb_spr_color()
                         },
                         VBK => {
-                            0xFE | bank as u8
+                            0xFE + self.vram_bank as u8
                         },
                         _ => {
                             self.read_io(addr)

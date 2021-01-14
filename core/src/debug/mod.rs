@@ -69,6 +69,7 @@ struct MemAddr {
 #[allow(non_camel_case_types)]
 pub struct debugger {
     debugging: bool,
+    tracing: bool,
     breakpoints: Vec<MemAddr>,
     watchpoints: Vec<MemAddr>,
     watch_map: HashMap<MemAddr, u8>,
@@ -84,6 +85,7 @@ impl debugger {
     pub fn new() -> debugger {
         debugger {
             debugging: false,
+            tracing: false,
             breakpoints: Vec::new(),
             watchpoints: Vec::new(),
             watch_map: HashMap::new(),
@@ -96,6 +98,10 @@ impl debugger {
 
     pub fn is_debugging(&self) -> bool {
         self.debugging
+    }
+
+    pub fn is_tracing(&self) -> bool {
+        self.tracing
     }
 
     pub fn debugloop(&mut self, gb: &mut Cpu) -> bool {
@@ -143,8 +149,8 @@ impl debugger {
                 "n" => {
                     gb.tick();
                     let pc = gb.get_pc();
-                    if pc <= ROM_STOP {
-                        println!("PC: {}:${:04x}", gb.get_rom_bank(), pc);
+                    if 0x4000 <= pc && pc <= ROM_STOP {
+                        println!("PC: ${}:{:04x}", gb.get_rom_bank(), pc);
                     } else {
                         println!("PC: ${:04x}", pc);
                     }
@@ -161,6 +167,9 @@ impl debugger {
                 },
                 "reg" => {
                     println!("{}", self.print_registers(&gb));
+                },
+                "trace" => {
+                    self.tracing = !self.tracing;
                 },
                 "w" => {
                     let mem_addr = parse_mem_addr(words[1]);
@@ -334,6 +343,13 @@ impl debugger {
         for i in 0..self.breakpoints.len() {
             if self.breakpoints[i] == mem {
                 self.breakpoints.remove(i);
+                break;
+            }
+        }
+
+        for i in 0..self.watchpoints.len() {
+            if self.watchpoints[i] == mem {
+                self.watchpoints.remove(i);
                 break;
             }
         }

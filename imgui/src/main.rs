@@ -302,6 +302,10 @@ fn load_shader(display: &Display, shad: Shaders) -> Program {
 /// ```
 fn tick_until_draw(mut gb: &mut Cpu, filename: &str, dbg: &mut debugger) {
     loop {
+        if dbg.is_tracing() {
+            println!("${}:{:04x}", gb.get_rom_bank(), gb.get_pc());
+        }
+
         let draw_time = gb.tick();
 
         dbg.check_break(gb.get_pc());

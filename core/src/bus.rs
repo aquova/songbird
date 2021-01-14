@@ -1,6 +1,6 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
-use crate::ppu::{PPU, LY};
+use crate::ppu::{PPU, LY, VBK};
 use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
@@ -236,6 +236,15 @@ impl Bus {
             },
             SVBK_REG => {
                 self.wram.set_wram_bank(val, mode);
+            },
+            VBK => {
+                if let Some(dma_data) = self.vram_dma_remaining {
+                    if !dma_data.active {
+                        self.ppu.write_vram(addr, val, mode);
+                    }
+                } else {
+                    self.ppu.write_vram(addr, val, mode);
+                }
             },
             _ => { // $8000-$9FFF, $FE00-$FE9F, $FF00-$FF7F
                 self.ppu.write_vram(addr, val, mode);
