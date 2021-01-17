@@ -294,12 +294,39 @@ impl PPU {
     }
 
     pub fn update(&mut self, cycles: u8) -> PpuUpdateResult {
+        let old_mode = self.clock.get_mode();
         let clock_result = self.clock.clock_step(cycles);
-        let interrupt = self.set_ly(self.clock.get_scanline());
+        let mut interrupt = self.set_ly();
+
+        // Trigger interrupt if
+        // - Mode has changed
+        // - Interrupt for that mode is enabled
+        let mut stat = self.read_io(STAT);
+        let mode = self.clock.get_mode();
+        if old_mode != mode {
+            match mode {
+                ModeTypes::HBLANK => {
+                    interrupt |= stat.get_bit(HBLANK_INTERRUPT_BIT);
+                },
+                ModeTypes::VBLANK => {
+                    interrupt |= stat.get_bit(VBLANK_INTERRUPT_BIT);
+                },
+                ModeTypes::VRAMReadMode => {
+                    interrupt |= stat.get_bit(OAM_INTERRUPT_BIT);
+                },
+                _ => ()
+            }
+        }
+
+        // Update the STAT register to match our new clock mode
+        stat &= 0b1111_1100;
+        stat |= mode.get_idx();
+        self.write_io(STAT, stat);
+
         PpuUpdateResult{ clock_result, interrupt }
     }
 
-    pub fn get_clock_mode(&self) -> u8 {
+    pub fn get_clock_mode(&self) -> ModeTypes {
         self.clock.get_mode()
     }
 
@@ -312,13 +339,11 @@ impl PPU {
     ///
     /// Sets the value at the LY RAM address
     ///
-    /// Input:
-    ///     Value to write (u8)
-    ///
     /// Output:
     ///     Whether values in LY and LYC registers are equal (bool)
     /// ```
-    pub fn set_ly(&mut self, line: u8) -> bool {
+    fn set_ly(&mut self) -> bool {
+        let line = self.clock.get_scanline();
         let old_ly = self.read_io(LY);
         if old_ly != line {
             // If we are in a new frame, reset window layer line
@@ -374,48 +399,6 @@ impl PPU {
         let start_index = line as usize * (SCREEN_WIDTH * COLOR_CHANNELS);
         let end_index = (line + 1) as usize * (SCREEN_WIDTH * COLOR_CHANNELS);
         self.screen_buffer[start_index..end_index].copy_from_slice(&pixel_row);
-    }
-
-    /// ```
-    /// Set status
-    ///
-    /// Sets the current value of the status register ($FF41)
-    ///
-    /// Input:
-    ///     Current clock mode (u8)
-    ///
-    /// Output:
-    ///     Whether STAT interrupt has been tripped
-    /// ```
-    pub fn set_status(&mut self, mode: u8) -> bool {
-        let mut stat = self.read_io(STAT);
-        let old_mode = stat & 0b11;
-        stat &= 0b1111_1100;
-        stat |= mode;
-        self.write_io(STAT, stat);
-
-        // Trigger interrupt if
-        // - Mode has changed
-        // - Interrupt for that mode is enabled
-        if old_mode != mode {
-            match mode {
-                0 => {
-                    stat.get_bit(HBLANK_INTERRUPT_BIT)
-                },
-                1 => {
-                    stat.get_bit(VBLANK_INTERRUPT_BIT)
-                },
-                2 => {
-                    stat.get_bit(OAM_INTERRUPT_BIT)
-                },
-                3 => {
-                    false
-                },
-                _ => { unreachable!("Mode must be < 4") }
-            }
-        } else {
-            false
-        }
     }
 
     /// ```

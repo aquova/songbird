@@ -14,12 +14,23 @@ pub enum ClockResults {
     RenderFrame
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum ModeTypes {
     HBLANK,
     VBLANK,
     OAMReadMode,
     VRAMReadMode
+}
+
+impl ModeTypes {
+    pub fn get_idx(&self) -> u8 {
+        match *self {
+            ModeTypes::HBLANK =>        0,
+            ModeTypes::VBLANK =>        1,
+            ModeTypes::OAMReadMode =>   2,
+            ModeTypes::VRAMReadMode =>  3,
+        }
+    }
 }
 
 pub struct Clock {
@@ -124,15 +135,10 @@ impl Clock {
     /// Returns the current clock mode, as an int
     ///
     /// Output:
-    ///     Current mode (u8)
+    ///     Current mode (ModeTypes)
     /// ```
-    pub fn get_mode(&self) -> u8 {
-        match self.mode {
-            ModeTypes::HBLANK => { 0 },
-            ModeTypes::VBLANK => { 1 },
-            ModeTypes::OAMReadMode => { 2 },
-            ModeTypes::VRAMReadMode => { 3 }
-        }
+    pub fn get_mode(&self) -> ModeTypes {
+        self.mode
     }
 
     /// ```
