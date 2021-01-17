@@ -160,10 +160,6 @@ impl Cpu {
         let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
         let ppu_result = self.bus.update_ppu(cycles, self.mode);
-        // let clock_result = self.clock.clock_step(cycles);
-        // let mut lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
-        // lcd_interrupt |= self.bus.set_status_reg(self.clock.get_mode(), self.mode);
-
         if ppu_result.interrupt {
             self.enable_interrupt(Interrupts::LCD_STAT);
         }
@@ -1314,7 +1310,9 @@ impl Cpu {
             }
 
             self.write_ram(IF_REG, if_reg);
-            self.bus.step_ppu_clock(3);
+            // TODO: I previously would iterate the PPU clock by 3 cycles.
+            // I couldn't remember why that was done, and it was removed,
+            // but may be needed in future
         }
     }
 

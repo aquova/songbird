@@ -306,10 +306,6 @@ impl Bus {
         raw_title.trim_end_matches(char::from(0))
     }
 
-    pub fn step_ppu_clock(&mut self, cycles: u8) {
-        self.ppu.step_clock(cycles);
-    }
-
     pub fn update_ppu(&mut self, cycles: u8, gb_mode: GB) -> PpuUpdateResult {
         let ret = self.ppu.update(cycles);
         if self.ppu.get_clock_mode() == ModeTypes::HBLANK && gb_mode == GB::CGB {

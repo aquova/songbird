@@ -330,10 +330,6 @@ impl PPU {
         self.clock.get_mode()
     }
 
-    pub fn step_clock(&mut self, cycles: u8) {
-        self.clock.clock_step(cycles);
-    }
-
     /// ```
     /// Set LY register
     ///
