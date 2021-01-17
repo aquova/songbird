@@ -136,7 +136,7 @@ impl PPU {
     pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
         // TODO: These limitations need to eventually be supported,
         // but due to my poor clock timer, cause issues due to inaccuracies
-        // let clock_mode = self.get_lcdc_status();
+        // let clock_mode = self.clock.get_mode();
 
         match addr {
             OAM_START..=OAM_END => {
@@ -940,26 +940,6 @@ impl PPU {
         let wndw_y = self.read_io(WY);
 
         Point{ x: wndw_x, y: wndw_y }
-    }
-
-    /// ```
-    /// Get LCDC Status
-    ///
-    /// Get the current clock mode from the LCD status register
-    ///
-    /// Output:
-    ///     Current clock mode (ModeTypes)
-    /// ```
-    fn get_lcdc_status(&self) -> ModeTypes {
-        let lcd_stat = self.read_io(STAT);
-        let mode = lcd_stat & 0b0000_0011;
-        match mode {
-            0 => { ModeTypes::HBLANK },
-            1 => { ModeTypes::VBLANK },
-            2 => { ModeTypes::OAMReadMode },
-            3 => { ModeTypes::VRAMReadMode },
-            _ => { panic!("Invalid mode") }
-        }
     }
 
     /// ```
