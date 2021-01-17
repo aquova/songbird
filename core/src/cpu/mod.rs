@@ -3,7 +3,7 @@ pub mod timer;
 
 use crate::bus::Bus;
 use crate::io::Buttons;
-use crate::ppu::clock::ClockResults;
+use crate::ppu::mode::LcdResults;
 use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use timer::*;
@@ -170,15 +170,15 @@ impl Cpu {
             self.enable_interrupt(Interrupts::TIMER);
         }
 
-        match ppu_result.clock_result {
-            ClockResults::RenderFrame => {
+        match ppu_result.lcd_result {
+            LcdResults::RenderFrame => {
                 // Render the final scanline before rendering frame
                 self.bus.render_scanline(self.mode);
                 // If time to render frame, then VBLANK interrupt is toggled
                 self.enable_interrupt(Interrupts::VBLANK);
                 draw_time = true;
             },
-            ClockResults::RenderScanline => {
+            LcdResults::RenderScanline => {
                 self.bus.render_scanline(self.mode);
             },
             _ => {
@@ -1310,7 +1310,7 @@ impl Cpu {
             }
 
             self.write_ram(IF_REG, if_reg);
-            // TODO: I previously would iterate the PPU clock by 3 cycles.
+            // TODO: I previously would iterate the PPU lcd by 3 cycles.
             // I couldn't remember why that was done, and it was removed,
             // but may be needed in future
         }

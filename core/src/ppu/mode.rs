@@ -8,108 +8,108 @@ const VBLANK_LINE_START: u8 = 143;
 const VBLANK_LINE_END: u8 = VBLANK_LINE_START + 10;
 
 #[derive(PartialEq)]
-pub enum ClockResults {
+pub enum LcdResults {
     NoAction,
     RenderScanline,
     RenderFrame
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum ModeTypes {
+pub enum LcdModeType {
     HBLANK,
     VBLANK,
     OAMReadMode,
     VRAMReadMode
 }
 
-impl ModeTypes {
+impl LcdModeType {
     pub fn get_idx(&self) -> u8 {
         match *self {
-            ModeTypes::HBLANK =>        0,
-            ModeTypes::VBLANK =>        1,
-            ModeTypes::OAMReadMode =>   2,
-            ModeTypes::VRAMReadMode =>  3,
+            LcdModeType::HBLANK =>        0,
+            LcdModeType::VBLANK =>        1,
+            LcdModeType::OAMReadMode =>   2,
+            LcdModeType::VRAMReadMode =>  3,
         }
     }
 }
 
-pub struct Clock {
+pub struct Lcd {
     cycles: usize,
     line: u8,
-    mode: ModeTypes
+    mode: LcdModeType
 }
 
-impl Default for Clock {
+impl Default for Lcd {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Clock {
-    pub fn new() -> Clock {
-        Clock {
+impl Lcd {
+    pub fn new() -> Lcd {
+        Lcd {
             cycles: 0,
             line: 0,
-            mode: ModeTypes::HBLANK
+            mode: LcdModeType::HBLANK
         }
     }
 
     /// ```
-    /// Clock Step
+    /// Lcd Step
     ///
-    /// Adds specified number of cycles to the clock, updating scanline and blank timings
+    /// Adds specified number of cycles to the LCD counter, updating scanline and blank timings
     ///
     /// Input:
     ///     Number of cycles of most recent instruction (u8)
     ///
     /// Output:
-    ///     Action to take following this clock cycle (ClockResults)
+    ///     Action to take following this lcd cycle (LcdResults)
     /// ```
-    pub fn clock_step(&mut self, cycles: u8) -> ClockResults {
+    pub fn lcd_step(&mut self, cycles: u8) -> LcdResults {
         self.cycles += cycles as usize;
-        let mut result = ClockResults::NoAction;
+        let mut result = LcdResults::NoAction;
 
         match self.mode {
             // Screen gets drawn after final hblank
-            ModeTypes::HBLANK => {
+            LcdModeType::HBLANK => {
                 if self.cycles >= HBLANK_LEN {
                     self.cycles = 0;
                     self.line += 1;
 
                     if self.line == VBLANK_LINE_START {
-                        self.mode = ModeTypes::VBLANK;
+                        self.mode = LcdModeType::VBLANK;
                         // VBLANK is starting, time to draw screen
                         // The VBLANK interrupt is triggered here
-                        result = ClockResults::RenderFrame;
+                        result = LcdResults::RenderFrame;
                     } else {
-                        self.mode = ModeTypes::OAMReadMode;
+                        self.mode = LcdModeType::OAMReadMode;
                     }
                 }
             },
             // VBLANK lasts for 10 lines
-            ModeTypes::VBLANK => {
+            LcdModeType::VBLANK => {
                 if self.cycles >= VBLANK_LEN {
                     self.cycles = 0;
                     self.line += 1;
 
                     if self.line > VBLANK_LINE_END {
-                        self.mode = ModeTypes::OAMReadMode;
+                        self.mode = LcdModeType::OAMReadMode;
                         self.line = 0;
                     }
                 }
             },
-            ModeTypes::OAMReadMode => {
+            LcdModeType::OAMReadMode => {
                 if self.cycles >= OAM_READ_LEN {
                     self.cycles = 0;
-                    self.mode = ModeTypes::VRAMReadMode;
+                    self.mode = LcdModeType::VRAMReadMode;
                 }
             },
-            ModeTypes::VRAMReadMode => {
+            LcdModeType::VRAMReadMode => {
                 if self.cycles >= VRAM_READ_LEN {
                     self.cycles = 0;
-                    self.mode = ModeTypes::HBLANK;
+                    self.mode = LcdModeType::HBLANK;
                     // Render current scanline here
-                    result = ClockResults::RenderScanline;
+                    result = LcdResults::RenderScanline;
                 }
             }
         }
@@ -132,12 +132,12 @@ impl Clock {
     /// ```
     /// Get mode
     ///
-    /// Returns the current clock mode, as an int
+    /// Returns the current lcd mode, as an int
     ///
     /// Output:
-    ///     Current mode (ModeTypes)
+    ///     Current mode (LcdModeType)
     /// ```
-    pub fn get_mode(&self) -> ModeTypes {
+    pub fn get_mode(&self) -> LcdModeType {
         self.mode
     }
 
@@ -160,6 +160,6 @@ impl Clock {
     ///     True if currently in VBLANK (bool)
     /// ```
     pub fn is_vblank_interrupt(&self) -> bool {
-        self.mode == ModeTypes::VBLANK
+        self.mode == LcdModeType::VBLANK
     }
 }

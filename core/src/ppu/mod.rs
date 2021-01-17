@@ -1,10 +1,10 @@
-pub mod clock;
+pub mod mode;
 pub mod palette;
 mod map;
 mod sprite;
 mod tile;
 
-use clock::{Clock, ClockResults, ModeTypes};
+use mode::{Lcd, LcdResults, LcdModeType};
 use map::Map;
 use palette::*;
 use sprite::{OAM_BYTE_SIZE, Sprite};
@@ -79,7 +79,7 @@ const OAM_INTERRUPT_BIT: u8     = 5;
 const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
 pub struct PpuUpdateResult {
-    pub clock_result: ClockResults,
+    pub lcd_result: LcdResults,
     pub interrupt: bool,
 }
 
@@ -93,7 +93,7 @@ pub struct PPU {
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
     cgb_spr_pal_data: [u8; CGB_SPR_PAL_DATA_SIZE],
-    clock: Clock,
+    lcd_mode: Lcd,
     palette: Palette,
 }
 
@@ -118,7 +118,7 @@ impl PPU {
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
             cgb_spr_pal_data: [0; CGB_SPR_PAL_DATA_SIZE],
-            clock: Clock::new(),
+            lcd_mode: Lcd::new(),
             palette: Palette::new(),
         }
     }
@@ -135,13 +135,13 @@ impl PPU {
     /// ```
     pub fn write_vram(&mut self, addr: u16, val: u8, mode: GB) {
         // TODO: These limitations need to eventually be supported,
-        // but due to my poor clock timer, cause issues due to inaccuracies
-        // let clock_mode = self.clock.get_mode();
+        // but due to my poor LCD timer, cause issues due to inaccuracies
+        // let lcd_mode = self.lcd_mode.get_mode();
 
         match addr {
             OAM_START..=OAM_END => {
-                // During clock modes 2 and 3, cannot access OAM
-                // if clock_mode == ModeTypes::OAMReadMode || clock_mode == ModeTypes::VRAMReadMode {
+                // During LCD modes 2 and 3, cannot access OAM
+                // if lcd_mode == LcdModeType::OAMReadMode || lcd_mode == LcdModeType::VRAMReadMode {
                 //     return;
                 // }
 
@@ -151,8 +151,8 @@ impl PPU {
                 self.oam[spr_num as usize].set_byte(byte_num, val, mode);
             },
             TILE_SET..=TILE_SET_END => {
-                // During clock mode 3, cannot access VRAM
-                // if clock_mode == ModeTypes::VRAMReadMode {
+                // During LCD mode 3, cannot access VRAM
+                // if lcd_mode == LcdModeType::VRAMReadMode {
                 //     return;
                 // }
 
@@ -162,8 +162,8 @@ impl PPU {
                 self.tiles[tile_num as usize].set_byte(byte_num, val);
             },
             TILE_MAP..=TILE_MAP_END => {
-                // During clock mode 3, cannot access VRAM
-                // if clock_mode == ModeTypes::VRAMReadMode {
+                // During LCD mode 3, cannot access VRAM
+                // if lcd_mode == LcdModeType::VRAMReadMode {
                 //     return;
                 // }
 
@@ -184,8 +184,8 @@ impl PPU {
                     },
                     BGPD => {
                         if mode == GB::CGB {
-                            // During clock mode 3, cannot edit palette data
-                            // if clock_mode == ModeTypes::VRAMReadMode {
+                            // During LCD mode 3, cannot edit palette data
+                            // if lcd_mode == LcdModeType::VRAMReadMode {
                             //     return;
                             // }
 
@@ -196,8 +196,8 @@ impl PPU {
                     },
                     OBPD => {
                         if mode == GB::CGB {
-                            // During clock mode 3, cannot edit palette data
-                            // if clock_mode == ModeTypes::VRAMReadMode {
+                            // During LCD mode 3, cannot edit palette data
+                            // if lcd_mode == LcdModeType::VRAMReadMode {
                             //     return;
                             // }
 
@@ -294,40 +294,40 @@ impl PPU {
     }
 
     pub fn update(&mut self, cycles: u8) -> PpuUpdateResult {
-        let old_mode = self.clock.get_mode();
-        let clock_result = self.clock.clock_step(cycles);
+        let old_mode = self.lcd_mode.get_mode();
+        let lcd_result = self.lcd_mode.lcd_step(cycles);
         let mut interrupt = self.set_ly();
 
         // Trigger interrupt if
         // - Mode has changed
         // - Interrupt for that mode is enabled
         let mut stat = self.read_io(STAT);
-        let mode = self.clock.get_mode();
+        let mode = self.lcd_mode.get_mode();
         if old_mode != mode {
             match mode {
-                ModeTypes::HBLANK => {
+                LcdModeType::HBLANK => {
                     interrupt |= stat.get_bit(HBLANK_INTERRUPT_BIT);
                 },
-                ModeTypes::VBLANK => {
+                LcdModeType::VBLANK => {
                     interrupt |= stat.get_bit(VBLANK_INTERRUPT_BIT);
                 },
-                ModeTypes::VRAMReadMode => {
+                LcdModeType::VRAMReadMode => {
                     interrupt |= stat.get_bit(OAM_INTERRUPT_BIT);
                 },
                 _ => ()
             }
         }
 
-        // Update the STAT register to match our new clock mode
+        // Update the STAT register to match our new LCD mode
         stat &= 0b1111_1100;
         stat |= mode.get_idx();
         self.write_io(STAT, stat);
 
-        PpuUpdateResult{ clock_result, interrupt }
+        PpuUpdateResult{ lcd_result, interrupt }
     }
 
-    pub fn get_clock_mode(&self) -> ModeTypes {
-        self.clock.get_mode()
+    pub fn get_lcd_mode(&self) -> LcdModeType {
+        self.lcd_mode.get_mode()
     }
 
     /// ```
@@ -339,7 +339,7 @@ impl PPU {
     ///     Whether values in LY and LYC registers are equal (bool)
     /// ```
     fn set_ly(&mut self) -> bool {
-        let line = self.clock.get_scanline();
+        let line = self.lcd_mode.get_scanline();
         let old_ly = self.read_io(LY);
         if old_ly != line {
             // If we are in a new frame, reset window layer line
