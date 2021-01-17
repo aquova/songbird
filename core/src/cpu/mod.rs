@@ -1,10 +1,9 @@
-pub mod clock;
 pub mod opcodes;
 pub mod timer;
 
-use clock::{Clock, ClockResults};
 use crate::bus::Bus;
 use crate::io::Buttons;
+use crate::ppu::clock::ClockResults;
 use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use timer::*;
@@ -73,7 +72,6 @@ pub struct Cpu {
     h: u8,
     l: u8,
     mode: GB,
-    clock: Clock,
     timer: Timer,
     interrupt_enabled: bool,
     halted: bool,
@@ -103,7 +101,6 @@ impl Cpu {
             h: 0x01,
             l: 0x4D,
             mode: GB::DMG,
-            clock: Clock::new(),
             timer: Timer::new(),
             interrupt_enabled: false,
             halted: false,
@@ -162,11 +159,12 @@ impl Cpu {
         // If halted, simply continue counting without executing opcodes
         let cycles = if self.halted { 1 } else { opcodes::execute(self) };
 
-        let clock_result = self.clock.clock_step(cycles);
-        let mut lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
-        lcd_interrupt |= self.bus.set_status_reg(self.clock.get_mode(), self.mode);
+        let ppu_result = self.bus.update_ppu(cycles, self.mode);
+        // let clock_result = self.clock.clock_step(cycles);
+        // let mut lcd_interrupt = self.bus.set_scanline(self.clock.get_scanline());
+        // lcd_interrupt |= self.bus.set_status_reg(self.clock.get_mode(), self.mode);
 
-        if lcd_interrupt {
+        if ppu_result.interrupt {
             self.enable_interrupt(Interrupts::LCD_STAT);
         }
 
@@ -176,7 +174,7 @@ impl Cpu {
             self.enable_interrupt(Interrupts::TIMER);
         }
 
-        match clock_result {
+        match ppu_result.clock_result {
             ClockResults::RenderFrame => {
                 // Render the final scanline before rendering frame
                 self.bus.render_scanline(self.mode);
@@ -1316,7 +1314,7 @@ impl Cpu {
             }
 
             self.write_ram(IF_REG, if_reg);
-            self.clock.clock_step(3);
+            self.bus.step_ppu_clock(3);
         }
     }
 

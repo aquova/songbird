@@ -1,13 +1,14 @@
+pub mod clock;
 pub mod palette;
 mod map;
 mod sprite;
 mod tile;
 
+use clock::{Clock, ClockResults, ModeTypes};
 use map::Map;
 use palette::*;
 use sprite::{OAM_BYTE_SIZE, Sprite};
 use tile::{Tile, TILE_BYTES};
-use crate::cpu::clock::ModeTypes;
 use crate::utils::*;
 
 // =============
@@ -77,6 +78,11 @@ const VBLANK_INTERRUPT_BIT: u8  = 4;
 const OAM_INTERRUPT_BIT: u8     = 5;
 const LYC_LY_INTERRUPT_BIT: u8  = 6;
 
+pub struct PpuUpdateResult {
+    pub clock_result: ClockResults,
+    pub interrupt: bool,
+}
+
 pub struct PPU {
     vram_bank: usize,
     io: [u8; IO_SIZE],
@@ -87,6 +93,7 @@ pub struct PPU {
     last_wndw_line: Option<u8>,
     cgb_bg_pal_data: [u8; CGB_BG_PAL_DATA_SIZE],
     cgb_spr_pal_data: [u8; CGB_SPR_PAL_DATA_SIZE],
+    clock: Clock,
     palette: Palette,
 }
 
@@ -111,6 +118,7 @@ impl PPU {
             last_wndw_line: None,
             cgb_bg_pal_data: [0; CGB_BG_PAL_DATA_SIZE],
             cgb_spr_pal_data: [0; CGB_SPR_PAL_DATA_SIZE],
+            clock: Clock::new(),
             palette: Palette::new(),
         }
     }
@@ -283,6 +291,20 @@ impl PPU {
                 0
             }
         }
+    }
+
+    pub fn update(&mut self, cycles: u8) -> PpuUpdateResult {
+        let clock_result = self.clock.clock_step(cycles);
+        let interrupt = self.set_ly(self.clock.get_scanline());
+        PpuUpdateResult{ clock_result, interrupt }
+    }
+
+    pub fn get_clock_mode(&self) -> u8 {
+        self.clock.get_mode()
+    }
+
+    pub fn step_clock(&mut self, cycles: u8) {
+        self.clock.clock_step(cycles);
     }
 
     /// ```

@@ -1,6 +1,6 @@
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
-use crate::ppu::{PPU, LY, VBK};
+use crate::ppu::{PPU, LY, VBK, PpuUpdateResult};
 use crate::ppu::palette::Palettes;
 use crate::utils::*;
 use crate::wram::{WRAM, WRAM_START, WRAM_END, SVBK_REG, ECHO_START, ECHO_END};
@@ -305,6 +305,23 @@ impl Bus {
         raw_title.trim_end_matches(char::from(0))
     }
 
+    pub fn step_ppu_clock(&mut self, cycles: u8) {
+        self.ppu.step_clock(cycles);
+    }
+
+    pub fn update_ppu(&mut self, cycles: u8, gb_mode: GB) -> PpuUpdateResult {
+        let mut ret = self.ppu.update(cycles);
+        let clock_mode = self.ppu.get_clock_mode() & 0b0000_0011;
+        // TODO: The clock_mode comparision should be a const or inherited from Clock or something
+        // If in HBLANK:
+        if clock_mode == 0 && gb_mode == GB::CGB {
+            self.vram_dma(None);
+        }
+        ret.interrupt |= self.ppu.set_status(clock_mode);
+
+        ret
+    }
+
     /// ```
     /// Set scanline
     ///
@@ -316,9 +333,9 @@ impl Bus {
     /// Output:
     ///     Whether to trigger LCDC interrupt
     /// ```
-    pub fn set_scanline(&mut self, line: u8) -> bool {
-        self.ppu.set_ly(line)
-    }
+    // pub fn set_scanline(&mut self, line: u8) -> bool {
+    //     self.ppu.set_ly(line)
+    // }
 
     /// ```
     /// Render scanline
@@ -344,15 +361,15 @@ impl Bus {
     /// Output:
     ///     Whether STAT interrupt has been tripped
     /// ```
-    pub fn set_status_reg(&mut self, clock_mode: u8, gb_mode: GB) -> bool {
-        let clock_mode = clock_mode & 0b0000_0011;
-        // TODO: The clock_mode comparision should be a const or inherited from Clock or something
-        // If in HBLANK:
-        if clock_mode == 0 && gb_mode == GB::CGB {
-            self.vram_dma(None);
-        }
-        self.ppu.set_status(clock_mode)
-    }
+    // pub fn set_status_reg(&mut self, clock_mode: u8, gb_mode: GB) -> bool {
+    //     let clock_mode = clock_mode & 0b0000_0011;
+    //     // TODO: The clock_mode comparision should be a const or inherited from Clock or something
+    //     // If in HBLANK:
+    //     if clock_mode == 0 && gb_mode == GB::CGB {
+    //         self.vram_dma(None);
+    //     }
+    //     self.ppu.set_status(clock_mode)
+    // }
 
     /// ```
     /// Set system palette
