@@ -5,14 +5,10 @@ WIN_TARGET = x86_64-pc-windows-gnu
 ARM_TARGET = arm-unknown-linux-gnueabihf
 REL_FLAGS = --release
 
-all: gtk imgui wasm windows arm
+all: gtk wasm windows arm
 
 gtk:
 	cd gtk && \
-	$(CARGO) build $(REL_FLAGS)
-
-imgui:
-	cd imgui && \
 	$(CARGO) build $(REL_FLAGS)
 
 wasm:
@@ -39,11 +35,7 @@ arm:
 	cd gtk && \
 	$(CARGO) build --target=$(ARM_TARGET) $(REL_FLAGS)
 
-term:
-	cd term && \
-	$(CARGO) build $(REL_FLAGS)
-
-clean: clean_core clean_gtk clean_imgui clean_wasm clean_term
+clean: clean_core clean_gtk clean_wasm
 
 clean_core:
 	cd core && \
@@ -61,12 +53,4 @@ clean_gtk:
 	$(CARGO) clean && \
 	rm -f songbird_gtk.exe
 
-clean_imgui:
-	cd imgui && \
-	$(CARGO) clean
-
-clean_term:
-	cd term && \
-	$(CARGO) clean
-
-.PHONY: all gtk imgui wasm windows arm term debug clean
+.PHONY: all gtk wasm windows arm debug clean

@@ -23,7 +23,6 @@ Latest builds can be downloaded [here](https://cirrus-ci.com/github/aquova/songb
 
 ## Resources
 
-- The Imgui file explorer module is originally from [here](https://github.com/aflak-vis/aflak)
 - Information on cross-compiling from Linux to Windows [here](https://gtk-rs.org/docs-src/tutorial/cross)
 - Songbird Docker image on DockerHub [here](https://hub.docker.com/r/aquova/songbird)
 - Of course the [Pandocs](https://gbdev.io/pandocs/), which are a huge help to all GB emulator developers
