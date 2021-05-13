@@ -1,4 +1,4 @@
-use crate::menubar::EmuMenubar;
+use crate::menubar::{EmuMenubar, INIT_SCALE};
 
 use songbird_core::io::Buttons;
 use songbird_core::utils::{COLOR_CHANNELS, DISP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -15,10 +15,6 @@ use gtk::prelude::*;
 use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, DrawingArea, FileChooserAction, FileChooserDialog, FileFilter, Orientation, WindowPosition};
 
 pub const FRAME_DELAY: u32 = 1000 / 60;
-const SCALE: usize = 5;
-const WINDOW_WIDTH: usize = SCREEN_WIDTH * SCALE;
-const WINDOW_HEIGHT: usize = SCREEN_HEIGHT * SCALE;
-const MENUBAR_HEIGHT: usize = 30;
 
 pub enum UiAction {
     Quit,
@@ -48,15 +44,15 @@ pub fn create_ui(
 ) {
     gtk::init().unwrap();
     let app = Application::new(Some("com.github.aquova.songbird"), Default::default()).expect("Initialization failed");
+    let menubar = EmuMenubar::new();
 
     let window = ApplicationWindow::new(&app);
     window.set_title("Songbird");
     window.set_position(WindowPosition::Center);
-    window.set_size_request(WINDOW_WIDTH as i32, (WINDOW_HEIGHT + MENUBAR_HEIGHT) as i32);
+    window.resize((INIT_SCALE * SCREEN_WIDTH) as i32, (INIT_SCALE * SCREEN_HEIGHT) as i32 + menubar.menubar.get_allocated_height());
 
     // Add items to window
     let v_box = gtk::Box::new(Orientation::Vertical, 0);
-    let menubar = EmuMenubar::new();
     let drawing_area = DrawingArea::new();
     v_box.pack_start(&menubar.menubar, false, false, 0);
     v_box.pack_start(&drawing_area, true, true, 0);
@@ -67,34 +63,13 @@ pub fn create_ui(
 
     window.show_all();
 
-    // Initialize our drawing area.
-    // Specifies which frame buffer is to be used, and scales to match our screen
-    drawing_area.connect_draw(move |_, cr| {
-        let data = frame.lock().unwrap().to_vec();
-        // Despite the name, the DrawingArea requires data as BGRA, not ARGB
-        let argb = rgba2bgra(&data);
-        let img = ImageSurface::create_for_data(
-            argb,
-            Format::ARgb32,
-            SCREEN_WIDTH as i32,
-            SCREEN_HEIGHT as i32,
-            Format::ARgb32.stride_for_width(SCREEN_WIDTH as u32).unwrap(),
-        ).unwrap();
-
-        let pattern = SurfacePattern::create(&img);
-        pattern.set_filter(Filter::Nearest);
-        cr.scale(SCALE as f64, SCALE as f64);
-        cr.set_source(&pattern);
-        cr.paint();
-
-        Inhibit(false)
-    });
-
     // Add event handlers for UI elements and keys
     connect_quit(&window, &menubar, &accel_group, &ui_to_gb);
     connect_open(&window, &menubar, &accel_group, &ui_to_gb);
     connect_keypress(&window, &ui_to_gb);
     connect_keyrelease(&window, &ui_to_gb);
+    connect_draw(&frame, &drawing_area, INIT_SCALE);
+    connect_scale(&window, &drawing_area, &frame, &menubar);
 
     app.connect_activate(move |app| {
         app.add_window(&window);
@@ -221,6 +196,69 @@ fn connect_keyrelease(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
 
         Inhibit(false)
     });
+}
+
+/// ```
+/// Connect Draw
+///
+/// Initializes our DrawingArea and sets scale factor
+///
+/// Inputs:
+///     Our frame data to render (&Arc<Mutex<Vec<u8>>>)
+///     Our canvas widget (&DrawingArea)
+///     The scale factor (usize)
+/// ```
+fn connect_draw(frame: &Arc<Mutex<Vec<u8>>>, drawing_area: &DrawingArea, scale: usize) {
+    // Initialize our drawing area.
+    // Specifies which frame buffer is to be used, and scales to match our screen
+    let frame = frame.clone();
+    drawing_area.connect_draw(move |_, cr| {
+        let data = frame.lock().unwrap().to_vec();
+        // Despite the name, the DrawingArea requires data as BGRA, not ARGB
+        let argb = rgba2bgra(&data);
+        let img = ImageSurface::create_for_data(
+            argb,
+            Format::ARgb32,
+            SCREEN_WIDTH as i32,
+            SCREEN_HEIGHT as i32,
+            Format::ARgb32.stride_for_width(SCREEN_WIDTH as u32).unwrap(),
+        ).unwrap();
+
+        let pattern = SurfacePattern::create(&img);
+        pattern.set_filter(Filter::Nearest);
+        cr.scale(scale as f64, scale as f64);
+        cr.set_source(&pattern);
+        cr.paint();
+
+        Inhibit(false)
+    });
+}
+
+/// ```
+/// Connect scale
+///
+/// Event handling for the scale factor menubar options
+///
+/// Inputs:
+///     The app window (&ApplicationWindow)
+///     The rendering canvas (&DrawingArea)
+///     Our frame data to render (&Arc<Mutex<Vec<u8>>>)
+///     The UI menubar struct (&EmuMenubar)
+/// ```
+fn connect_scale(window: &ApplicationWindow, drawing_area: &DrawingArea, frame: &Arc<Mutex<Vec<u8>>>, menubar: &EmuMenubar) {
+    let btn_num = menubar.scale_btns.len();
+    let menubar_h = menubar.menubar.get_allocated_height();
+    for (idx, btn) in menubar.scale_btns.iter().enumerate() {
+        let window = window.clone();
+        let drawing_area = drawing_area.clone();
+        let frame = frame.clone();
+        btn.connect_button_press_event(move |_, _evt| {
+            let new_scale = btn_num - idx - 1;
+            window.resize((new_scale * SCREEN_WIDTH) as i32, (new_scale * SCREEN_HEIGHT) as i32 + menubar_h);
+            connect_draw(&frame, &drawing_area, new_scale);
+            Inhibit(false)
+        });
+    }
 }
 
 /// ```
