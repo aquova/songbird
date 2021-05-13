@@ -15,12 +15,14 @@ use gtk::prelude::*;
 use gtk::{AccelFlags, AccelGroup, Application, ApplicationWindow, DrawingArea, FileChooserAction, FileChooserDialog, FileFilter, Orientation, WindowPosition};
 
 pub const FRAME_DELAY: u32 = 1000 / 60;
+const MENUBAR_HEIGHT: i32 = 30;
 
 pub enum UiAction {
     Quit,
     Load(PathBuf),
     BtnPress(Buttons),
     BtnRelease(Buttons),
+    SetDMG(bool),
 }
 
 pub enum CoreAction {
@@ -49,7 +51,7 @@ pub fn create_ui(
     let window = ApplicationWindow::new(&app);
     window.set_title("Songbird");
     window.set_position(WindowPosition::Center);
-    window.resize((INIT_SCALE * SCREEN_WIDTH) as i32, (INIT_SCALE * SCREEN_HEIGHT) as i32 + menubar.menubar.get_allocated_height());
+    window.resize((INIT_SCALE * SCREEN_WIDTH) as i32, (INIT_SCALE * SCREEN_HEIGHT) as i32 + MENUBAR_HEIGHT);
 
     // Add items to window
     let v_box = gtk::Box::new(Orientation::Vertical, 0);
@@ -68,6 +70,7 @@ pub fn create_ui(
     connect_open(&window, &menubar, &accel_group, &ui_to_gb);
     connect_keypress(&window, &ui_to_gb);
     connect_keyrelease(&window, &ui_to_gb);
+    connect_force_dmg(&menubar, &ui_to_gb);
     connect_draw(&frame, &drawing_area, INIT_SCALE);
     connect_scale(&window, &drawing_area, &frame, &menubar);
 
@@ -195,6 +198,23 @@ fn connect_keyrelease(window: &ApplicationWindow, ui_to_gb: &Sender<UiAction>) {
         }
 
         Inhibit(false)
+    });
+}
+
+/// ```
+/// Connect Force DMG
+///
+/// Sets up handling for the Force DMG menubar option
+///
+/// Inputs:
+///     Our GTK menubar (&EmuMenubar)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
+fn connect_force_dmg(menubar: &EmuMenubar, ui_to_gb: &Sender<UiAction>) {
+    let ui_to_gb_clone = ui_to_gb.clone();
+    menubar.force_dmg.connect_toggled(move |btn| {
+        let is_set = btn.get_active();
+        ui_to_gb_clone.send(UiAction::SetDMG(is_set)).unwrap();
     });
 }
 

@@ -1,5 +1,5 @@
 use gtk::prelude::*;
-use gtk::{Menu, MenuBar, MenuItem, RadioMenuItem};
+use gtk::{CheckMenuItem, Menu, MenuBar, MenuItem, RadioMenuItem};
 
 pub const INIT_SCALE: usize = 3;
 const MAX_SCALE: usize = 5;
@@ -8,6 +8,7 @@ pub struct EmuMenubar {
     pub open_btn: MenuItem,
     pub quit_btn: MenuItem,
     pub scale_btns: Vec<RadioMenuItem>,
+    pub force_dmg: CheckMenuItem,
     pub menubar: MenuBar,
 }
 
@@ -43,13 +44,17 @@ impl EmuMenubar {
             scale_submenu.append(&scale_btn);
         }
 
+        let force_dmg = CheckMenuItem::with_label("Force DMG");
+
         settings_menu.append(&scale);
+        settings_menu.append(&force_dmg);
         menu_bar.append(&settings);
 
         Self {
             open_btn: open,
             quit_btn: quit,
             scale_btns: btn_1x.get_group(),
+            force_dmg: force_dmg,
             menubar: menu_bar,
         }
     }

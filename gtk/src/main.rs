@@ -20,6 +20,7 @@ use std::time::Duration;
 
 fn main() {
     let mut gb = Cpu::new();
+    let mut force_dmg = false;
     let filename: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let (ui_to_gb_sender, ui_to_gb_receiver) = channel::<UiAction>();
     let (gb_to_ui_sender, gb_to_ui_receiver) = channel::<CoreAction>();
@@ -47,7 +48,7 @@ fn main() {
             match evt {
                 UiAction::Quit => break,
                 UiAction::Load(f) => {
-                    setup_emu(&mut gb, &f, false);
+                    setup_emu(&mut gb, &f, force_dmg);
                     filename.borrow_mut().replace(f);
                 },
                 UiAction::BtnPress(btn) => {
@@ -55,6 +56,9 @@ fn main() {
                 },
                 UiAction::BtnRelease(btn) => {
                     gb.toggle_button(btn, false);
+                },
+                UiAction::SetDMG(should_force) => {
+                    force_dmg = should_force;
                 }
             }
         }
