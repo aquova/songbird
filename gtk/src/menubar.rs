@@ -6,6 +6,7 @@ const MAX_SCALE: usize = 5;
 
 pub struct EmuMenubar {
     pub open_btn: MenuItem,
+    pub reset_btn: MenuItem,
     pub quit_btn: MenuItem,
     pub scale_btns: Vec<RadioMenuItem>,
     pub force_dmg: CheckMenuItem,
@@ -22,8 +23,10 @@ impl EmuMenubar {
         file.set_submenu(Some(&file_menu));
 
         let open = MenuItem::with_label("Open");
+        let reset = MenuItem::with_label("Reset");
         let quit = MenuItem::with_label("Quit");
         file_menu.append(&open);
+        file_menu.append(&reset);
         file_menu.append(&quit);
         menu_bar.append(&file);
 
@@ -52,6 +55,7 @@ impl EmuMenubar {
 
         Self {
             open_btn: open,
+            reset_btn: reset,
             quit_btn: quit,
             scale_btns: btn_1x.get_group(),
             force_dmg: force_dmg,

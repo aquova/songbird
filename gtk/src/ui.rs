@@ -20,6 +20,7 @@ const MENUBAR_HEIGHT: i32 = 30;
 pub enum UiAction {
     Quit,
     Load(PathBuf),
+    Reset,
     BtnPress(Buttons),
     BtnRelease(Buttons),
     SetDMG(bool),
@@ -68,6 +69,7 @@ pub fn create_ui(
     // Add event handlers for UI elements and keys
     connect_quit(&window, &menubar, &accel_group, &ui_to_gb);
     connect_open(&window, &menubar, &accel_group, &ui_to_gb);
+    connect_reset(&menubar, &ui_to_gb);
     connect_keypress(&window, &ui_to_gb);
     connect_keyrelease(&window, &ui_to_gb);
     connect_force_dmg(&menubar, &ui_to_gb);
@@ -153,6 +155,22 @@ fn connect_open(
     });
     let (open_key, open_modifier) = gtk::accelerator_parse("<Primary>O");
     menubar.open_btn.add_accelerator("activate", accel_group, open_key, open_modifier, AccelFlags::VISIBLE);
+}
+
+/// ```
+/// Connect Reset
+///
+/// Sets up event handling for 'Reset' menubar option
+///
+/// Inputs:
+///     Our GTK menubar (&EmuMenubar)
+///     Channel from UI thread to main (&Sender<UiAction>)
+/// ```
+fn connect_reset(menubar: &EmuMenubar, ui_to_gb: &Sender<UiAction>) {
+    let ui_to_gb = ui_to_gb.clone();
+    menubar.reset_btn.connect_activate(move |_| {
+        ui_to_gb.send(UiAction::Reset).unwrap();
+    });
 }
 
 /// ```

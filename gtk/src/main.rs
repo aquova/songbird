@@ -51,6 +51,12 @@ fn main() {
                     setup_emu(&mut gb, &f, force_dmg);
                     filename.borrow_mut().replace(f);
                 },
+                UiAction::Reset => {
+                    if let Some(f) = filename.borrow().as_ref() {
+                        gb = Cpu::new();
+                        setup_emu(&mut gb, &f, force_dmg);
+                    }
+                },
                 UiAction::BtnPress(btn) => {
                     gb.toggle_button(btn, true);
                 },
