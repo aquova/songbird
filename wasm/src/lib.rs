@@ -58,17 +58,17 @@ impl GB {
     ///
     /// Input:
     ///     JS data object (Uint8Array)
+    ///     Force DMG mode (bool)
     /// ```
     #[wasm_bindgen]
-    pub fn load_rom(&mut self, data: Uint8Array) {
+    pub fn load_rom(&mut self, data: Uint8Array, force_dmg: bool) {
         let mut rom_data: Vec<u8> = Vec::new();
 
         for i in 0..data.byte_length() {
             rom_data.push(data.get_index(i));
         }
 
-        // TODO: Add option to allow for DMG force in browser
-        self.cpu.load_game(&rom_data, false)
+        self.cpu.load_game(&rom_data, force_dmg)
     }
 
     /// ```

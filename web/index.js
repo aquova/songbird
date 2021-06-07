@@ -45,8 +45,9 @@ async function run() {
             let buffer = fr.result
             const rom = new Uint8Array(buffer)
 
+            let force_dmg = document.getElementById("force_dmg").checked
             gb.reset()
-            gb.load_rom(rom)
+            gb.load_rom(rom, force_dmg)
             load_save(gb)
             let title = gb.get_title()
             document.title = title
