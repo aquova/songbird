@@ -1,0 +1,9 @@
+[package]
+name = "sdl"
+version = "0.1.0"
+authors = ["aquova <abrick912@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+songbird_core = { path = "../core" }
+sdl2 = "0.34.5"

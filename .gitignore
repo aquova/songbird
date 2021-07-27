@@ -8,6 +8,7 @@
 **/songbird_wasm.js
 *.exe
 **/gui/core
+*.lock
 
 # Editor files
 **/.idea/*
