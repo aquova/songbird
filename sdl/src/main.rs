@@ -76,16 +76,9 @@ pub fn main() {
         }
 
         // Game loop
-        let draw_time = gb.tick();
-        if draw_time {
-            let disp_arr = gb.render();
-            draw_screen(&disp_arr, &mut canvas);
-        }
-
-        // Update save file if needed
-        if gb.is_battery_dirty() {
-            write_battery_save(&mut gb, filename);
-        }
+        tick_until_draw(&mut gb, filename);
+        let disp_arr = gb.render();
+        draw_screen(&disp_arr, &mut canvas);
     }
 }
 
@@ -154,6 +147,27 @@ fn load_rom(path: &str) -> Vec<u8> {
     f.read_to_end(&mut buffer).expect("Error reading ROM to buffer");
 
     buffer
+}
+
+/// ```
+/// Tick until draw
+///
+/// Repeatedly runs until it is time to render a frame
+///
+/// Inputs:
+///     Game Boy CPU (&Cpu)
+///     Filename of game ROM (&String)
+/// ```
+fn tick_until_draw(gb: &mut Cpu, filename: &String) {
+    // Keep ticking until returns true, indicating time to render
+    while !gb.tick() {}
+
+    // Limiting saving battery state to only once per frame.
+    // Doing it every tick is both overkill and causes some unknown issue on
+    // Windows which traps us in an infinite loop on this frame
+    if gb.is_battery_dirty() {
+        write_battery_save(gb, &filename);
+    }
 }
 
 /// ```
