@@ -1,3 +1,4 @@
+use crate::audio::{APU, AUDIO_REGS_START, AUDIO_REGS_END};
 use crate::cartridge::{Cart, ROM_START, ROM_STOP, EXT_RAM_START, EXT_RAM_STOP};
 use crate::io::{Buttons, IO};
 use crate::ppu::{PPU, LY, VBK, PpuUpdateResult};
@@ -75,6 +76,7 @@ pub struct Bus {
     rom: Cart,
     io: IO,
     ppu: PPU,
+    apu: APU,
     wram: WRAM,
     hram: [u8; HRAM_SIZE],
     vram_dma_remaining: Option<VRAM_DMA>,
@@ -106,6 +108,7 @@ impl Bus {
             rom: Cart::new(),
             io: IO::new(),
             ppu: PPU::new(),
+            apu: APU::new(),
             wram: WRAM::new(),
             hram: [0; HRAM_SIZE],
             vram_dma_remaining: None,
@@ -163,6 +166,9 @@ impl Bus {
             ECHO_START..=ECHO_END => {
                 self.wram.read_echo(addr, bank_override)
             },
+            AUDIO_REGS_START..=AUDIO_REGS_END => {
+                self.apu.read(addr)
+            },
             JOYPAD_REG => {
                 self.io.read_btns()
             },
@@ -214,6 +220,9 @@ impl Bus {
             ROM_START..=ROM_STOP | EXT_RAM_START..=EXT_RAM_STOP => {
                 self.rom.write_cart(addr, val);
                 battery_write = true;
+            },
+            AUDIO_REGS_START..=AUDIO_REGS_END => {
+                self.apu.write(addr, val);
             },
             WRAM_START..=WRAM_END => {
                 self.wram.write_wram(addr, val);

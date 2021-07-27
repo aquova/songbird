@@ -102,6 +102,8 @@ impl_modifybits!(u16);
 pub trait ModifyBytes {
     fn get_high_byte(&self) -> u8;
     fn get_low_byte(&self) -> u8;
+    fn set_high_byte(&mut self, val: u8);
+    fn set_low_byte(&mut self, val: u8);
 }
 
 impl ModifyBytes for u16 {
@@ -111,6 +113,14 @@ impl ModifyBytes for u16 {
 
     fn get_low_byte(&self) -> u8 {
         (self & 0xFF) as u8
+    }
+
+    fn set_high_byte(&mut self, val: u8) {
+        *self = (*self & 0x0F) | ((val as u16) << 8);
+    }
+
+    fn set_low_byte(&mut self, val: u8) {
+        *self = (*self & 0xF0) | val as u16;
     }
 }
 
