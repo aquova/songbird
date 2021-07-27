@@ -21,11 +21,12 @@ https://aquova.net/songbird
 
 Latest builds can be downloaded [here](https://cirrus-ci.com/github/aquova/songbird/master)
 
-## Resources
-
-- Information on cross-compiling from Linux to Windows [here](https://gtk-rs.org/docs-src/tutorial/cross)
-- Songbird Docker image on DockerHub [here](https://hub.docker.com/r/aquova/songbird)
-- Of course the [Pandocs](https://gbdev.io/pandocs/), which are a huge help to all GB emulator developers
+## Features
+- [X] Original DMG Game Boy support
+- [X] Game Boy Color support
+- [X] Browser builds
+- [] Audio
+- [] Super Game Boy support
 
 ## Screenshots
 
