@@ -218,9 +218,7 @@ impl PPU {
                     }
                 }
             },
-            _ => {
-                unreachable!("The address {:04x} should not have led to this function", addr);
-            }
+            _ => {}
         }
     }
 
